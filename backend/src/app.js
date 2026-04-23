@@ -67,6 +67,9 @@ const __dirname = dirname(__filename);
 
 const app = express();
 
+app.disable('etag');
+app.disable('x-powered-by');
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
@@ -109,6 +112,10 @@ app.get('/api/csrf-token', (req, res) => {
 });
 
 app.use('/api', authLimiter);
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 /* All JWT-protected routes mount here (CSRF not needed — Bearer token auth) */
 app.use('/uploads', express.static(path.resolve(__dirname, '..', config.upload.uploadDir)));

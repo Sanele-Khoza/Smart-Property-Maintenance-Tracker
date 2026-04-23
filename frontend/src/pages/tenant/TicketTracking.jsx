@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaTicketAlt, FaSearch, FaEye, FaStar, FaHistory, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getAuditLogs, updateTicketRating, confirmTicketCompletion } from '../../data/store';
+import { getAuditLogs, updateTicketRating, confirmTicketCompletion, refreshTickets as fetchTickets } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import useTickets from '../../hooks/useTickets';
 
 const TicketTracking = () => {
   const session = getSession();
   const currentUser = session ? `${session.name} ${session.surname}` : '';
+  const currentUserId = session?.id;
   const tickets = useTickets();
   const [auditLogs] = useState(getAuditLogs());
   const [search, setSearch] = useState('');
@@ -15,7 +16,14 @@ const TicketTracking = () => {
   const [rating, setRating] = useState({ ticketId: null, stars: 0, comment: '', hover: 0 });
   const [msg, setMsg] = useState({ text: '', type: '' });
 
-  const myTickets = useMemo(() => tickets.filter(t => t.createdBy === currentUser || t.createdBy === 'John Tenant' && currentUser === 'John Tenant'), [tickets, currentUser]);
+  const myTickets = useMemo(() => {
+    if (!currentUserId) return [];
+    return tickets.filter(t => t.createdById === currentUserId || t.createdBy === currentUser);
+  }, [tickets, currentUser, currentUserId]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   const filtered = myTickets.filter(t =>
     !search || t.ticketId.toLowerCase().includes(search.toLowerCase()) ||

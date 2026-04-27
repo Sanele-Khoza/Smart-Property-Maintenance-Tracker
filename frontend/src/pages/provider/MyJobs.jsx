@@ -39,23 +39,23 @@ const MyJobs = ({ onViewDetails }) => {
       case 'Assigned':
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn btn-teal btn-sm" onClick={() => run(acceptJob(t.ticketId), `${t.ticketId} accepted.`)} title="Accept job"><FaPlay /> Accept</button>
+            <button className="btn btn-teal btn-sm" onClick={() => run(acceptJob(t.ticketId), 'Job accepted.')} title="Accept job"><FaPlay /> Accept</button>
           </div>
         );
       case 'Accepted':
         return (
-          <button className="btn btn-teal btn-sm" onClick={() => run(startJob(t.ticketId), `${t.ticketId} started.`)} title="Start work"><FaPlay /> Start</button>
+          <button className="btn btn-teal btn-sm" onClick={() => run(startJob(t.ticketId), 'Job started.')} title="Start work"><FaPlay /> Start</button>
         );
       case 'In Progress':
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => run(waitForParts(t.ticketId), `${t.ticketId} → Waiting for Parts`)}><FaPause /> Waiting for Parts</button>
-            <button className="btn btn-teal btn-sm" onClick={() => run(submitJobCompletion(t.ticketId, '', []), `${t.ticketId} completed.`)}><FaCheck /> Complete</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => run(waitForParts(t.ticketId), 'Waiting for parts set.')}><FaPause /> Waiting for Parts</button>
+            <button className="btn btn-teal btn-sm" onClick={() => run(submitJobCompletion(t.ticketId, '', []), 'Job completed.')}><FaCheck /> Complete</button>
           </div>
         );
       case 'Waiting for Parts':
         return (
-          <button className="btn btn-primary btn-sm" onClick={() => run(partsReceived(t.ticketId), `${t.ticketId} resumed.`)}><FaPlay /> Resume</button>
+          <button className="btn btn-primary btn-sm" onClick={() => run(partsReceived(t.ticketId), 'Job resumed.')}><FaPlay /> Resume</button>
         );
       case 'Completed':
         return <span className="badge badge-completed" style={{ fontSize: 10 }}><FaCheck /> Awaiting Confirmation</span>;
@@ -89,7 +89,6 @@ const MyJobs = ({ onViewDetails }) => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Priority</th>
@@ -104,7 +103,6 @@ const MyJobs = ({ onViewDetails }) => {
                 {filtered.map(t => (
                   <React.Fragment key={t.ticketId}>
                     <tr style={{ background: expandedId === t.ticketId ? 'var(--surface2)' : 'transparent' }}>
-                      <td className="cell-mono">{t.ticketId}</td>
                       <td><strong>{t.title}</strong></td>
                       <td><StatusBadge status={t.status} /></td>
                       <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{t.priority}</span></td>
@@ -119,7 +117,7 @@ const MyJobs = ({ onViewDetails }) => {
                     </tr>
                     {expandedId === t.ticketId && (
                       <tr>
-                        <td colSpan={9} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
+                        <td colSpan={8} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
                             <div><strong>Description:</strong><br />{t.description}</div>
                             <div>

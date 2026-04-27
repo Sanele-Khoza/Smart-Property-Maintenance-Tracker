@@ -31,7 +31,6 @@ const MyUnit = () => {
               <tr><td style={{ fontWeight: 600 }}><FaLayerGroup /> Floor</td><td>{primary.floor !== null && primary.floor !== undefined ? primary.floor : '—'}</td></tr>
               <tr><td style={{ fontWeight: 600 }}><FaBuilding /> Property</td><td>{primary.propertyName}</td></tr>
               <tr><td style={{ fontWeight: 600 }}>Status</td><td><span className="badge badge-completed"><FaCheckCircle /> {primary.status}</span></td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Unit ID</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>{primary.unitId}</td></tr>
             </tbody>
           </table>
         </div>

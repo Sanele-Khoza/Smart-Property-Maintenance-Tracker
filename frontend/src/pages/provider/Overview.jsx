@@ -57,7 +57,6 @@ const Overview = () => {
           <div className="data-list">
             {recentActive.map(t => (
               <div key={t.ticketId} className="data-item">
-                <span className="data-item-id">{t.ticketId}</span>
                 <span className="data-item-name">{t.title}</span>
                 <StatusBadge status={t.status} />
               </div>

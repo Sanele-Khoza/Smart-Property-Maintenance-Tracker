@@ -64,7 +64,6 @@ const WorkHistory = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Property</th>
@@ -78,7 +77,6 @@ const WorkHistory = () => {
                 {filtered.map(t => (
                   <React.Fragment key={t.ticketId}>
                     <tr style={{ background: expandedId === t.ticketId ? 'var(--surface2)' : 'transparent', cursor: 'pointer' }} onClick={() => setExpandedId(expandedId === t.ticketId ? null : t.ticketId)}>
-                      <td className="cell-mono">{t.ticketId}</td>
                       <td><strong>{t.title}</strong></td>
                       <td><StatusBadge status={t.status} /></td>
                       <td style={{ fontSize: 12 }}>{t.propertyName}</td>
@@ -97,7 +95,7 @@ const WorkHistory = () => {
                     </tr>
                     {expandedId === t.ticketId && (
                       <tr>
-                        <td colSpan={8} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
+                        <td colSpan={7} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
                             <div>
                               <strong>Details</strong>

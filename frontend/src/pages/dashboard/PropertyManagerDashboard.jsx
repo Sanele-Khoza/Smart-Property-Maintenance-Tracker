@@ -84,7 +84,6 @@ const PropertyManagerDashboard = ({ activePage }) => {
                       return (
                         <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <span className="badge badge-open">Open</span>
                           </div>
                           <div className="ticket-desc"><strong>{t.title}</strong><br />{t.description.substring(0, 80)}...</div>
@@ -148,7 +147,6 @@ const PropertyManagerDashboard = ({ activePage }) => {
                   return (
                     <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                       <div className="ticket-header">
-                        <span className="ticket-id">{t.ticketId}</span>
                         <StatusBadge status={t.status} />
                       </div>
                       <div className="ticket-desc">{t.title}</div>
@@ -166,7 +164,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
               <div className="modal" onClick={() => setSelectedTicketDetails(null)} style={{ alignItems: 'flex-start', paddingTop: 60 }}>
                 <div className="card" style={{ maxWidth: 600, margin: 'auto', background: 'var(--surface2)', maxHeight: '80vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h3 style={{ color: 'var(--amber)' }}>Ticket #{selectedTicketDetails.ticketId}</h3>
+                    <h3 style={{ color: 'var(--amber)' }}>Ticket Details</h3>
                     <StatusBadge status={selectedTicketDetails.status} />
                   </div>
                   <div className="ticket-details">

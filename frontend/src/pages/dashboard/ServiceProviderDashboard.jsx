@@ -34,7 +34,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
     if (result.error) {
       setStatusMsg({ text: result.error, type: 'error' });
     } else {
-      setStatusMsg({ text: `Ticket ${ticketId} → ${newStatus}`, type: 'success' });
+      setStatusMsg({ text: `Status updated to ${newStatus}`, type: 'success' });
       refresh();
       setTimeout(() => setStatusMsg({ text: '', type: '' }), 3000);
     }
@@ -79,7 +79,6 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       {myTickets.map(t => (
                         <div className="ticket-card" key={t.ticketId}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <StatusBadge status={t.status} />
                           </div>
                           <div className="ticket-desc">
@@ -140,7 +139,6 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       {openTickets.map(t => (
                         <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <span className="badge badge-open">Open</span>
                           </div>
                           <div className="ticket-desc">
@@ -163,7 +161,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
               <div className="modal" onClick={() => setSelectedTicketDetails(null)} style={{ alignItems: 'flex-start', paddingTop: 60 }}>
                 <div className="card" style={{ maxWidth: 600, margin: 'auto', background: 'var(--surface2)', maxHeight: '80vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h3 style={{ color: 'var(--amber)' }}>Ticket #{selectedTicketDetails.ticketId}</h3>
+                    <h3 style={{ color: 'var(--amber)' }}>Ticket Details</h3>
                     <StatusBadge status={selectedTicketDetails.status} />
                   </div>
                   <div className="ticket-details">

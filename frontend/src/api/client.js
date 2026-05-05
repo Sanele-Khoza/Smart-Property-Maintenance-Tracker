@@ -62,6 +62,7 @@ export async function api(endpoint, options = {}) {
       method: method || (body || formData ? 'POST' : 'GET'),
       headers,
       body: formData || (body ? JSON.stringify(body) : undefined),
+      cache: 'no-store',
       ...rest,
     });
   } catch (err) {
@@ -77,6 +78,7 @@ export async function api(endpoint, options = {}) {
         method: method || (body || formData ? 'POST' : 'GET'),
         headers,
         body: formData || (body ? JSON.stringify(body) : undefined),
+        cache: 'no-store',
         ...rest,
       });
     } else {

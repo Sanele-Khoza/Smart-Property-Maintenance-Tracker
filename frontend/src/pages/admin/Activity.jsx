@@ -97,7 +97,6 @@ const Activity = () => {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <strong style={{ fontSize: 12 }}>{log.actor}</strong>
             <span className="badge badge-info" style={{ fontSize: 8, whiteSpace: 'nowrap' }}>{label}</span>
-            {log.ticketId && <span className="cell-mono" style={{ fontSize: 10 }}>{log.ticketId}</span>}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{detail}</div>
         </div>
@@ -140,7 +139,6 @@ const Activity = () => {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <strong style={{ fontSize: 12 }}>{log.adapter}</strong>
             <span className="badge" style={{ fontSize: 8, backgroundColor: ACTIVITY_COLORS.inference.bg, color: ACTIVITY_COLORS.inference.iconColor, border: '1px solid rgba(45,183,145,0.3)' }}>{log.inputType}</span>
-            {log.ticketId && <span className="cell-mono" style={{ fontSize: 10 }}>{log.ticketId}</span>}
             {hasConflict && <span className="badge badge-danger" style={{ fontSize: 8 }}>CONFLICT</span>}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>

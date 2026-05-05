@@ -36,7 +36,7 @@ const Emergency = () => {
 
   const handleAccept = async (ticketId) => {
     const r = await acceptJob(ticketId);
-    if (r.success) { refresh(); showMsg(`${ticketId} accepted`, 'success'); }
+    if (r.success) { refresh(); showMsg('Emergency job accepted', 'success'); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -78,7 +78,6 @@ const Emergency = () => {
             <table className="table">
               <thead>
                 <tr style={{ background: 'rgba(192,57,43,0.08)' }}>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Property</th>
                   <th>Unit</th>
@@ -92,7 +91,6 @@ const Emergency = () => {
                   const aa = getAutoAssignTime(t);
                   return (
                     <tr key={t.ticketId} style={{ background: aa?.isOverdue ? 'rgba(192,57,43,0.06)' : 'transparent' }}>
-                      <td className="cell-mono" style={{ color: 'var(--danger)', fontWeight: 700 }}>{t.ticketId}</td>
                       <td><strong>{t.title}</strong></td>
                       <td>{t.propertyName}</td>
                       <td>Unit {t.unitNumber}</td>
@@ -129,7 +127,6 @@ const Emergency = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Property / Unit</th>
@@ -141,7 +138,6 @@ const Emergency = () => {
               <tbody>
                 {myEmergencyTickets.map(t => (
                   <tr key={t.ticketId}>
-                    <td className="cell-mono" style={{ color: 'var(--danger)', fontWeight: 700 }}>{t.ticketId}</td>
                     <td><strong>{t.title}</strong></td>
                     <td><StatusBadge status={t.status} /></td>
                     <td style={{ fontSize: 12 }}>{t.propertyName} / Unit {t.unitNumber}</td>
@@ -156,7 +152,7 @@ const Emergency = () => {
                       {t.status === 'In Progress' && (
                         <button className="btn btn-teal btn-sm" onClick={async () => {
                           const r = await submitJobCompletion(t.ticketId, '', []);
-                          if (r.success) { refresh(); showMsg(`${t.ticketId} marked complete`, 'success'); }
+                          if (r.success) { refresh(); showMsg('Job marked complete', 'success'); }
                           else { showMsg(r.error, 'error'); }
                         }}>
                           Complete

@@ -115,7 +115,7 @@ const Assignment = ({ refreshData, pmName }) => {
               <option value="">— Select open ticket —</option>
               {openTickets.map(t => (
                 <option key={t.ticketId} value={t.ticketId}>
-                  {t.ticketId}: {t.title.substring(0, 50)}...
+                  {t.title.substring(0, 50)}...
                 </option>
               ))}
             </select>
@@ -150,7 +150,7 @@ const Assignment = ({ refreshData, pmName }) => {
               onChange={e => setStatusForm(f => ({ ...f, ticketId: e.target.value, newStatus: '' }))}>
               <option value="">— Select ticket —</option>
               {activeTickets.map(t => (
-                <option key={t.ticketId} value={t.ticketId}>{t.ticketId} [{t.status}] - {t.title}</option>
+                <option key={t.ticketId} value={t.ticketId}>{t.title} [{t.status}]</option>
               ))}
             </select>
           </div>
@@ -196,7 +196,6 @@ const Assignment = ({ refreshData, pmName }) => {
               {[...tickets].reverse().map(t => (
                 <div className="ticket-card" key={t.ticketId}>
                   <div className="ticket-header">
-                    <span className="ticket-id">{t.ticketId}</span>
                     <StatusBadge status={t.status} />
                   </div>
                   <div className="ticket-desc"><strong>{t.title}</strong><br />{t.description.substring(0, 100)}...</div>
@@ -204,7 +203,7 @@ const Assignment = ({ refreshData, pmName }) => {
                     <div className="ticket-images">
                       {t.images.slice(0, 3).map((img, idx) => (
                         <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img)}>
-                          <img src={img} alt={`Ticket ${t.ticketId}`} />
+                          <img src={img} alt={t.title} />
                         </div>
                       ))}
                       {t.images.length > 3 && <span className="ticket-meta">+{t.images.length - 3} more</span>}

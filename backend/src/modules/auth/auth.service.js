@@ -95,6 +95,14 @@ async function register({ name, surname, email, password, role, phone, idNumber,
     text: `Hi ${name},\n\nVerify your email by visiting: ${verifyUrl}\n\nThis link expires in 1 hour.`,
   }).catch(() => {});
 
+  sendNewUserRegisteredAlert(user)
+    .catch((err) => {
+      console.log(`\n══════════════════════════════════════════════`);
+      console.log(`  TENANT ALERT EMAIL ERROR (${err.message})`);
+      console.log(`  Tenant: ${email}`);
+      console.log(`══════════════════════════════════════════════\n`);
+    });
+
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 
   return {

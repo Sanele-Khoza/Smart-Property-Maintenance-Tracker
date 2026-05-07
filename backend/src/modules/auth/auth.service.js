@@ -5,13 +5,16 @@ import config from '../../config/index.js';
 import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
-import { sendEmail } from '../../shared/adapters/sesAdapter.js';
-import {sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
+import { sendMail } from '../../shared/adapters/mailAdapter.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
 const RESET_TOKEN_BYTES = 32;
 const VERIFICATION_TOKEN_BYTES = 32;
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 function signJwt(user) {
   return jwt.sign(
@@ -70,31 +73,27 @@ async function register({ name, surname, email, password, role, phone, idNumber,
   await repo.saveRefreshToken(user.id, refreshToken, refreshExpiry);
 
   const verificationToken = generateToken(VERIFICATION_TOKEN_BYTES);
-  await repo.updateUser(user.id, { email_verification_token: verificationToken });
+  const hashedVerificationToken = hashToken(verificationToken);
+  await repo.updateUser(user.id, { email_verification_token: hashedVerificationToken });
 
-  const verifyUrl = `${config.cors.origin}/verify-email?token=${verificationToken}`;
-  sendEmail({
+  const verifyUrl = `${config.frontendUrl}/verify-email?token=${verificationToken}`;
+  sendMail({
     to: email,
     subject: 'Verify your SPMT account',
-    html: `<p>Hi ${name},</p><p>Please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 1 hour.</p>`,
-  }).then((emailResult) => {
-    if (!emailResult.success) {
-      console.log(`\n══════════════════════════════════════════════`);
-      console.log(`  VERIFICATION EMAIL FAILED (${emailResult.error || 'SES unavailable'})`);
-      console.log(`  To: ${email}`);
-      console.log(`  Token: ${verificationToken}`);
-      console.log(`  Verify URL: ${verifyUrl}`);
-      console.log(`  Tip: Verify "${config.aws.ses.fromAddress}" in AWS SES console first`);
-      console.log(`══════════════════════════════════════════════\n`);
-    }
-  }).catch((err) => {
-    console.log(`\n══════════════════════════════════════════════`);
-    console.log(`  VERIFICATION EMAIL ERROR (${err.message})`);
-    console.log(`  To: ${email}`);
-    console.log(`  Token: ${verificationToken}`);
-    console.log(`  Verify URL: ${verifyUrl}`);
-    console.log(`══════════════════════════════════════════════\n`);
-  });
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #00796b;">Verify Your Email</h2>
+        <p>Hi ${name},</p>
+        <p>Thank you for registering with SPMT. Please click the link below to verify your email address:</p>
+        <p style="margin: 24px 0;">
+          <a href="${verifyUrl}" style="background: #00796b; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+        </p>
+        <p style="color: #666; font-size: 13px;">Or copy this link: ${verifyUrl}</p>
+        <p style="color: #666; font-size: 13px;">This link expires in 1 hour. If you did not register, you can ignore this email.</p>
+      </div>
+    `,
+    text: `Hi ${name},\n\nVerify your email by visiting: ${verifyUrl}\n\nThis link expires in 1 hour.`,
+  }).catch(() => {});
 
   sendNewUserRegisteredAlert(user)
     .catch((err) => {
@@ -113,7 +112,6 @@ async function register({ name, surname, email, password, role, phone, idNumber,
       accessToken,
       refreshToken,
       user: buildUserPayload(user),
-      verificationToken,
     },
   };
 }
@@ -214,7 +212,8 @@ async function logout(userId, refreshToken, ipAddress) {
 }
 
 async function verifyEmail(token, ipAddress) {
-  const user = await repo.findByVerificationToken(token);
+  const hashedToken = hashToken(token);
+  const user = await repo.findByVerificationToken(hashedToken);
   if (!user) {
     await audit.log('VERIFY_EMAIL_FAILED', 'Invalid or expired verification token', null, ipAddress, audit.SEVERITY.WARN);
     throw AppError.badRequest('Invalid or expired verification token');
@@ -230,20 +229,40 @@ async function forgotPassword(email, ipAddress) {
   if (!user) return { success: true, message: 'If the email exists, a reset link has been sent' };
 
   const resetToken = generateToken(RESET_TOKEN_BYTES);
-  const expiry = new Date(Date.now() + 60 * 60 * 1000);
-  await repo.setResetToken(user.id, resetToken, expiry);
+  const hashedResetToken = hashToken(resetToken);
+  const expiry = new Date(Date.now() + 30 * 60 * 1000);
+  await repo.setResetToken(user.id, hashedResetToken, expiry);
 
-  await audit.log('PASSWORD_RESET_REQUESTED', 'Password reset link generated', user.id, ipAddress);
+  const resetUrl = `${config.frontendUrl}/reset-password?reset-token=${resetToken}`;
+  sendMail({
+    to: email,
+    subject: 'Reset your SPMT password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #00796b;">Password Reset Request</h2>
+        <p>Hi ${user.name},</p>
+        <p>We received a request to reset your password. Click the link below to set a new password:</p>
+        <p style="margin: 24px 0;">
+          <a href="${resetUrl}" style="background: #00796b; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+        </p>
+        <p style="color: #666; font-size: 13px;">Or copy this link: ${resetUrl}</p>
+        <p style="color: #666; font-size: 13px;">This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+    text: `Hi ${user.name},\n\nReset your password by visiting: ${resetUrl}\n\nThis link expires in 30 minutes.`,
+  }).catch(() => {});
+
+  await audit.log('PASSWORD_RESET_REQUESTED', 'Password reset link generated and emailed', user.id, ipAddress);
 
   return {
     success: true,
     message: 'If the email exists, a reset link has been sent',
-    data: { resetToken },
   };
 }
 
 async function resetPassword(token, newPassword, ipAddress) {
-  const user = await repo.findByResetToken(token);
+  const hashedToken = hashToken(token);
+  const user = await repo.findByResetToken(hashedToken);
   if (!user) {
     await audit.log('PASSWORD_RESET_FAILED', 'Invalid or expired reset token', null, ipAddress, audit.SEVERITY.WARN);
     throw AppError.badRequest('Invalid or expired reset token');
@@ -295,9 +314,46 @@ async function deactivateAccount(userId, password, ipAddress) {
   return { success: true, message: 'Account deactivated successfully' };
 }
 
+async function resendVerificationEmail(email, ipAddress) {
+  const user = await repo.findByEmail(email);
+  if (!user) return { success: true, message: 'If the email exists, a verification link has been sent' };
+
+  if (user.status === 'ACTIVE') {
+    return { success: true, message: 'If the email exists, a verification link has been sent' };
+  }
+
+  const verificationToken = generateToken(VERIFICATION_TOKEN_BYTES);
+  const hashedVerificationToken = hashToken(verificationToken);
+  await repo.updateUser(user.id, { email_verification_token: hashedVerificationToken });
+
+  const verifyUrl = `${config.frontendUrl}/verify-email?token=${verificationToken}`;
+  sendMail({
+    to: email,
+    subject: 'Verify your SPMT account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #00796b;">Verify Your Email</h2>
+        <p>Hi ${user.name},</p>
+        <p>Please click the link below to verify your email address:</p>
+        <p style="margin: 24px 0;">
+          <a href="${verifyUrl}" style="background: #00796b; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+        </p>
+        <p style="color: #666; font-size: 13px;">Or copy this link: ${verifyUrl}</p>
+        <p style="color: #666; font-size: 13px;">This link expires in 1 hour.</p>
+      </div>
+    `,
+    text: `Hi ${user.name},\n\nVerify your email by visiting: ${verifyUrl}\n\nThis link expires in 1 hour.`,
+  }).catch(() => {});
+
+  await audit.log('VERIFICATION_EMAIL_RESENT', 'Verification email resent', user.id, ipAddress);
+
+  return { success: true, message: 'If the email exists, a verification link has been sent' };
+}
+
 export {
   register, login, refreshAccessToken, getMe,
   logout, verifyEmail, forgotPassword, resetPassword,
   changePassword,
   deactivateAccount,
+  resendVerificationEmail,
 };

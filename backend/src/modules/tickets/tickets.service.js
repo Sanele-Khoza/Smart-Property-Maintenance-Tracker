@@ -18,6 +18,11 @@ import { checkForDuplicate } from '../ai/duplicateDetector.js';
 import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
 import config from '../../config/index.js';
+import {
+  sendTicketCreatedNotification,
+  sendTicketAssignedNotification,
+  sendTicketStatusChangedNotification,
+} from '../../shared/utils/email.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,8 +69,14 @@ async function performTransition(ticketId, toStatus, userId, userName, reason, s
   const sla = await checkTicketSla(updated);
   if (sla.warning && updated.tenant_id) {
     sendToUser(updated.tenant_id, 'sla_warning', {
-      ticketId, priority: updated.priority, deadline: sla.responseDeadline,
+      ticketId, status: toStatus, title: ticket.title,
     });
+  }
+
+  if (updated.tenant_id) {
+    sendTicketStatusChangedNotification(
+      updated.tenant_id, updated, toStatus, ticket.status, reason
+    ).catch(() => {});
   }
 
   return updated;
@@ -247,6 +258,27 @@ async function create(data, userId) {
   await repo.addHistory(ticket.id, ticket.status, userId, null, 'Ticket created');
   await auditLog(ticket.id, 'created', userId, null, { status: ticket.status, title: ticket.title });
   runAiPipeline(ticket.id).catch(() => {});
+
+  if (ticket.unit_id) {
+    (async () => {
+      try {
+        const unitRow = (await query(
+          `SELECT u.property_id FROM units u WHERE u.id = $1`, [ticket.unit_id]
+        )).rows[0];
+        if (unitRow?.property_id) {
+          const propRow = (await query(
+            `SELECT p.manager_id FROM properties p WHERE p.id = $1`, [unitRow.property_id]
+          )).rows[0];
+          if (propRow?.manager_id) {
+            sendTicketCreatedNotification(propRow.manager_id, ticket).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error('Ticket creation notification failed:', e.message);
+      }
+    })();
+  }
+
   return { success: true, data: { ticket }, message: 'Ticket created' };
 }
 
@@ -345,6 +377,12 @@ async function changeStatus(id, status, reason, userId, userName, role) {
     sendToUser(updated.tenant_id, 'sla_warning', { ticketId: id, priority: updated.priority, deadline: sla.responseDeadline });
   }
 
+  if (updated.tenant_id) {
+    sendTicketStatusChangedNotification(
+      updated.tenant_id, updated, status, ticket.status, reason
+    ).catch(() => {});
+  }
+
   return { success: true, data: { ticket: updated }, message: 'Status updated' };
 }
 
@@ -375,6 +413,8 @@ async function assign(id, technicianId, note, userId, userName, role) {
   await auditLog(ticket.id, 'assigned', userId, userName, {
     providerId: technicianId, provider: provider.name, note,
   });
+
+  sendTicketAssignedNotification(technicianId, updated).catch(() => {});
 
   return { success: true, data: { ticket: updated }, message: `Assigned to ${provider.name}` };
 }

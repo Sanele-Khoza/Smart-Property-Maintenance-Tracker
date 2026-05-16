@@ -87,7 +87,7 @@ export const registerUser = async (userData) => {
       },
     });
     if (result.success && result.data) {
-      return { success: true, data: result.data.user, verificationToken: result.data.verificationToken };
+      return { success: true, data: result.data.user };
     }
     return { success: false, error: result.error || 'Registration failed' };
   } catch (err) {
@@ -294,5 +294,14 @@ export const resetPassword = async (token, newPassword) => {
     return { success: false, error: result.error || 'Failed to reset password' };
   } catch (err) {
     return { success: false, error: err.message };
+  }
+};
+
+export const resendVerificationEmail = async (email) => {
+  try {
+    const result = await api('/auth/resend-verification', { body: { email } });
+    return { success: true, message: result.message || 'If the email exists, a verification link was sent.' };
+  } catch {
+    return { success: true, message: 'If the email exists, a verification link was sent.' };
   }
 };

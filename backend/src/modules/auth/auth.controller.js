@@ -82,9 +82,18 @@ const deactivateAccount = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.validatedBody;
+    const result = await service.resendVerificationEmail(email, getIp(req));
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
 export {
   register, login, me, logout, refreshToken,
   verifyEmail, forgotPassword, resetPassword,
   changePassword,
   deactivateAccount,
+  resendVerification,
 };

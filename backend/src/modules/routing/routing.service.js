@@ -2,11 +2,15 @@ import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
 import { scoreProviders } from '../../shared/utils/routingScore.js';
 import { sendToUser, broadcast } from '../../shared/utils/sse.js';
+import { commitAutoAssignment, notifyAutoAssignment } from '../../shared/utils/assignmentCommitter.js';
 
 const SDD_CATEGORIES = [
   'Plumbing', 'Electrical', 'HVAC', 'Appliances',
   'Structural', 'Security', 'Landscaping', 'Pest Control', 'Other',
 ];
+
+/* Statuses a ticket can be in while eligible for (re)routing. */
+const ROUTABLE_AUTO_STATUSES = ['New', 'Open', 'AI Classified'];
 
 async function findTicket(ticketId) {
   const result = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
@@ -82,11 +86,27 @@ async function autoAssign(ticketId, userId, userName, requireSpecialisation = tr
 
   const top = providers[0];
 
-  await query(
+  /* §4 — race-condition guard: if a manager/scheduler assigned this ticket a
+   * split second before this UPDATE, rowCount is 0 and nothing is recorded. */
+  const updated = await query(
     `UPDATE tickets
-     SET assigned_to = $1, status = 'Assigned', updated_at = NOW()
-     WHERE id = $2`,
-    [top.id, ticketId]
+     SET assigned_to = $1, status = 'Assigned', updated_at = NOW(),
+         auto_assigned = TRUE, auto_assigned_at = NOW(),
+         no_provider_flagged_at = NULL
+     WHERE id = $2
+       AND assigned_to IS NULL
+       AND auto_assigned_at IS NULL
+       AND status = ANY($3::text[])`,
+    [top.id, ticketId, ROUTABLE_AUTO_STATUSES]
+  );
+  if ((updated.rowCount || 0) === 0) {
+    throw AppError.conflict('Ticket was just assigned by another process — no duplicate assignment recorded');
+  }
+
+  await query(
+    `UPDATE low_confidence_queue SET status = 'resolved'
+     WHERE ticket_id = $1 AND status = 'pending'`,
+    [ticketId]
   );
 
   await query(
@@ -110,6 +130,11 @@ async function autoAssign(ticketId, userId, userName, requireSpecialisation = tr
     providerId: top.id, providerName: top.name, score: top.totalScore,
   });
 
+  /* §6 — notify tenant, provider and property manager that the system
+   * assigned on the manager's behalf. */
+  const manager = await resolveTicketManager(ticketId);
+  await notifyAutoAssignment({ ticket, provider: top, manager });
+
   sendToUser(ticket.tenant_id, 'ticket_assigned', {
     ticketId, providerName: top.name, method: 'auto',
   });
@@ -122,6 +147,21 @@ async function autoAssign(ticketId, userId, userName, requireSpecialisation = tr
     },
     message: `Auto-assigned to ${top.name}`,
   };
+}
+
+/** Load the property manager (id/name/email) responsible for a ticket. */
+async function resolveTicketManager(ticketId) {
+  const result = await query(
+    `SELECT p.manager_id AS id, mgr.name AS name, mgr.email AS email
+     FROM tickets t
+     LEFT JOIN units u ON u.id = t.unit_id
+     LEFT JOIN properties p ON p.id = u.property_id
+     LEFT JOIN users mgr ON mgr.id = p.manager_id
+     WHERE t.id = $1`,
+    [ticketId]
+  );
+  const row = result.rows[0];
+  return row?.id ? row : null;
 }
 
 async function dispatchEmergency(ticketId, userId, userName, opts = {}) {
@@ -315,8 +355,18 @@ async function manualAssign(ticketId, providerId, userId, userName, note) {
   }
 
   await query(
-    `UPDATE tickets SET assigned_to = $1, status = 'Assigned', updated_at = NOW() WHERE id = $2`,
+    `UPDATE tickets
+     SET assigned_to = $1, status = 'Assigned', updated_at = NOW(),
+         auto_assigned = FALSE, auto_assigned_at = NULL,
+         no_provider_flagged_at = NULL
+     WHERE id = $2`,
     [providerId, ticketId]
+  );
+
+  await query(
+    `UPDATE low_confidence_queue SET status = 'resolved'
+     WHERE ticket_id = $1 AND status = 'pending'`,
+    [ticketId]
   );
 
   await query(
@@ -353,6 +403,93 @@ async function manualAssign(ticketId, providerId, userId, userName, note) {
   };
 }
 
+/**
+ * §4 — decline triggers automatic fallback: move to the next-ranked candidate
+ * from the original scoring, excluding providers who already declined/expired.
+ * System-generated → audit actor NULL. If nobody remains, flag for the
+ * manager instead of leaving the ticket silently unassigned.
+ * Returns { success: true } or { success: false, reason }.
+ */
+async function reassignAfterDecline(ticketId) {
+  /*
+   * This runs at the tail of a provider decline and must NEVER break the
+   * decline response: it is a best-effort auto-routing fallback. Any failure
+   * (DB hiccup, no record, invalid state) degrades to { success: false } and
+   * the decline itself stands.
+   */
+  try {
+    const ticket = await findTicket(ticketId);
+    if (ticket.status !== 'Declined') {
+      return { success: false, reason: `Ticket is not Declined (${ticket.status})` };
+    }
+
+    const category = ticket.ai_category || ticket.category || 'Other';
+    const providers = await scoreProviders(ticket, {
+      topN: 10, requireSpecialisation: true, category,
+    });
+
+    const prior = await query(
+      `SELECT provider_id FROM routing_assignments
+       WHERE ticket_id = $1 AND status IN ('declined', 'accepted', 'expired', 'assigned')`,
+      [ticketId]
+    );
+    const tried = new Set(prior.rows.map((r) => r.provider_id));
+
+    const next = providers.find((p) => !tried.has(p.id));
+    if (!next) {
+      const reason = 'Declined by provider; no eligible fallback remaining — requires manager attention';
+      await query(
+        `UPDATE tickets
+         SET no_provider_flagged_at = NOW(), status = 'Manual Review', updated_at = NOW()
+         WHERE id = $1`,
+        [ticketId]
+      );
+      await query(
+        `INSERT INTO ticket_status_history (ticket_id, status, changed_by, changed_by_name, reason)
+         VALUES ($1, 'Manual Review', NULL, 'System', $2)`,
+        [ticketId, reason]
+      );
+      await query(
+        `INSERT INTO low_confidence_queue (ticket_id, text_confidence, visual_confidence, combined_confidence, reason)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (ticket_id) DO UPDATE SET
+           combined_confidence = EXCLUDED.combined_confidence,
+           reason = EXCLUDED.reason,
+           status = 'pending',
+           reviewed_by = NULL,
+           reviewed_at = NULL`,
+        [ticketId, ticket.ai_text_confidence ?? null, ticket.ai_visual_confidence ?? null,
+         ticket.ai_confidence || 0, reason]
+      );
+      const manager = await resolveTicketManager(ticketId);
+      try {
+        sendToUser(manager?.id, 'ticket_needs_attention', { ticketId, reason });
+      } catch { /* best effort */ }
+      return { success: false, reason };
+    }
+
+    /* Guarded: only wins while still Declined + unassigned. */
+    const updated = await query(
+      `UPDATE tickets
+       SET assigned_to = $1, status = 'Assigned', updated_at = NOW(),
+           auto_assigned = TRUE, auto_assigned_at = NOW(),
+           no_provider_flagged_at = NULL
+       WHERE id = $2 AND status = 'Declined' AND assigned_to IS NULL`,
+      [next.id, ticketId]
+    );
+    if ((updated.rowCount || 0) === 0) {
+      return { success: false, reason: 'Ticket was reassigned concurrently' };
+    }
+
+    const manager = await resolveTicketManager(ticketId);
+    await commitAutoAssignment({ ticket, provider: next, manager });
+
+    return { success: true, data: { provider: next } };
+  } catch {
+    return { success: false, reason: 'Best-effort fallback failed — decline still succeeded' };
+  }
+}
+
 async function getAssignmentHistory(ticketId) {
   const result = await query(
     `SELECT ra.*, sp.name AS provider_name, sp.company_name
@@ -385,6 +522,7 @@ export {
   dispatchEmergency,
   accept,
   manualAssign,
+  reassignAfterDecline,
   getAssignmentHistory,
   getProviderStatus,
 };

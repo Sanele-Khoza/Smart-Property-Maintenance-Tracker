@@ -2,7 +2,6 @@ import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
 import * as service from './tickets.service.js';
 import * as repo from './tickets.repository.js';
-import { classifyTicket } from '../ai/ai.service.js';
 import { runAiPipeline } from './tickets.service.js';
 import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
@@ -77,9 +76,8 @@ const create = async (req, res, next) => {
     if (result.duplicates) {
       return res.status(409).json(result);
     }
-    if (result.success && result.data?.ticket?.id) {
-      classifyTicket(result.data.ticket.id).catch(() => {});
-    }
+    /* The single post-submission AI pipeline fires inside service.create —
+     * it must not be re-triggered here (Prompt 22 v2 §1: fires exactly once). */
     res.status(201).json(result);
   } catch (err) { next(err); }
 };

@@ -54,6 +54,7 @@ function mapTicket(t) {
     manualReviewRequired: false,
     assignedTo: t.assigned_to_name || t.assignedTo || null,
     assignedToId: t.assigned_to || t.assignedToId || null,
+    autoAssigned: !!(t.auto_assigned ?? t.autoAssigned ?? false),
     providerRating: t.provider_rating ?? t.providerRating ?? null,
     providerRatingCount: t.provider_rating_count ?? t.providerRatingCount ?? null,
     createdBy: t.created_by_name || t.createdBy || '',
@@ -95,7 +96,7 @@ export const uploadTicketImages = async (ticketId, images) => {
   }
 };
 
-export const createTicket = async (unitId, title, description, priority, category, images, createdById, createdByName, forceSubmit = false) => {
+export const createTicket = async (unitId, title, description, priority, images, createdById, createdByName, forceSubmit = false) => {
   try {
     const result = await api('/tickets', {
       method: 'POST',
@@ -103,7 +104,6 @@ export const createTicket = async (unitId, title, description, priority, categor
         unit_id: unitId,
         title: title || 'Maintenance Request',
         description,
-        category: category || 'General',
         priority: priority || 'MEDIUM',
         source: 'tenant_portal',
       },

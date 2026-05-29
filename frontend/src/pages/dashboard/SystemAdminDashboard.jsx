@@ -194,6 +194,7 @@ const SystemAdminDashboard = ({ activePage }) => {
                         <span><FaUser /> By: {t.createdBy}</span>
                         <span><FaCalendarAlt /> {t.createdAt}</span>
                         {t.assignedTo && <span><FaWrench /> {t.assignedTo}</span>}
+                        {t.autoAssigned && <span style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginLeft: 6 }}>Auto-assigned by system</span>}
                       </div>
                     </div>
                   ))}

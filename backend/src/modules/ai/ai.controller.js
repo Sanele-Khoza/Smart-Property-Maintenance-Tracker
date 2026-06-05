@@ -57,6 +57,16 @@ const getQueueStats = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const pythonClassifyAndAssign = async (req, res, next) => {
+  try {
+    const result = await aiService.pythonClassifyAndAssign(req.params.ticketId, req.query);
+    if (result.error) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
 export {
   classify,
   getLowConfidenceQueue,
@@ -65,4 +75,5 @@ export {
   getDuplicates,
   extractEntities,
   getQueueStats,
+  pythonClassifyAndAssign,
 };

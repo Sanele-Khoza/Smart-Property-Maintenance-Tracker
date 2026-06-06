@@ -19,4 +19,6 @@ router.get('/duplicates/:ticketId', authenticate, hasPermission('tickets.view.ow
 
 router.post('/extract-entities', authenticate, validate(extractEntitiesSchema), ctrl.extractEntities);
 
+router.get('/python/classify-assign/:ticketId', authenticate, hasPermission('tickets.view.own'), ctrl.pythonClassifyAndAssign);
+
 export default router;

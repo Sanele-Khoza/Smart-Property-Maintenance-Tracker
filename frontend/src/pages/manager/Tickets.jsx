@@ -60,6 +60,8 @@ const TRANSITION_LABELS = {
   'Archived': 'Archive', 'On Hold': 'Hold', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
 };
 
+const PROVIDER_ACTIONS = new Set(['Accepted', 'In Progress', 'Waiting for Parts', 'Completed', 'Tenant Confirmed', 'Closed']);
+
 const TABS = ['All', 'New', 'Assigned', 'Accepted', 'In Progress', 'Declined', 'Needs Review', 'SLA Warning', 'SLA Breached', 'Completed'];
 
 const Tickets = () => {
@@ -308,7 +310,7 @@ const Tickets = () => {
                   const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated', 'Declined'].includes(t.status);
                   const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
-                  const genericButtons = tc.filter(s => s !== 'Reopened' && !(t.status === 'Declined' && s === 'Assigned'));
+                  const genericButtons = tc.filter(s => s !== 'Reopened' && !PROVIDER_ACTIONS.has(s) && !(t.status === 'Declined' && s === 'Assigned'));
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
                   const sla = getSlaStatus(t);
                   return (

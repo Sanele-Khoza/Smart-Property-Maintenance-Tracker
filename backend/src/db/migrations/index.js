@@ -32,6 +32,7 @@ async function run(query) {
     { name: '026_users_id_number', file: '026_users_id_number.js' },
     { name: '027_auto_assign', file: '027_auto_assign.js' },
     { name: '028_ai_service', file: '028_ai_service.js' },
+    { name: '029_auto_assign_seconds', file: '029_auto_assign_seconds.js' },
   ];
 
   await query(`

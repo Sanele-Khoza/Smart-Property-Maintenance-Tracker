@@ -1,0 +1,11 @@
+{
+  "Plumbing": ["Pipe", "Faucet", "Water", "Sink", "Toilet", "Drain", "Shower", "Bathtub", "Tap", "Plumbing", "Valve", "Hose", "Sewer", "Overflow", "Clog"],
+  "Electrical": ["Wire", "Outlet", "Switch", "Cable", "Breaker", "Socket", "Light Fixture", "Spark", "Electrical", "Fuse", "Circuit", "Transformer", "Generator"],
+  "HVAC": ["Vent", "Duct", "Air Conditioner", "Furnace", "Thermostat", "Heater", "HVAC", "Condenser", "Compressor", "Fan", "Radiator", "Heat Pump"],
+  "Appliances": ["Refrigerator", "Dishwasher", "Washing Machine", "Dryer", "Stove", "Oven", "Microwave", "Freezer", "Appliance", "Kitchen Appliance"],
+  "Structural": ["Crack", "Wall", "Ceiling", "Floor", "Roof", "Foundation", "Door", "Window", "Frame", "Hole", "Damage", "Mold", "Rot", "Water Stain", "Structural"],
+  "Security": ["Lock", "Door Lock", "Window Lock", "Security", "Alarm", "Camera", "Keypad", "Intercom", "Fence Lock", "Deadbolt"],
+  "Landscaping": ["Fence", "Gate", "Garden", "Lawn", "Tree", "Sprinkler", "Irrigation", "Grass", "Hedge", "Patio", "Pathway", "Outdoor"],
+  "Pest Control": ["Rodent", "Termite", "Cockroach", "Ant", "Pest", "Insect", "Bug", "Roach", "Spider", "Bee", "Wasp", "Infestation"],
+  "Emergency": ["Smoke", "Fire", "Flame", "Flood", "Water Damage", "Gas", "Fumes", "Explosion", "Collapse", "Emergency"]
+}

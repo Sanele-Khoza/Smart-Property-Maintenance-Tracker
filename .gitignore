@@ -1,0 +1,41 @@
+### Node ###
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+### Environment ###
+.env
+.env.test
+.env.local
+.env.production
+
+### Uploads ###
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+### Logs ###
+logs/
+*.log
+
+### OS ###
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+### IDE ###
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+### Docker ###
+docker-compose.override.yml
+
+### Postman ###
+backend/postman_collection.json

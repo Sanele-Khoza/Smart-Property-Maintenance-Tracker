@@ -1,0 +1,50 @@
+import logger from '../../shared/utils/logger.js';
+import { autoAssignEmergencyTickets, markSlaBreaches } from '../../shared/utils/emergencyScheduler.js';
+import { markBreachedTickets } from '../../shared/utils/slaChecker.js';
+import { query } from '../../db/connection.js';
+
+let intervalId = null;
+
+async function checkSla() {
+  try {
+    /* BR-003: Emergency auto-assign if unassigned >20min */
+    const autoAssigned = await autoAssignEmergencyTickets();
+    if (autoAssigned > 0) {
+      logger.info(`Auto-assigned ${autoAssigned} emergency tickets`);
+    }
+
+    /* Mark SLA breaches across all priorities */
+    await markBreachedTickets();
+
+    /* Notify tenants of breached tickets */
+    const breachedTickets = await query(
+      `SELECT t.*, u.name, u.surname FROM tickets t
+       JOIN users u ON u.id = t.tenant_id
+       WHERE t.sla_breached = TRUE AND t.sla_breached_at > NOW() - INTERVAL '2 minutes'`
+    );
+
+    for (const ticket of breachedTickets.rows) {
+      await query(
+        `INSERT INTO notifications (user_id, type, title, body, is_emergency)
+         VALUES ($1, 'warning', 'SLA Breached', $2, TRUE)`,
+        [ticket.tenant_id, `Ticket #${ticket.id}: ${ticket.title} has exceeded the resolution SLA.`]
+      );
+      logger.warn(`SLA breached notification sent for ticket #${ticket.id}`);
+    }
+  } catch (err) {
+    logger.error('SLA worker error', { error: err.message });
+  }
+}
+
+function start() {
+  if (intervalId) return;
+  logger.info('SLA worker started (every 2 min)');
+  checkSla();
+  intervalId = setInterval(checkSla, 2 * 60 * 1000);
+}
+
+function stop() {
+  if (intervalId) { clearInterval(intervalId); intervalId = null; logger.info('SLA worker stopped'); }
+}
+
+export { start, stop };

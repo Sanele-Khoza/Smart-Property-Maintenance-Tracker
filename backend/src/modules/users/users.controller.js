@@ -1,0 +1,88 @@
+import { query } from '../../db/connection.js';
+import AppError from '../../shared/errors/AppError.js';
+
+const getUsers = async (req, res, next) => {
+  try {
+    const conditions = ['deleted_at IS NULL'];
+    const params = [];
+    let idx = 1;
+    if (req.query.status) { conditions.push(`account_status = $${idx++}`); params.push(req.query.status); }
+    if (req.query.role) { conditions.push(`role = $${idx++}`); params.push(req.query.role); }
+    if (req.query.search) { conditions.push(`(name ILIKE $${idx} OR surname ILIKE $${idx} OR email ILIKE $${idx})`); params.push(`%${req.query.search}%`); idx++; }
+    const whereClause = 'WHERE ' + conditions.join(' AND ');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const countResult = await query(`SELECT COUNT(*) FROM users ${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    params.push(limit);
+    params.push(offset);
+    const result = await query(`SELECT id, name, surname, email, phone, role, account_status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, params);
+    res.json({ data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString(), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } } });
+  } catch (err) { next(err); }
+};
+
+const getPendingUsers = async (req, res, next) => {
+  try {
+    const result = await query("SELECT id, name, surname, email, phone, role, created_at FROM users WHERE account_status = 'PENDING' AND approved = FALSE AND deleted_at IS NULL ORDER BY created_at ASC");
+    res.json({ data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const approveUser = async (req, res, next) => {
+  try {
+    await query("UPDATE users SET approved = TRUE, approved_at = NOW(), account_status = 'ACTIVE' WHERE id = $1", [req.params.id]);
+    res.json({ data: { message: 'User approved' }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const deactivateUser = async (req, res, next) => {
+  try {
+    await query("UPDATE users SET account_status = 'DEACTIVATED', deactivated_at = NOW() WHERE id = $1", [req.params.id]);
+    res.json({ data: { message: 'User deactivated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const reactivateUser = async (req, res, next) => {
+  try {
+    await query("UPDATE users SET account_status = 'ACTIVE', deactivated_at = NULL, login_attempts = 0, locked_until = NULL WHERE id = $1", [req.params.id]);
+    res.json({ data: { message: 'User reactivated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const changeRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    if (!role || !['SYSTEM_ADMIN','PROPERTY_MANAGER','TENANT','SERVICE_PROVIDER'].includes(role)) throw AppError.badRequest('Invalid role');
+    await query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
+    res.json({ data: { message: 'Role updated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const unlockUser = async (req, res, next) => {
+  try {
+    await query('UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = $1', [req.params.id]);
+    res.json({ data: { message: 'User unlocked' }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+const updateUser = async (req, res, next) => {
+  try {
+    const fields = ['name', 'surname', 'email', 'phone', 'role'];
+    const updates = [];
+    const params = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (req.body[f] !== undefined) { updates.push(`${f} = $${idx++}`); params.push(req.body[f]); }
+    }
+    if (updates.length === 0) throw AppError.badRequest('No fields to update');
+    params.push(req.params.id);
+    await query(`UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${idx}`, params);
+    const result = await query('SELECT id, name, surname, email, phone, role, account_status FROM users WHERE id = $1', [req.params.id]);
+    res.json({ data: { user: result.rows[0] }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
+export { getUsers, getPendingUsers, approveUser, deactivateUser, reactivateUser, changeRole, unlockUser, updateUser };

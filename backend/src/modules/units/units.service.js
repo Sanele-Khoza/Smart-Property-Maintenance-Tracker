@@ -1,0 +1,66 @@
+import * as repo from './units.repository.js';
+import AppError from '../../shared/errors/AppError.js';
+
+async function list(filters) {
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 20;
+  const offset = (page - 1) * limit;
+  const { units, total } = await repo.findAll({ ...filters, limit, offset });
+  return {
+    success: true,
+    data: { units },
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+}
+
+async function getById(id) {
+  const unit = await repo.findById(id);
+  if (!unit) throw AppError.notFound('Unit not found');
+  return { success: true, data: { unit } };
+}
+
+async function create(data) {
+  const unit = await repo.create(data);
+  return { success: true, data: { unit }, message: 'Unit created' };
+}
+
+async function update(id, data) {
+  await repo.findById(id);
+  const unit = await repo.update(id, data);
+  return { success: true, data: { unit }, message: 'Unit updated' };
+}
+
+async function assign(unitId, tenantId) {
+  const unit = await repo.findById(unitId);
+  if (!unit) throw AppError.notFound('Unit not found');
+
+  /* BR-001: check tenant is not already in another unit */
+  const existingUnit = await repo.findByOccupant(tenantId);
+  if (existingUnit) {
+    throw AppError.conflict(
+      `Tenant is already assigned to unit ${existingUnit.unit_number} in ${existingUnit.property_name}`
+    );
+  }
+  if (unit.occupant_id) {
+    throw AppError.conflict(`Unit ${unit.unit_number} already has an occupant`);
+  }
+
+  await repo.assign(unitId, tenantId);
+  const updated = await repo.findById(unitId);
+  return { success: true, data: { unit: updated }, message: 'Unit assigned' };
+}
+
+async function vacate(unitId) {
+  await repo.findById(unitId);
+  await repo.vacate(unitId);
+  const unit = await repo.findById(unitId);
+  return { success: true, data: { unit }, message: 'Unit vacated' };
+}
+
+async function remove(id) {
+  await repo.findById(id);
+  await repo.remove(id);
+  return { success: true, message: 'Unit deleted' };
+}
+
+export { list, getById, create, update, assign, vacate, remove };

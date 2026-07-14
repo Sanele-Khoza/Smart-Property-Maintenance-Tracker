@@ -66,8 +66,8 @@ const Tenants = () => {
 
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 
-  const handleApprove = (userId) => {
-    const r = updateUser(userId, { status: 'Active' });
+  const handleApprove = async (userId) => {
+    const r = await updateUser(userId, { status: 'Active' });
     if (r.success) { showAlert(`Account approved.`, 'success'); refresh(); }
     else showAlert(r.error, 'error');
   };

@@ -29,14 +29,14 @@ const MyJobs = ({ onViewDetails }) => {
 
   const refresh = () => setTickets(getTickets());
 
-  const handleStatus = (ticketId, newStatus) => {
-    const r = updateTicketStatus(ticketId, newStatus);
+  const handleStatus = async (ticketId, newStatus) => {
+    const r = await updateTicketStatus(ticketId, newStatus);
     if (r.success) { refresh(); showMsg(`${ticketId} → ${newStatus}`, 'success'); }
     else { showMsg(r.error, 'error'); }
   };
 
-  const handleDecline = (ticketId) => {
-    const r = declineTicketAssignment(ticketId, providerName, declineReason);
+  const handleDecline = async (ticketId) => {
+    const r = await declineTicketAssignment(ticketId, providerName, declineReason);
     if (r.success) { refresh(); showMsg(`${ticketId} declined.`, 'success'); setDecliningId(null); setDeclineReason(''); }
     else { showMsg(r.error, 'error'); }
   };

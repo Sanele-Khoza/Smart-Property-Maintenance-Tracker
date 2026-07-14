@@ -47,14 +47,14 @@ const Categories = () => {
     setShowCreate(true);
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) {
       setCreateError('Category name is required.');
       return;
     }
     const keywords = createForm.aiKeywords.split(',').map(k => k.trim()).filter(Boolean);
-    const r = addCategory(createForm.name, createForm.description, createForm.defaultPriority, keywords, createForm.rekognitionLabel.trim() || createForm.name.trim());
+    const r = await addCategory(createForm.name, createForm.description, createForm.defaultPriority, keywords, createForm.rekognitionLabel.trim() || createForm.name.trim());
     if (r.success) {
       showAlert(`Category "${r.data.name}" created.`, 'success');
       setShowCreate(false);
@@ -76,14 +76,14 @@ const Categories = () => {
     setEditError('');
   };
 
-  const handleEdit = (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.name.trim()) {
       setEditError('Category name is required.');
       return;
     }
     const keywords = editForm.aiKeywords.split(',').map(k => k.trim()).filter(Boolean);
-    const r = updateCategory(editTarget.id, {
+    const r = await updateCategory(editTarget.id, {
       name: editForm.name,
       description: editForm.description,
       defaultPriority: editForm.defaultPriority,
@@ -116,9 +116,9 @@ const Categories = () => {
     }
   };
 
-  const executeDelete = () => {
+  const executeDelete = async () => {
     if (!confirmDelete || confirmDelete.blocked) return;
-    const r = deleteCategory(confirmDelete.category.id);
+    const r = await deleteCategory(confirmDelete.category.id);
     if (r.success) {
       showAlert(`Category "${confirmDelete.category.name}" deleted.`, 'success');
       setConfirmDelete(null);
@@ -132,14 +132,14 @@ const Categories = () => {
     setThresholdEdits(p => ({ ...p, [key]: value }));
   };
 
-  const saveThreshold = (key) => {
+  const saveThreshold = async (key) => {
     const val = parseFloat(thresholdEdits[key]);
     if (isNaN(val) || val < 0 || val > 1) {
       showAlert(`${key} must be a float between 0 and 1.`, 'error');
       return;
     }
     setSavingThreshold(key);
-    const r = updateSystemSetting(key, val);
+    const r = await updateSystemSetting(key, val);
     if (r.success) {
       showAlert(`${key} updated to ${val}.`, 'success');
       setThresholdEdits(p => { const n = { ...p }; delete n[key]; return n; });

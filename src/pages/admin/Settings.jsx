@@ -48,7 +48,7 @@ const Settings = () => {
     setSlaEdits(p => ({ ...p, [key]: value }));
   };
 
-  const saveSetting = (key) => {
+  const saveSetting = async (key) => {
     const raw = edits[key];
     if (raw === undefined || raw === '') return;
     const orig = settings.find(s => s.key === key);
@@ -62,7 +62,7 @@ const Settings = () => {
       if (key.startsWith('AI_') && parsed > 1) { showAlert(`${key} must be ≤ 1.0 for AI thresholds.`, 'error'); return; }
     }
     setSaving(key);
-    const r = updateSystemSetting(key, parsed);
+    const r = await updateSystemSetting(key, parsed);
     if (r.success) {
       showAlert(`${key} updated to ${parsed}.`, 'success');
       setEdits(p => { const n = { ...p }; delete n[key]; return n; });
@@ -73,14 +73,14 @@ const Settings = () => {
     setSaving(null);
   };
 
-  const saveSlaField = (priority, field) => {
+  const saveSlaField = async (priority, field) => {
     const key = `${priority}.${field}`;
     const raw = slaEdits[key];
     if (raw === undefined || raw === '') return;
     const val = parseInt(raw, 10);
     if (isNaN(val) || val < 0) { showAlert(`${priority} ${field} must be a positive integer.`, 'error'); return; }
     setSaving(key);
-    const r = updateSlaConfig(priority, { [field]: val });
+    const r = await updateSlaConfig(priority, { [field]: val });
     if (r.success) {
       showAlert(`${priority} ${field} updated to ${val}.`, 'success');
       setSlaEdits(p => { const n = { ...p }; delete n[key]; return n; });

@@ -47,8 +47,8 @@ const Property = ({ refreshData, pmName }) => {
    * Handles Result type (success/error) with pattern matching
    * On success: Clear form, show feedback, sync state. On error: Display error message.
    */
-  const handleAddProperty = () => {
-    const result = addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName);
+  const handleAddProperty = async () => {
+    const result = await addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName);
     if (result.error) {
       setPropMsg({ text: result.error, type: 'error' });
     } else {
@@ -63,8 +63,8 @@ const Property = ({ refreshData, pmName }) => {
    * Orchestrates: Validate -> Create -> Display feedback -> Clear -> Refresh
    * Implements atomic transaction pattern: all-or-nothing operation
    */
-  const handleAddUnit = () => {
-    const result = addUnit(unitForm.propertyId, unitForm.unitNumber, unitForm.floor);
+  const handleAddUnit = async () => {
+    const result = await addUnit(unitForm.propertyId, unitForm.unitNumber, unitForm.floor);
     if (result.error) {
       setUnitMsg({ text: result.error, type: 'error' });
     } else {
@@ -79,8 +79,8 @@ const Property = ({ refreshData, pmName }) => {
    * Updates unit occupancy state through data layer mutation
    * Implements cascading state update: form → store → local state
    */
-  const handleAssignTenant = () => {
-    const result = assignTenantToUnit(tenantAssign.unitId, tenantAssign.tenantName);
+  const handleAssignTenant = async () => {
+    const result = await assignTenantToUnit(tenantAssign.unitId, tenantAssign.tenantName);
     if (result.error) {
       setAssignMsg({ text: result.error, type: 'error' });
     } else {

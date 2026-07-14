@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter } from 'react-icons/fa';
 import { getTickets, getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
+import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
@@ -111,35 +112,11 @@ const Tickets = () => {
 
   const getSlaStatus = (ticket) => {
     if (['Closed', 'Completed (Provider)'].includes(ticket.status)) {
-      return { label: '\u2713 Resolved', pct: 100, colour: 'var(--teal)', state: 'resolved' };
+      return { label: '\u2713 Resolved', pctElapsed: 100, color: 'var(--teal)', state: 'resolved' };
     }
-    if (!ticket.slaResolutionBefore) {
-      return { label: '\u2014', pct: 0, colour: 'var(--text-dim)', state: 'unknown' };
-    }
-    const createdMs = new Date(ticket.createdAt).getTime();
-    const now = Date.now();
-    const total = ticket.slaResolutionBefore - createdMs;
-    const elapsed = now - createdMs;
-    const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
-    const remaining = ticket.slaResolutionBefore - now;
-
-    if (remaining <= 0) {
-      return { label: '\u26A0 BREACHED', pct: 100, colour: 'var(--danger)', state: 'breached' };
-    }
-    if (pct >= 75) {
-      const hrs = Math.floor(remaining / 3600000);
-      const mins = Math.floor((remaining % 3600000) / 60000);
-      return {
-        label: hrs > 0 ? `${hrs}h ${mins}m left` : `${mins}m left`,
-        pct, colour: 'var(--amber)', state: 'warning'
-      };
-    }
-    const days = Math.floor(remaining / 86400000);
-    const hrs = Math.floor((remaining % 86400000) / 3600000);
-    return {
-      label: days > 0 ? `${days}d ${hrs}h left` : `${Math.floor(remaining / 3600000)}h left`,
-      pct, colour: 'var(--teal)', state: 'ontrack'
-    };
+    const s = computeSlaStatus(ticket);
+    if (!s) return { label: '\u2014', pctElapsed: 0, color: 'var(--text-dim)', state: 'unknown' };
+    return { label: s.label, pctElapsed: s.pctElapsed, color: s.color, state: s.state };
   };
 
   const filtered = tickets.filter(t => {
@@ -182,32 +159,32 @@ const Tickets = () => {
   const uniqueStatuses = [...new Set(tickets.map(t => t.status))].sort();
   const uniqueCategories = [...new Set(tickets.filter(t => t.category).map(t => t.category))].sort();
 
-  const handleTransition = (ticketId, newStatus) => {
-    const r = updateTicketStatus(ticketId, newStatus);
+  const handleTransition = async (ticketId, newStatus) => {
+    const r = await updateTicketStatus(ticketId, newStatus);
     if (r.success) { showAlert(`Ticket ${ticketId} → ${newStatus}`, 'success'); }
     else showAlert(r.error, 'error');
   };
 
-  const handleReassign = (e) => {
+  const handleReassign = async (e) => {
     e.preventDefault();
     if (!reassignProvider) return;
     const prov = providers.find(p => p.name === reassignProvider);
-    const r = assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
+    const r = await assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
     if (r.success) { showAlert(`Reassigned ${showReassign.ticketId}`, 'success'); setShowReassign(null); }
     else showAlert(r.error, 'error');
   };
 
-  const handleReopen = (e) => {
+  const handleReopen = async (e) => {
     e.preventDefault();
     if (reopenText.trim().length < 10) { setReopenError('Justification ≥10 chars (REQ-041)'); return; }
-    const r = reopenTicket(showReopen.ticketId, reopenText.trim());
+    const r = await reopenTicket(showReopen.ticketId, reopenText.trim());
     if (r.success) { showAlert(`Ticket reopened.`, 'success'); setShowReopen(null); }
     else setReopenError(r.error);
   };
 
-  const handleCategoryOverride = (e) => {
+  const handleCategoryOverride = async (e) => {
     e.preventDefault();
-    const r = updateTicketCategory(showCategoryModal.ticketId, categoryValue);
+    const r = await updateTicketCategory(showCategoryModal.ticketId, categoryValue);
     if (r.success) { showAlert(`Category override saved (BR-006)`, 'success'); setShowCategoryModal(null); }
     else showAlert(r.error, 'error');
   };
@@ -281,7 +258,7 @@ const Tickets = () => {
                       <tr style={{
                         backgroundColor: sla?.state === 'breached' ? 'rgba(220,60,60,0.04)' : sla?.state === 'warning' ? 'rgba(240,180,50,0.04)' : '',
                         borderLeft: sla?.state === 'breached' ? '3px solid var(--danger)' : sla?.state === 'warning' ? '3px solid var(--amber)' : '3px solid transparent',
-                        borderRight: sla?.state === 'breached' ? `3px solid ${sla.colour}` : sla?.state === 'warning' ? `3px solid ${sla.colour}` : '3px solid transparent',
+                        borderRight: sla?.state === 'breached' ? `3px solid ${sla.color}` : sla?.state === 'warning' ? `3px solid ${sla.color}` : '3px solid transparent',
                       }}>
                         <td className="cell-mono">{t.ticketId}</td>
                         <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>{t.title}</td>
@@ -295,9 +272,9 @@ const Tickets = () => {
                         <td><div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>{t.conflictDetected && <span className="badge badge-danger" style={{ fontSize: 8 }}>CONFLICT</span>}{t.manualReviewRequired && <span className="badge badge-warning" style={{ fontSize: 8 }}>REVIEW</span>}{!t.conflictDetected && !t.manualReviewRequired && <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>—</span>}</div></td>
                         <td style={{ minWidth: 110 }}>
                           <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', marginBottom: 4, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${sla.pct}%`, background: sla.colour, transition: 'width 0.3s' }} />
+                            <div style={{ height: '100%', width: `${sla.pctElapsed}%`, background: sla.color, transition: 'width 0.3s' }} />
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: sla.colour }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: sla.color }}>
                             {sla.label}
                           </div>
                         </td>

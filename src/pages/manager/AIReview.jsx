@@ -33,9 +33,9 @@ const AIReview = () => {
     return true;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const handleCategoryOverride = (e) => {
+  const handleCategoryOverride = async (e) => {
     e.preventDefault();
-    const r = updateTicketCategory(showCategoryModal.ticketId, categoryValue);
+    const r = await updateTicketCategory(showCategoryModal.ticketId, categoryValue);
     if (r.success) { showAlert(`Category override saved (BR-006)`, 'success'); setShowCategoryModal(null); }
     else showAlert(r.error, 'error');
   };

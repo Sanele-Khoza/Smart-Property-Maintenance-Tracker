@@ -39,3 +39,6 @@ docker-compose.override.yml
 
 ### Postman ###
 backend/postman_collection.json
+
+build/
+dist/

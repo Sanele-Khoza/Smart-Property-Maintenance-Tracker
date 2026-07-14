@@ -13,17 +13,12 @@ const ForgotPasswordPage = ({ onBack }) => {
   const handleRequest = async (e) => {
     e.preventDefault();
     setMsg({ text: '', type: '' });
-    const result = requestPasswordReset(email);
-    if (result.resetToken) {
-      setResetToken(result.resetToken);
-    }
+    const result = await requestPasswordReset(email);
     setMsg({ text: result.message, type: 'info' });
-    if (result.resetToken) {
-      setStep('reset');
-    }
+    setStep('reset');
   };
 
-  const handleReset = (e) => {
+  const handleReset = async (e) => {
     e.preventDefault();
     setMsg({ text: '', type: '' });
 
@@ -36,7 +31,7 @@ const ForgotPasswordPage = ({ onBack }) => {
       return;
     }
 
-    const result = resetPassword(resetToken, newPassword);
+    const result = await resetPassword(resetToken, newPassword);
     if (result.success) {
       setMsg({ text: 'Password reset successful! Redirecting to login...', type: 'success' });
       setTimeout(() => onBack(), 2000);

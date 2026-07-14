@@ -25,8 +25,8 @@ const Profile = () => {
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
-  const handleSave = () => {
-    const r = updateUser(user.id, {
+  const handleSave = async () => {
+    const r = await updateUser(user.id, {
       name: form.name.trim(),
       surname: form.surname.trim(),
       email: form.email.trim(),
@@ -43,14 +43,14 @@ const Profile = () => {
     }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
     if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
     if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
     const users = getUsers();
     const u = users.find(x => x.id === user.id);
     if (!u || u.password !== passForm.current) { showMsg('Current password is incorrect.', 'error'); return; }
-    const r = updateUser(user.id, { password: passForm.newPass });
+    const r = await updateUser(user.id, { password: passForm.newPass });
     if (r.success) {
       showMsg('Password changed successfully.', 'success');
       setPassForm({ current: '', newPass: '', confirm: '' });

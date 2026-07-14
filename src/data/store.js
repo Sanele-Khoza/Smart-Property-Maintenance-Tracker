@@ -10,7 +10,7 @@ export {
   updateTicketStatus, assignTicket, declineTicketAssignment, reopenTicket,
   updateTicketCategory, updateTicketRating, submitJobCompletion,
   getTicketsByStatus, getOpenTickets, getTicketsByProvider,
-  getStats, TICKET_TRANSITIONS, PRIORITY_ORDER,
+  getStats, refreshTickets, TICKET_TRANSITIONS, PRIORITY_ORDER,
 } from './ticketStore';
 
 export {
@@ -18,7 +18,7 @@ export {
 } from './technicianStore';
 
 export {
-  runAiPipeline, simulateAiClassification, addInferenceLog, getInferenceLogs,
+  addInferenceLog, getInferenceLogs,
 } from './aiPipeline';
 
 export {

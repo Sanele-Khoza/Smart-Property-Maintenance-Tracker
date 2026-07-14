@@ -111,10 +111,10 @@ const Roles = () => {
     setChangingRoles(p => ({ ...p, [userId]: newRole }));
   };
 
-  const confirmRoleChange = (userId) => {
+  const confirmRoleChange = async (userId) => {
     const newRole = changingRoles[userId];
     if (!newRole) return;
-    const result = updateUser(userId, { role: newRole });
+    const result = await updateUser(userId, { role: newRole });
     if (result.success) {
       setMessage({ type: 'success', text: `${result.data.name} ${result.data.surname} role updated to ${ROLE_LABELS[newRole]}.` });
       setChangingRoles(p => { const n = { ...p }; delete n[userId]; return n; });

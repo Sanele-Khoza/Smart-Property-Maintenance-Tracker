@@ -13,13 +13,15 @@ const VerifyEmailPage = ({ token, onVerified }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const result = verifyEmail(token);
-    if (result.success) {
-      setStatus('success');
-    } else {
-      setError(result.error);
-      setStatus('error');
-    }
+    (async () => {
+      const result = await verifyEmail(token);
+      if (result.success) {
+        setStatus('success');
+      } else {
+        setError(result.error);
+        setStatus('error');
+      }
+    })();
   }, [token]);
 
   return (

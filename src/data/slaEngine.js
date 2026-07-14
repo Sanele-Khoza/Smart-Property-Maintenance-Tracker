@@ -1,90 +1,85 @@
-/**
- * SLA Management Engine — MOD-005 (SDD §4)
- * Simulates the server-side node-cron job described in the SDD.
- * Production: this runs as a background cron thread on the Node.js API server,
- * polling every SLA_POLL_INTERVAL_MINUTES (default: 5 min) via node-cron.
- * The window CustomEvents simulate SNS/SES notifications to PM and SysAdmin.
- */
-import { getTickets, updateTicketStatus, getSystemSettings, getTechnicians, assignTicket, addNotification, getSlaConfig } from './store';
-import { getStore, saveToLocalStorage } from './storeCore';
+import { getTickets, refreshTickets } from './ticketStore';
 
 export let pollingIntervalId = null;
 
-export function runSlaCheck() {
-  const store = getStore();
+export function getSlaStatus(ticket) {
+  if (!ticket?.slaResolutionBefore && !ticket?.slaResponseBefore) return null;
+
   const now = Date.now();
+  const deadline = ticket.slaResolutionBefore || ticket.slaResponseBefore;
+  const remaining = deadline - now;
+
+  if (!ticket.createdAt) {
+    return {
+      state: remaining <= 0 ? 'breached' : 'ok',
+      pctElapsed: remaining <= 0 ? 100 : 0,
+      label: remaining <= 0 ? 'BREACHED' : '',
+      color: remaining <= 0 ? 'var(--danger)' : 'var(--teal)',
+      remaining,
+    };
+  }
+
+  const createdMs = new Date(ticket.createdAt).getTime();
+  const totalWindow = deadline - createdMs;
+  const pctElapsed = totalWindow > 0
+    ? Math.min(100, Math.max(0, ((now - createdMs) / totalWindow) * 100))
+    : 0;
+
+  if (remaining <= 0) {
+    return { state: 'breached', pctElapsed: 100, label: 'BREACHED', color: 'var(--danger)', remaining: 0 };
+  }
+
+  const isWarning = pctElapsed >= 80;
+  const hrs = Math.floor(remaining / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+  return {
+    state: isWarning ? 'warning' : 'ok',
+    pctElapsed,
+    label: isWarning ? timeStr : timeStr,
+    color: isWarning ? 'var(--amber)' : 'var(--teal)',
+    remaining,
+  };
+}
+
+export function runSlaCheck() {
   const tickets = getTickets();
-  const slaConfig = getSlaConfig();
-  const results = { warned: [], escalated: [], autoAssigned: [] };
+  const result = { warned: [], escalated: [] };
 
   for (const ticket of tickets) {
     if (['Closed', 'Completed (Provider)', 'Escalated'].includes(ticket.status)) continue;
 
-    const resolutionDeadline = ticket.slaResolutionBefore;
-    const sla = slaConfig.find(s => s.priority === ticket.priority);
-    const warningPct = sla?.warningPercent || 0.80;
+    const status = getSlaStatus(ticket);
+    if (!status) continue;
 
-    // --- ESCALATION check (resolution breach) ---
-    if (now > resolutionDeadline && ticket.status !== 'Escalated') {
-      updateTicketStatus(ticket.ticketId, 'Escalated',
-        'SLA resolution deadline breached — auto-escalated by SLA Engine (MOD-005)');
-      addNotification('admin@spmt.com', 'email',
-        `SLA BREACH: ${ticket.ticketId} (${ticket.priority}) — resolution deadline exceeded. Auto-escalated.`, true);
+    if (status.state === 'breached') {
       window.dispatchEvent(new CustomEvent('spmt:sla-breach', {
-        detail: { ticketId: ticket.ticketId, priority: ticket.priority }
+        detail: { ticketId: ticket.ticketId, priority: ticket.priority },
       }));
-      results.escalated.push(ticket.ticketId);
-    }
-
-    // --- WARNING check (approaching breach) ---
-    const createdMs = new Date(ticket.createdAt).getTime();
-    const totalWindow = resolutionDeadline - createdMs;
-    const elapsed = now - createdMs;
-    const pctElapsed = totalWindow > 0 ? elapsed / totalWindow : 1;
-
-    if (pctElapsed >= warningPct && pctElapsed < 1 && !ticket.slaWarningSent) {
-      const t = store.tickets.find(tk => tk.ticketId === ticket.ticketId);
-      if (t) { t.slaWarningSent = true; saveToLocalStorage(); }
+      result.escalated.push(ticket.ticketId);
+    } else if (status.state === 'warning') {
       window.dispatchEvent(new CustomEvent('spmt:sla-warning', {
-        detail: { ticketId: ticket.ticketId, pctElapsed: Math.round(pctElapsed * 100) }
+        detail: { ticketId: ticket.ticketId, pctElapsed: Math.round(status.pctElapsed) },
       }));
-      results.warned.push(ticket.ticketId);
-    }
-
-    // --- EMERGENCY AUTO-ASSIGNMENT check (BR-003) ---
-    const emergencyAutoMinutes =
-      getSystemSettings().find(s => s.key === 'EMERGENCY_AUTOASSIGN_MINUTES')?.value || 20;
-    if (ticket.priority === 'EMERGENCY' && ticket.status === 'Open' && !ticket.assignedTo) {
-      const minutesSinceCreation = (now - createdMs) / 60000;
-      if (minutesSinceCreation >= emergencyAutoMinutes) {
-        const available = getTechnicians().filter(t =>
-          t.availabilityStatus === 'AVAILABLE' &&
-          (t.specialisations || []).includes('Emergency')
-        );
-        const fallback = getTechnicians().filter(t =>
-          t.availabilityStatus === 'AVAILABLE'
-        );
-        const provider = available[0] || fallback[0];
-        if (provider) {
-          assignTicket(ticket.ticketId, provider.name, provider.id);
-          addNotification(provider.email || 'provider@spmt.com', 'push',
-            `EMERGENCY AUTO-ASSIGN: ${ticket.ticketId} assigned to you. Immediate response required.`, true);
-          window.dispatchEvent(new CustomEvent('spmt:emergency-autoassigned', {
-            detail: { ticketId: ticket.ticketId, providerId: provider.id }
-          }));
-          results.autoAssigned.push(ticket.ticketId);
-        }
-      }
+      result.warned.push(ticket.ticketId);
     }
   }
 
-  return results;
+  return result;
 }
 
-export function startSlaPolling() {
+export async function startSlaPolling() {
   if (pollingIntervalId) return;
+
+  try { await refreshTickets(); } catch {}
   runSlaCheck();
-  pollingIntervalId = setInterval(runSlaCheck, 5 * 60 * 1000);
+
+  pollingIntervalId = setInterval(async () => {
+    try { await refreshTickets(); } catch {}
+    runSlaCheck();
+  }, 5 * 60 * 1000);
 }
 
 export function stopSlaPolling() {

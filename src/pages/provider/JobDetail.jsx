@@ -55,8 +55,8 @@ const JobDetail = ({ ticketId, onBack }) => {
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 3000); };
   const refresh = () => setTickets(getTickets());
 
-  const handleStatus = (newStatus) => {
-    const r = updateTicketStatus(ticketId, newStatus, comment.trim() || undefined);
+  const handleStatus = async (newStatus) => {
+    const r = await updateTicketStatus(ticketId, newStatus, comment.trim() || undefined);
     if (r.success) { refresh(); showMsg(`Status updated to ${newStatus}`, 'success'); setComment(''); }
     else { showMsg(r.error, 'error'); }
   };
@@ -194,8 +194,8 @@ const JobDetail = ({ ticketId, onBack }) => {
                     <label className="form-label" htmlFor="invoiceText">Invoice Summary (optional)</label>
                     <textarea id="invoiceText" className="form-textarea" style={{ minHeight: 70 }} placeholder="e.g. Labour: 2hrs @ R350/hr = R700. Parts: pipe fitting R120. Total: R820." value={invoiceText} onChange={e => setInvoiceText(e.target.value)} />
                   </div>
-                  <button className="btn btn-primary" onClick={() => {
-                    const r = submitJobCompletion(ticketId, invoiceText, completionPhotos, providerName);
+                  <button className="btn btn-primary" onClick={async () => {
+                    const r = await submitJobCompletion(ticketId, invoiceText, completionPhotos, providerName);
                     if (r.success) {
                       setCompletionMsg({ text: 'Job marked complete successfully.', type: 'success' });
                       setShowComplete(false);

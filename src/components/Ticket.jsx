@@ -3,7 +3,7 @@ import { FaBuilding, FaBox, FaBolt, FaCalendarAlt, FaUser, FaTicketAlt, FaCamera
 import Alert from './common/Alert';
 import EmptyState from './common/EmptyState';
 import StatusBadge from './common/StatusBadge';
-import { createTicket, getUnits, getTickets, simulateAiClassification, runAiPipeline, addInferenceLog, getCategories } from '../data/store';
+import { createTicket, getUnits, getTickets } from '../data/store';
 import { getSession } from '../data/authStore';
 
 const Ticket = ({ currentUser, refreshData }) => {
@@ -52,21 +52,12 @@ const Ticket = ({ currentUser, refreshData }) => {
     setImagePreviews(newPreviews);
   };
 
-  const doSubmit = (forceSubmit = false) => {
-    const categories = getCategories();
-    const aiRaw = simulateAiClassification(form.description, images.length > 0, categories);
-    const aiFields = runAiPipeline({
-      textResult: aiRaw.textResult,
-      imageResult: aiRaw.imageResult,
-      textConfidence: aiRaw.textConfidence,
-      imageConfidence: aiRaw.imageConfidence,
-    });
-
+  const doSubmit = async (forceSubmit = false) => {
     const session = getSession();
     const userId = session?.id || null;
     const displayName = session ? `${session.name} ${session.surname}` : currentUser;
 
-    const result = createTicket(
+    const result = await createTicket(
       form.unitId,
       form.title,
       form.description,
@@ -74,7 +65,7 @@ const Ticket = ({ currentUser, refreshData }) => {
       images,
       userId,
       displayName,
-      aiFields,
+      null,
       forceSubmit
     );
 
@@ -87,23 +78,7 @@ const Ticket = ({ currentUser, refreshData }) => {
     if (result.error) {
       setMsg({ text: result.error, type: 'error' });
     } else {
-      const id = result.data.ticketId;
-      addInferenceLog(id, 'Comprehend', 'text', aiRaw.textResult, aiRaw.textConfidence, aiFields.conflictDetected);
-      if (images.length > 0) {
-        addInferenceLog(id, 'Rekognition', 'image', aiRaw.imageResult, aiRaw.imageConfidence, aiFields.conflictDetected);
-      }
-
-      let msgText;
-      if (aiFields.manualReviewRequired) {
-        msgText = `Ticket ${id} submitted — flagged for Manual Review (AI confidence below threshold).`;
-      } else if (aiFields.conflictDetected) {
-        msgText = `Ticket ${id} submitted — AI conflict detected: text=${aiRaw.textResult} vs image=${aiRaw.imageResult}. Property Manager will review.`;
-      } else if (aiFields.overridePriority === 'EMERGENCY') {
-        msgText = `⚠ EMERGENCY ticket ${id} submitted — AI detected emergency indicators. Priority escalated automatically.`;
-      } else {
-        msgText = `Ticket ${id} submitted — AI classified as ${aiFields.suggestedCategory} (confidence: ${(aiFields.combinedConfidence * 100).toFixed(0)}%).`;
-      }
-      setMsg({ text: msgText, type: 'success' });
+      setMsg({ text: `Ticket ${result.data.ticketId} submitted successfully.`, type: 'success' });
       setForm({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
       setImages([]);
       setImagePreviews([]);
@@ -144,7 +119,7 @@ const Ticket = ({ currentUser, refreshData }) => {
             <div style={{ background: 'rgba(240,165,0,0.10)', border: '1px solid var(--amber)', borderRadius: 6, padding: 12, marginBottom: 12 }}>
               <div style={{ fontSize: 12, marginBottom: 8 }}><FaExclamationTriangle style={{ color: 'var(--amber)', marginRight: 4 }} />{duplicateWarning.message}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => { setDuplicateWarning(null); doSubmit(true); }}>Submit Anyway</button>
+                <button className="btn btn-primary btn-sm" onClick={async () => { setDuplicateWarning(null); await doSubmit(true); }}>Submit Anyway</button>
                 <button className="btn btn-secondary btn-sm" onClick={() => setDuplicateWarning(null)}>Cancel</button>
               </div>
             </div>
@@ -163,7 +138,7 @@ const Ticket = ({ currentUser, refreshData }) => {
                 </tbody>
               </table>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary" onClick={() => doSubmit(false)} disabled={!canProceed}>Confirm & Submit</button>
+                <button className="btn btn-primary" onClick={async () => await doSubmit(false)} disabled={!canProceed}>Confirm & Submit</button>
                 <button className="btn btn-secondary" onClick={() => setConfirmStep(false)}>Edit</button>
               </div>
             </div>

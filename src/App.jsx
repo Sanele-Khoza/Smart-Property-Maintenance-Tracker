@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getSession, logoutUser } from './data/authStore';
+import { getSession, logoutUser, refreshUsers } from './data/authStore';
 import { getTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
+import { setLogoutHandler } from './api/client';
 import Navbar from './components/common/Navbar';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
@@ -46,11 +47,18 @@ function App() {
   const [verificationToken, setVerificationToken] = useState('');
 
   useEffect(() => {
+    setLogoutHandler(() => {
+      stopSlaPolling();
+      setUser(null);
+      setPage('login');
+    });
+
     const session = getSession();
     if (session) {
       setUser(session);
       setPage('app');
       startSlaPolling();
+      refreshUsers();
     } else {
       setPage('login');
     }
@@ -74,9 +82,9 @@ function App() {
     setPage('app');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     stopSlaPolling();
-    logoutUser();
+    await logoutUser();
     setUser(null);
     setPage('login');
   };

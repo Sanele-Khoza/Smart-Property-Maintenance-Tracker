@@ -50,24 +50,24 @@ const Units = () => {
   ];
 
   const openCreate = () => { setCreateForm({ propertyId: properties[0]?.propertyId || '', unitNumber: '', floor: '' }); setCreateError(''); setShowCreate(true); };
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.propertyId || !createForm.unitNumber.trim()) { setCreateError('Property and unit number required.'); return; }
-    const r = addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
+    const r = await addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
     if (r.success) { showAlert(`Unit ${r.data.unitNumber} created.`, 'success'); setShowCreate(false); refresh(); } else setCreateError(r.error);
   };
   const openEdit = (u) => { setEditTarget(u); setEditForm({ unitNumber: u.unitNumber || '', floor: u.floor?.toString() || '' }); setEditError(''); };
-  const handleEdit = (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.unitNumber.trim()) { setEditError('Unit number required.'); return; }
-    const r = updateUnit(editTarget.unitId, editForm);
+    const r = await updateUnit(editTarget.unitId, editForm);
     if (r.success) { showAlert('Unit updated.', 'success'); setEditTarget(null); refresh(); } else setEditError(r.error);
   };
   const openAssign = (u) => { setAssignTarget(u); setAssignName(''); setAssignError(''); };
-  const handleAssign = (e) => {
+  const handleAssign = async (e) => {
     e.preventDefault();
     if (!assignName.trim()) { setAssignError('Tenant name required.'); return; }
-    const r = assignTenantToUnit(assignTarget.unitId, assignName.trim());
+    const r = await assignTenantToUnit(assignTarget.unitId, assignName.trim());
     if (r.success) { showAlert(`${assignName.trim()} assigned.`, 'success'); setAssignTarget(null); refresh(); } else setAssignError(r.error + (r.statusCode === 409 ? ' (409 Conflict)' : ''));
   };
   const promptVacate = (u) => { setConfirmAction({ type: 'vacate', unit: u, message: `Vacate ${u.unitNumber}? ${u.tenantName} will be removed.` }); };
@@ -75,10 +75,10 @@ const Units = () => {
     const tc = ticketCountByUnit[u.unitId] || 0;
     setConfirmAction({ type: 'delete_unit', unit: u, message: `Delete ${u.unitNumber}?${tc > 0 ? ` ${tc} ticket(s) will also be removed.` : ''}` });
   };
-  const executeConfirm = () => {
+  const executeConfirm = async () => {
     const a = confirmAction; if (!a) return;
-    if (a.type === 'vacate') { vacateUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} vacated.`, 'success'); refresh(); }
-    else if (a.type === 'delete_unit') { deleteUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} deleted.`, 'success'); refresh(); }
+    if (a.type === 'vacate') { await vacateUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} vacated.`, 'success'); refresh(); }
+    else if (a.type === 'delete_unit') { await deleteUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} deleted.`, 'success'); refresh(); }
     setConfirmAction(null);
   };
 

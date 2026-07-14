@@ -10,11 +10,11 @@ const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    const result = loginUser(form.email, form.password);
+    const result = await loginUser(form.email, form.password);
     if (result.success) {
       onLogin(result.data);
     } else {

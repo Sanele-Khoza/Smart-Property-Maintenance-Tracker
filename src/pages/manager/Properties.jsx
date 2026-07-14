@@ -55,19 +55,19 @@ const Properties = () => {
   ];
 
   const openCreate = () => { setCreateForm({ ...EMPTY_FORM, managerName: pmName }); setCreateError(''); setShowCreate(true); };
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim() || !createForm.address.trim()) { setCreateError('Name and address are required.'); return; }
-    const r = addProperty(createForm.name, createForm.address, createForm.propertyType, createForm.managerName);
+    const r = await addProperty(createForm.name, createForm.address, createForm.propertyType, createForm.managerName);
     if (r.success) { showAlert(`"${r.data.name}" created.`, 'success'); setShowCreate(false); refresh(); }
     else { setCreateError(r.error); }
   };
 
   const openEdit = (p) => { setEditTarget(p); setEditForm({ name: p.name || '', address: p.address || '', propertyType: p.propertyType || 'RESIDENTIAL', managerName: p.managerName || '' }); setEditError(''); };
-  const handleEdit = (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.name.trim() || !editForm.address.trim()) { setEditError('Name and address are required.'); return; }
-    const r = updateProperty(editTarget.propertyId, editForm);
+    const r = await updateProperty(editTarget.propertyId, editForm);
     if (r.success) { showAlert('Property updated.', 'success'); setEditTarget(null); refresh(); }
     else { setEditError(r.error); }
   };
@@ -83,11 +83,11 @@ const Properties = () => {
     if (uc > 0) { setConfirmAction({ type: 'delete_blocked', property: p, message: `Cannot delete "${p.name}" — ${uc} unit(s) exist.` }); return; }
     setConfirmAction({ type: 'delete', property: p, message: `Permanently delete "${p.name}"?` });
   };
-  const executeConfirm = () => {
+  const executeConfirm = async () => {
     const a = confirmAction; if (!a) return;
-    if (a.type === 'deactivate') { updatePropertyStatus(a.property.propertyId, 'INACTIVE'); showAlert(`"${a.property.name}" deactivated.`, 'success'); refresh(); }
-    else if (a.type === 'reactivate') { updatePropertyStatus(a.property.propertyId, 'ACTIVE'); showAlert(`"${a.property.name}" reactivated.`, 'success'); refresh(); }
-    else if (a.type === 'delete') { deleteProperty(a.property.propertyId); showAlert(`"${a.property.name}" deleted.`, 'success'); refresh(); }
+    if (a.type === 'deactivate') { await updatePropertyStatus(a.property.propertyId, 'INACTIVE'); showAlert(`"${a.property.name}" deactivated.`, 'success'); refresh(); }
+    else if (a.type === 'reactivate') { await updatePropertyStatus(a.property.propertyId, 'ACTIVE'); showAlert(`"${a.property.name}" reactivated.`, 'success'); refresh(); }
+    else if (a.type === 'delete') { await deleteProperty(a.property.propertyId); showAlert(`"${a.property.name}" deleted.`, 'success'); refresh(); }
     setConfirmAction(null);
   };
 

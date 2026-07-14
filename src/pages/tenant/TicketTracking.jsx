@@ -23,9 +23,9 @@ const TicketTracking = () => {
 
   const getAuditForTicket = (ticketId) => auditLogs.filter(a => a.ticketId === ticketId);
 
-  const handleRate = (ticketId) => {
+  const handleRate = async (ticketId) => {
     if (rating.stars < 1) { setMsg({ text: 'Please select a rating.', type: 'error' }); return; }
-    const r = updateTicketRating(ticketId, rating.stars, rating.comment);
+    const r = await updateTicketRating(ticketId, rating.stars, rating.comment);
     if (r.success) {
       setMsg({ text: `Rating submitted: ${rating.stars}/5`, type: 'success' });
       setTickets(getTickets());

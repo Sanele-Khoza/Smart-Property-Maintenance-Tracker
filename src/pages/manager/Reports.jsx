@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FaFileAlt, FaChartBar, FaChartLine, FaChartPie, FaDownload, FaSearch, FaFilter, FaBuilding, FaWrench, FaClock, FaBrain, FaTimes } from 'react-icons/fa';
 import { getTickets, getProperties, getTechnicians } from '../../data/store';
+import { getSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 
 const TABS = ['Ticket Volume', 'Resolution Time', 'SLA Compliance', 'Provider Performance', 'AI Performance'];
@@ -16,17 +17,12 @@ const Reports = () => {
   const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)), [allTickets, propNames]);
   const [activeTab, setActiveTab] = useState('Ticket Volume');
 
-  const now = Date.now();
   const dayMs = 86400000;
 
-  const getSlaStatus = (t) => {
-    if (!t.slaResolutionBefore) return null;
-    const remaining = t.slaResolutionBefore - now;
-    if (remaining <= 0) return 'breached';
-    const total = t.slaResolutionBefore - (t.slaResponseBefore || (t.slaResolutionBefore - 24 * 3600000));
-    if (total <= 0) return 'ontrack';
-    if (((total - remaining) / total) * 100 >= 75) return 'warning';
-    return 'ontrack';
+  const getSlaStatusForReport = (t) => {
+    const s = getSlaStatus(t);
+    if (!s) return null;
+    return s.state === 'breached' ? 'breached' : s.state === 'warning' ? 'warning' : 'ontrack';
   };
 
   const TabContent = () => {
@@ -78,8 +74,8 @@ const Reports = () => {
             const stats = {};
             ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].forEach(p => {
               const pt = withSla.filter(t => t.priority === p);
-              const breached = pt.filter(t => getSlaStatus(t) === 'breached').length;
-              const warning = pt.filter(t => getSlaStatus(t) === 'warning').length;
+              const breached = pt.filter(t => getSlaStatusForReport(t) === 'breached').length;
+              const warning = pt.filter(t => getSlaStatusForReport(t) === 'warning').length;
               stats[p] = { total: pt.length, breached, warning, compliant: pt.length - breached - warning };
             });
             return (

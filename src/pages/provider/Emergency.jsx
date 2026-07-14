@@ -32,8 +32,8 @@ const Emergency = () => {
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
-  const handleAccept = (ticketId) => {
-    const r = updateTicketStatus(ticketId, 'In Progress');
+  const handleAccept = async (ticketId) => {
+    const r = await updateTicketStatus(ticketId, 'In Progress');
     if (r.success) { refresh(); showMsg(`${ticketId} accepted — job started`, 'success'); }
     else { showMsg(r.error, 'error'); }
   };
@@ -152,8 +152,8 @@ const Emergency = () => {
                         </button>
                       )}
                       {t.status === 'In Progress' && (
-                        <button className="btn btn-teal btn-sm" onClick={() => {
-                          const r = updateTicketStatus(t.ticketId, 'Completed (Provider)');
+                        <button className="btn btn-teal btn-sm" onClick={async () => {
+                          const r = await updateTicketStatus(t.ticketId, 'Completed (Provider)');
                           if (r.success) { refresh(); showMsg(`${t.ticketId} marked complete`, 'success'); }
                           else { showMsg(r.error, 'error'); }
                         }}>

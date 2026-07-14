@@ -23,7 +23,7 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -43,7 +43,7 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
-    const result = registerUser({
+    const result = await registerUser({
       name: form.name,
       surname: form.surname,
       age: form.age,

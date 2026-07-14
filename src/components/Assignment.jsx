@@ -49,8 +49,8 @@ const Assignment = ({ refreshData, pmName }) => {
    * Invokes mutation with Result type for error handling
    * Implements transactional semantics: form clear only on success
    */
-  const handleAssign = () => {
-    const result = assignTicket(assignForm.ticketId, assignForm.providerName, assignForm.providerId);
+  const handleAssign = async () => {
+    const result = await assignTicket(assignForm.ticketId, assignForm.providerName, assignForm.providerId);
     if (result.error) {
       setAssignMsg({ text: result.error, type: 'error' });
     } else {
@@ -65,8 +65,8 @@ const Assignment = ({ refreshData, pmName }) => {
    * Validates transition through store's state machine logic
    * Implements workflow progression control
    */
-  const handleStatusUpdate = () => {
-    const result = updateTicketStatus(statusForm.ticketId, statusForm.newStatus);
+  const handleStatusUpdate = async () => {
+    const result = await updateTicketStatus(statusForm.ticketId, statusForm.newStatus);
     if (result.error) {
       setStatusMsg({ text: result.error, type: 'error' });
     } else {

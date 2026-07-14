@@ -90,8 +90,8 @@ const Users = () => {
     setTimeout(() => setAlert({ msg: "", type: "" }), 4000);
   };
 
-  const handleApprove = (userId) => {
-    const r = approveManager(userId);
+  const handleApprove = async (userId) => {
+    const r = await approveManager(userId);
     if (r.success) {
       showAlert("Property Manager approved.", "success");
       refresh();
@@ -100,8 +100,8 @@ const Users = () => {
     }
   };
 
-  const handleDeactivate = (userId) => {
-    const r = deactivateUser(userId);
+  const handleDeactivate = async (userId) => {
+    const r = await deactivateUser(userId);
     if (r.success) {
       showAlert("Account deactivated. (REQ-008)", "success");
       refresh();
@@ -110,8 +110,8 @@ const Users = () => {
     }
   };
 
-  const handleReactivate = (userId) => {
-    const r = reactivateUser(userId);
+  const handleReactivate = async (userId) => {
+    const r = await reactivateUser(userId);
     if (r.success) {
       showAlert("Account reactivated.", "success");
       refresh();
@@ -120,8 +120,8 @@ const Users = () => {
     }
   };
 
-  const handleUnlock = (userId) => {
-    const r = unlockUserAccount(userId);
+  const handleUnlock = async (userId) => {
+    const r = await unlockUserAccount(userId);
     if (r.success) {
       showAlert("Account unlocked. (REQ-006)", "success");
       refresh();
@@ -159,7 +159,7 @@ const Users = () => {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (
       !editForm.name ||
@@ -170,7 +170,7 @@ const Users = () => {
       setEditError("Name, surname, email, and phone are required.");
       return;
     }
-    const r = updateUser(editUser.id, {
+    const r = await updateUser(editUser.id, {
       name: editForm.name.trim(),
       surname: editForm.surname.trim(),
       age: Number(editForm.age) || 0,

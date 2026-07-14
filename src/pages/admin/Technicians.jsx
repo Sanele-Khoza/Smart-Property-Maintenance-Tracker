@@ -46,8 +46,8 @@ const Technicians = () => {
 
   const getSpecialisations = (t) => t.specialisations || t.specilisations || [];
 
-  const handleStatusChange = (techId, newStatus) => {
-    const r = updateTechnicianStatus(techId, newStatus);
+  const handleStatusChange = async (techId, newStatus) => {
+    const r = await updateTechnicianStatus(techId, newStatus);
     if (r.success) {
       showAlert(`Status updated to ${newStatus} for ${r.data.name}.`, 'success');
       refresh();
@@ -56,8 +56,8 @@ const Technicians = () => {
     }
   };
 
-  const handleSuspend = (tech) => {
-    const r = updateTechnician(tech.id, { availabilityStatus: 'SUSPENDED' });
+  const handleSuspend = async (tech) => {
+    const r = await updateTechnician(tech.id, { availabilityStatus: 'SUSPENDED' });
     if (r.success) {
       showAlert(`${tech.name} has been suspended.`, 'success');
       refresh();

@@ -37,19 +37,19 @@ const Technicians = () => {
   const getSpecialisations = (t) => t.specialisations || t.specilisations || [];
   const getScore = (tech) => Math.round((tech.rating * 10 + (tech.totalJobsCompleted > 50 ? 20 : tech.totalJobsCompleted > 10 ? 10 : 0)) / 1.5);
 
-  const handleStatusChange = (techId, newStatus) => {
-    const r = updateTechnicianStatus(techId, newStatus);
+  const handleStatusChange = async (techId, newStatus) => {
+    const r = await updateTechnicianStatus(techId, newStatus);
     if (r.success) { showAlert(`Status updated to ${newStatus}.`, 'success'); refresh(); }
     else showAlert(r.error, 'error');
   };
 
-  const handleAssign = (e) => {
+  const handleAssign = async (e) => {
     e.preventDefault();
     if (!assignTarget || !assignTicketId) return;
     const ticket = tickets.find(t => t.ticketId === assignTicketId);
     const tech = technicians.find(t => t.id === assignTarget);
     if (!ticket || !tech) return;
-    const r = assignTicket(assignTicketId, tech.name, tech.id);
+    const r = await assignTicket(assignTicketId, tech.name, tech.id);
     if (r.success) { showAlert(`${ticket.ticketId} assigned to ${tech.name}.`, 'success'); setAssignTarget(null); }
     else showAlert(r.error, 'error');
   };

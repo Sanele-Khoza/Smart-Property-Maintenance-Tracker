@@ -2,6 +2,7 @@
   "name": "spmt-app",
   "version": "1.0.0",
   "private": true,
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "js-sha256": "^0.11.1",
     "jspdf": "^4.2.1",

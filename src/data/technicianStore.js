@@ -1,31 +1,46 @@
+import { api } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
 
 export const getTechnicians = () => [...getStore().technicians];
 
-export const updateTechnicianStatus = (techId, newStatus) => {
-  const store = getStore();
-  const tech = store.technicians.find(t => t.id === techId);
-  if (!tech) return { success: false, error: 'Technician not found.' };
-  tech.availabilityStatus = newStatus;
-  saveToLocalStorage();
-  return { success: true, data: { ...tech } };
+export const updateTechnicianStatus = async (techId, newStatus) => {
+  try {
+    const result = await api(`/technicians/${techId}/status`, {
+      method: 'PUT',
+      body: { status: newStatus },
+    });
+    if (result.success && result.data) {
+      const updated = result.data.technician || result.data;
+      const store = getStore();
+      const idx = store.technicians.findIndex(t => t.id === techId);
+      if (idx !== -1) store.technicians[idx] = { ...store.technicians[idx], ...updated };
+      saveToLocalStorage();
+      return { success: true, data: store.technicians[idx] || updated };
+    }
+    return { success: false, error: result.error || 'Failed to update status' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };
 
-export const updateTechnician = (techId, updates) => {
-  const store = getStore();
-  const tech = store.technicians.find(t => t.id === techId);
-  if (!tech) return { success: false, error: 'Technician not found.' };
-  if (updates.rating !== undefined) tech.rating = updates.rating;
-  if (updates.currentWorkload !== undefined) tech.currentWorkload = updates.currentWorkload;
-  if (updates.availabilityStatus) tech.availabilityStatus = updates.availabilityStatus;
-  if (updates.companyName !== undefined) tech.companyName = updates.companyName;
-  if (updates.specialisations !== undefined) tech.specialisations = updates.specialisations;
-  if (updates.email !== undefined) tech.email = updates.email;
-  if (updates.phone !== undefined) tech.phone = updates.phone;
-  if (updates.gpsLatitude !== undefined) tech.gpsLatitude = updates.gpsLatitude;
-  if (updates.gpsLongitude !== undefined) tech.gpsLongitude = updates.gpsLongitude;
-  saveToLocalStorage();
-  return { success: true, data: { ...tech } };
+export const updateTechnician = async (techId, updates) => {
+  try {
+    const result = await api(`/technicians/${techId}`, {
+      method: 'PUT',
+      body: updates,
+    });
+    if (result.success && result.data) {
+      const updated = result.data.technician || result.data;
+      const store = getStore();
+      const idx = store.technicians.findIndex(t => t.id === techId);
+      if (idx !== -1) store.technicians[idx] = { ...store.technicians[idx], ...updated };
+      saveToLocalStorage();
+      return { success: true, data: store.technicians[idx] || updated };
+    }
+    return { success: false, error: result.error || 'Failed to update technician' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };
 
 const providers = [

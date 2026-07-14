@@ -54,8 +54,8 @@ const Profile = () => {
     }));
   };
 
-  const handleSaveProfile = () => {
-    const r = updateUser(session.id, {
+  const handleSaveProfile = async () => {
+    const r = await updateUser(session.id, {
       name: form.name.trim(), surname: form.surname.trim(),
       email: form.email.trim(), phone: form.phone.trim(),
     });
@@ -63,7 +63,7 @@ const Profile = () => {
       const updated = getUsers().find(u => u.id === session.id);
       setUser(updated);
       if (tech) {
-        updateTechnician(tech.id, {
+        await updateTechnician(tech.id, {
           companyName: techForm.companyName.trim(),
           specialisations: techForm.specialisations,
           email: form.email.trim(), phone: form.phone.trim(),
@@ -77,21 +77,21 @@ const Profile = () => {
     }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
     if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
     if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
     const users = getUsers();
     const u = users.find(x => x.id === session.id);
     if (!u || u.password !== passForm.current) { showMsg('Current password is incorrect.', 'error'); return; }
-    const r = updateUser(session.id, { password: passForm.newPass });
+    const r = await updateUser(session.id, { password: passForm.newPass });
     if (r.success) { showMsg('Password changed successfully.', 'success'); setPassForm({ current: '', newPass: '', confirm: '' }); }
     else { showMsg(r.error, 'error'); }
   };
 
-  const handleStatusChange = (newStatus) => {
+  const handleStatusChange = async (newStatus) => {
     if (!tech) return;
-    const r = updateTechnicianStatus(tech.id, newStatus);
+    const r = await updateTechnicianStatus(tech.id, newStatus);
     if (r.success) { refreshTech(); showMsg(`Status changed to ${STATUS_LABELS[newStatus]}`, 'success'); }
     else { showMsg(r.error, 'error'); }
   };

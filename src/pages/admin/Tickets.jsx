@@ -9,6 +9,7 @@ import {
   updateTicketCategory, getProviders, getProperties, getCategories,
   getAuditLogs, getInferenceLogs
 } from '../../data/store';
+import { getSlaStatus } from '../../data/slaEngine';
 import Alert from '../../components/common/Alert';
 
 const STATUS_STYLES = {
@@ -91,20 +92,6 @@ const Tickets = () => {
     return true;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const now = Date.now();
-  const getSlaStatus = (t) => {
-    if (!t.slaResponseBefore && !t.slaResolutionBefore) return null;
-    const resol = t.slaResolutionBefore || t.slaResponseBefore;
-    if (now > resol) return { state: 'breached', label: 'BREACHED', color: 'var(--danger)' };
-    const remaining = resol - now;
-    const hrs = Math.floor(remaining / 3600000);
-    const mins = Math.floor((remaining % 3600000) / 60000);
-    const secs = Math.floor((remaining % 60000) / 1000);
-    const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-    if (remaining < 3600000) return { state: 'warning', label: timeStr, color: 'var(--amber)' };
-    return { state: 'ok', label: timeStr, color: 'var(--teal)' };
-  };
-
   const slaBreached = tickets.filter(t => getSlaStatus(t)?.state === 'breached').length;
 
   const stats = [
@@ -120,8 +107,8 @@ const Tickets = () => {
   const uniqueCategories = [...new Set(tickets.filter(t => t.category).map(t => t.category))].sort();
   const uniqueProperties = [...new Set(tickets.filter(t => t.propertyName).map(t => t.propertyName))].sort();
 
-  const handleTransition = (ticketId, newStatus) => {
-    const r = updateTicketStatus(ticketId, newStatus);
+  const handleTransition = async (ticketId, newStatus) => {
+    const r = await updateTicketStatus(ticketId, newStatus);
     if (r.success) {
       showAlert(`Ticket ${ticketId} → ${newStatus}`, 'success');
       refresh();
@@ -130,11 +117,11 @@ const Tickets = () => {
     }
   };
 
-  const handleReassign = (e) => {
+  const handleReassign = async (e) => {
     e.preventDefault();
     if (!reassignProvider) return;
     const prov = providers.find(p => p.name === reassignProvider);
-    const r = assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
+    const r = await assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
     if (r.success) {
       showAlert(`Reassigned ${showReassign.ticketId} to ${reassignProvider}`, 'success');
       setShowReassign(null);
@@ -144,13 +131,13 @@ const Tickets = () => {
     }
   };
 
-  const handleReopen = (e) => {
+  const handleReopen = async (e) => {
     e.preventDefault();
     if (reopenText.trim().length < 10) {
       setReopenError('Justification must be at least 10 characters. (REQ-041)');
       return;
     }
-    const r = reopenTicket(showReopen.ticketId, reopenText.trim());
+    const r = await reopenTicket(showReopen.ticketId, reopenText.trim());
     if (r.success) {
       showAlert(`Ticket ${showReopen.ticketId} reopened.`, 'success');
       setShowReopen(null);
@@ -160,9 +147,9 @@ const Tickets = () => {
     }
   };
 
-  const handleCategoryOverride = (e) => {
+  const handleCategoryOverride = async (e) => {
     e.preventDefault();
-    const r = updateTicketCategory(showCategoryModal.ticketId, categoryValue);
+    const r = await updateTicketCategory(showCategoryModal.ticketId, categoryValue);
     if (r.success) {
       showAlert(`Category override saved (BR-006)`, 'success');
       setShowCategoryModal(null);

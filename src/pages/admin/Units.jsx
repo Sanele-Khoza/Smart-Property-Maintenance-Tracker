@@ -62,13 +62,13 @@ const Units = () => {
     setShowCreate(true);
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.propertyId || !createForm.unitNumber.trim()) {
       setCreateError('Property and unit number are required.');
       return;
     }
-    const r = addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
+    const r = await addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
     if (r.success) {
       showAlert(`Unit ${r.data.unitNumber} created. (REQ-010)`, 'success');
       setShowCreate(false);
@@ -84,13 +84,13 @@ const Units = () => {
     setEditError('');
   };
 
-  const handleEdit = (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.unitNumber.trim()) {
       setEditError('Unit number is required.');
       return;
     }
-    const r = updateUnit(editTarget.unitId, { unitNumber: editForm.unitNumber, floor: editForm.floor || null });
+    const r = await updateUnit(editTarget.unitId, { unitNumber: editForm.unitNumber, floor: editForm.floor || null });
     if (r.success) {
       showAlert('Unit updated.', 'success');
       setEditTarget(null);
@@ -106,13 +106,13 @@ const Units = () => {
     setAssignError('');
   };
 
-  const handleAssign = (e) => {
+  const handleAssign = async (e) => {
     e.preventDefault();
     if (!assignName.trim()) {
       setAssignError('Tenant name is required.');
       return;
     }
-    const r = assignTenantToUnit(assignTarget.unitId, assignName.trim());
+    const r = await assignTenantToUnit(assignTarget.unitId, assignName.trim());
     if (r.success) {
       showAlert(`${assignName.trim()} assigned to ${assignTarget.unitNumber}. (BR-001)`, 'success');
       setAssignTarget(null);
@@ -141,16 +141,16 @@ const Units = () => {
     });
   };
 
-  const executeConfirm = () => {
+  const executeConfirm = async () => {
     const a = confirmAction;
     if (!a) return;
 
     if (a.type === 'vacate') {
-      const r = vacateUnit(a.unit.unitId);
+      const r = await vacateUnit(a.unit.unitId);
       if (r.success) { showAlert(`Unit ${a.unit.unitNumber} vacated.`, 'success'); refresh(); }
       else { showAlert(r.error, 'error'); }
     } else if (a.type === 'delete_unit') {
-      const r = deleteUnit(a.unit.unitId);
+      const r = await deleteUnit(a.unit.unitId);
       if (r.success) { showAlert(`Unit ${a.unit.unitNumber} deleted. (REQ-010)`, 'success'); refresh(); }
       else { showAlert(r.error, 'error'); }
     }

@@ -48,17 +48,17 @@ const Notifications = () => {
   const failedCount = filtered.filter(n => n.deliveryStatus === 'Failed').length;
   const emergencyCount = filtered.filter(n => n.isEmergency).length;
 
-  const handleRetry = (notif) => {
+  const handleRetry = async (notif) => {
     const newRetry = (notif.retryCount || 0) + 1;
-    const r = updateNotificationStatus(notif.id, 'Pending', newRetry);
+    const r = await updateNotificationStatus(notif.id, 'Pending', newRetry);
     if (r.success) {
       showAlert(`Retry ${notif.id} (attempt ${newRetry})`, 'success');
       refresh();
     }
   };
 
-  const handleDismiss = (notif) => {
-    const r = updateNotificationStatus(notif.id, 'Sent', notif.retryCount);
+  const handleDismiss = async (notif) => {
+    const r = await updateNotificationStatus(notif.id, 'Sent', notif.retryCount);
     if (r.success) {
       showAlert(`Dismissed ${notif.id}`, 'success');
       refresh();

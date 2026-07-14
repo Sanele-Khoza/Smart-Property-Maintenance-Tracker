@@ -33,8 +33,8 @@ const ServiceProviderDashboard = ({ activePage }) => {
   const myTickets = tickets.filter(t => t.assignedTo === providerName);
   const openTickets = tickets.filter(t => t.status === 'Open' && t.assignedTo !== providerName);
 
-  const handleStatusUpdate = (ticketId, newStatus) => {
-    const result = updateTicketStatus(ticketId, newStatus);
+  const handleStatusUpdate = async (ticketId, newStatus) => {
+    const result = await updateTicketStatus(ticketId, newStatus);
     if (result.error) {
       setStatusMsg({ text: result.error, type: 'error' });
     } else {

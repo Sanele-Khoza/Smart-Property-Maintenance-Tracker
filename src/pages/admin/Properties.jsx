@@ -78,13 +78,13 @@ const Properties = () => {
     setShowCreate(true);
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim() || !createForm.address.trim()) {
       setCreateError('Name and address are required.');
       return;
     }
-    const r = addProperty(createForm.name, createForm.address, createForm.propertyType, createForm.managerName);
+    const r = await addProperty(createForm.name, createForm.address, createForm.propertyType, createForm.managerName);
     if (r.success) {
       showAlert(`Property "${r.data.name}" created. (REQ-009)`, 'success');
       setShowCreate(false);
@@ -105,13 +105,13 @@ const Properties = () => {
     setEditError('');
   };
 
-  const handleEdit = (e) => {
+  const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.name.trim() || !editForm.address.trim()) {
       setEditError('Name and address are required.');
       return;
     }
-    const r = updateProperty(editTarget.propertyId, {
+    const r = await updateProperty(editTarget.propertyId, {
       name: editForm.name,
       address: editForm.address,
       propertyType: editForm.propertyType,
@@ -172,20 +172,20 @@ const Properties = () => {
     });
   };
 
-  const executeConfirm = () => {
+  const executeConfirm = async () => {
     const a = confirmAction;
     if (!a) return;
 
     if (a.type === 'deactivate') {
-      const r = updatePropertyStatus(a.property.propertyId, 'INACTIVE');
+      const r = await updatePropertyStatus(a.property.propertyId, 'INACTIVE');
       if (r.success) { showAlert(`"${a.property.name}" deactivated.`, 'success'); refresh(); }
       else { showAlert(r.error, 'error'); }
     } else if (a.type === 'reactivate') {
-      const r = updatePropertyStatus(a.property.propertyId, 'ACTIVE');
+      const r = await updatePropertyStatus(a.property.propertyId, 'ACTIVE');
       if (r.success) { showAlert(`"${a.property.name}" reactivated.`, 'success'); refresh(); }
       else { showAlert(r.error, 'error'); }
     } else if (a.type === 'delete') {
-      const r = deleteProperty(a.property.propertyId);
+      const r = await deleteProperty(a.property.propertyId);
       if (r.success) { showAlert(`"${a.property.name}" deleted.`, 'success'); refresh(); }
       else { showAlert(r.error, 'error'); }
     }

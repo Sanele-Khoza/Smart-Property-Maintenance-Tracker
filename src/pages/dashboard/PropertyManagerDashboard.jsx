@@ -3,6 +3,7 @@ import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamati
 import Property from '../../components/Property';
 import Assignment from '../../components/Assignment';
 import { getStats, getTickets, getProperties, getUnits } from '../../data/store';
+import { getSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import StatusBadge from '../../components/common/StatusBadge';
 import Overview from '../manager/Overview';
@@ -37,28 +38,17 @@ const PropertyManagerDashboard = ({ activePage }) => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const now = Date.now();
   const openTickets = tickets.filter(t => t.status === 'Open');
   const assignedTickets = tickets.filter(t => t.status === 'Assigned');
   const inProgressTickets = tickets.filter(t => t.status === 'In Progress');
   const completedTickets = tickets.filter(t => t.status === 'Completed');
 
-  const getSlaStatus = (t) => {
-    if (!t.slaResponseBefore && !t.slaResolutionBefore) return null;
-    const resol = t.slaResolutionBefore || t.slaResponseBefore;
-    const remaining = resol - now;
-    const total = (t.slaResponseBefore && t.slaResolutionBefore)
-      ? t.slaResolutionBefore - t.slaResponseBefore
-      : 24 * 3600000;
-    const pctElapsed = ((total - remaining) / total) * 100;
-    if (remaining <= 0) return { state: 'breached', label: 'Breached', color: 'var(--danger)', pct: 100 };
-    if (pctElapsed >= 75) return { state: 'warning', label: 'Warning', color: 'var(--amber)', pct: pctElapsed };
-    return { state: 'ontrack', label: 'On Track', color: 'var(--teal)', pct: pctElapsed };
-  };
-
   const slaBreached = tickets.filter(t => getSlaStatus(t)?.state === 'breached').length;
   const slaWarning = tickets.filter(t => getSlaStatus(t)?.state === 'warning').length;
-  const slaOntrack = tickets.filter(t => getSlaStatus(t)?.state === 'ontrack').length;
+  const slaOntrack = tickets.filter(t => {
+    const s = getSlaStatus(t);
+    return s && s.state !== 'breached' && s.state !== 'warning';
+  }).length;
 
   const needsReviewCount = tickets.filter(t => t.conflictDetected || t.manualReviewRequired).length;
 

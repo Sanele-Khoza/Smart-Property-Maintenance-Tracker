@@ -1,63 +1,111 @@
+import { api } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
 
 export const getNotifications = () => [...getStore().notifications];
 
-export const updateNotificationStatus = (notifId, newStatus, retryCount) => {
-  const store = getStore();
-  const notif = store.notifications.find(n => n.id === notifId);
-  if (!notif) return { success: false, error: 'Notification not found.' };
-  notif.deliveryStatus = newStatus;
-  if (retryCount !== undefined) notif.retryCount = retryCount;
-  saveToLocalStorage();
-  return { success: true, data: { ...notif } };
+export const updateNotificationStatus = async (notifId, newStatus, retryCount) => {
+  try {
+    const result = await api(`/notifications/${notifId}/status`, {
+      method: 'PUT',
+      body: { status: newStatus, retryCount },
+    });
+    if (result.success) {
+      const store = getStore();
+      const notif = store.notifications.find(n => n.id === notifId);
+      if (notif) {
+        notif.deliveryStatus = newStatus;
+        if (retryCount !== undefined) notif.retryCount = retryCount;
+        saveToLocalStorage();
+      }
+      return { success: true, data: notif || result.data };
+    }
+    return { success: false, error: result.error || 'Failed to update notification' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };
 
-export const addNotification = (recipientEmail, type, message, isEmergency) => {
-  const store = getStore();
-  const newNotif = {
-    id: `NOT-${String(store.notifications.length + 1).padStart(3, '0')}`,
-    recipient: recipientEmail,
-    type,
-    message,
-    deliveryStatus: 'Pending',
-    retryCount: 0,
-    createdAt: new Date().toISOString(),
-    isEmergency: isEmergency || false,
-  };
-  store.notifications.push(newNotif);
-  saveToLocalStorage();
-  return newNotif;
+export const addNotification = async (recipientEmail, type, message, isEmergency) => {
+  try {
+    const result = await api('/notifications', {
+      method: 'POST',
+      body: { recipient: recipientEmail, type, message, isEmergency: isEmergency || false },
+    });
+    if (result.success && result.data) {
+      const newNotif = result.data.notification || result.data;
+      const store = getStore();
+      store.notifications.push(newNotif);
+      saveToLocalStorage();
+      return newNotif;
+    }
+    return null;
+  } catch {
+    const store = getStore();
+    const newNotif = {
+      id: `NOT-${String(store.notifications.length + 1).padStart(3, '0')}`,
+      recipient: recipientEmail, type, message,
+      deliveryStatus: 'Pending', retryCount: 0,
+      createdAt: new Date().toISOString(),
+      isEmergency: isEmergency || false,
+    };
+    store.notifications.push(newNotif);
+    saveToLocalStorage();
+    return newNotif;
+  }
 };
 
 export const getCategories = () => [...getStore().categories];
 
-export const addCategory = (name, description, defaultPriority, aiKeywords, rekognitionLabel) => {
-  const store = getStore();
-  if (!name?.trim()) return { success: false, error: 'Category name is required.' };
-  if (store.categories.some(c => c.name.toLowerCase() === name.trim().toLowerCase())) return { success: false, error: `Category "${name}" already exists.` };
-  const newCat = { id: `CAT-${String(store.categories.length + 1).padStart(3, '0')}`, name: name.trim(), description: description || '', defaultPriority: defaultPriority || 'MEDIUM', aiKeywords: aiKeywords || [], rekognitionLabel: rekognitionLabel || name.trim() };
-  store.categories.push(newCat);
-  saveToLocalStorage();
-  return { success: true, data: newCat };
+export const addCategory = async (name, description, defaultPriority, aiKeywords, rekognitionLabel) => {
+  try {
+    const result = await api('/categories', {
+      method: 'POST',
+      body: { name, description, defaultPriority, aiKeywords, rekognitionLabel },
+    });
+    if (result.success && result.data) {
+      const newCat = result.data.category || result.data;
+      const store = getStore();
+      store.categories.push(newCat);
+      saveToLocalStorage();
+      return { success: true, data: newCat };
+    }
+    return { success: false, error: result.error || 'Failed to add category' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };
 
-export const updateCategory = (catId, updates) => {
-  const store = getStore();
-  const cat = store.categories.find(c => c.id === catId);
-  if (!cat) return { success: false, error: 'Category not found.' };
-  if (updates.name) cat.name = updates.name.trim();
-  if (updates.description !== undefined) cat.description = updates.description;
-  if (updates.defaultPriority) cat.defaultPriority = updates.defaultPriority;
-  if (updates.aiKeywords !== undefined) cat.aiKeywords = updates.aiKeywords;
-  if (updates.rekognitionLabel !== undefined) cat.rekognitionLabel = updates.rekognitionLabel;
-  saveToLocalStorage();
-  return { success: true, data: { ...cat } };
+export const updateCategory = async (catId, updates) => {
+  try {
+    const result = await api(`/categories/${catId}`, {
+      method: 'PUT',
+      body: updates,
+    });
+    if (result.success && result.data) {
+      const updated = result.data.category || result.data;
+      const store = getStore();
+      const idx = store.categories.findIndex(c => c.id === catId);
+      if (idx !== -1) store.categories[idx] = { ...store.categories[idx], ...updated };
+      saveToLocalStorage();
+      return { success: true, data: store.categories[idx] || updated };
+    }
+    return { success: false, error: result.error || 'Failed to update category' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };
 
-export const deleteCategory = (catId) => {
-  const store = getStore();
-  if (store.tickets.some(t => t.category === store.categories.find(c => c.id === catId)?.name)) return { success: false, error: 'Cannot delete category: tickets reference it.' };
-  store.categories = store.categories.filter(c => c.id !== catId);
-  saveToLocalStorage();
-  return { success: true };
+export const deleteCategory = async (catId) => {
+  try {
+    const result = await api(`/categories/${catId}`, { method: 'DELETE' });
+    if (result.success) {
+      const store = getStore();
+      store.categories = store.categories.filter(c => c.id !== catId);
+      saveToLocalStorage();
+      return { success: true };
+    }
+    return { success: false, error: result.error || 'Failed to delete category' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 };

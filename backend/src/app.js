@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -103,11 +104,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(sanitize);
 app.use(morgan(config.nodeEnv === 'development' ? 'dev' : 'combined', { stream: { write: msg => logger.info(msg.trim()) } }));
 
-app.use('/api', doubleCsrfProtection);
-
 app.get('/api/csrf-token', (req, res) => {
   res.json({ success: true, data: { csrfToken: generateToken(req, res) } });
 });
+
+/* Auth routes before CSRF — they use JWT, not session cookies */
+app.use('/api/auth', authRoutes);
+
+app.use('/api', doubleCsrfProtection);
 
 /* Authenticated routes get higher rate limit */
 app.use('/api', authLimiter);
@@ -117,8 +121,6 @@ app.use('/uploads', express.static(path.resolve(__dirname, '..', config.upload.u
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } }));
-
-app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketsRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/units', unitsRoutes);

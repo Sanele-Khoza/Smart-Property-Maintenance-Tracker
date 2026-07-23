@@ -8,7 +8,9 @@ function validate(schema) {
         field: e.path.join('.'),
         message: e.message,
       }));
-      const err = new AppError('Validation error', 422, 'VALIDATION_ERROR');
+      const first = errors[0];
+      const msg = first ? `${first.field}: ${first.message}` : 'Validation error';
+      const err = new AppError(msg, 422, 'VALIDATION_ERROR');
       err.errors = errors;
       return next(err);
     }

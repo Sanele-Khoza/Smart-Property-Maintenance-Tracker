@@ -5,6 +5,7 @@ import config from '../../config/index.js';
 import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
+import { sendEmail } from '../../shared/adapters/sesAdapter.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
@@ -35,7 +36,7 @@ function buildUserPayload(user) {
     email: user.email,
     role: user.role,
     phone: user.phone,
-    account_status: user.account_status,
+    status: user.status,
     approved: user.approved,
   };
 }
@@ -60,6 +61,22 @@ async function register({ name, surname, email, password, role, phone }, ipAddre
   const verificationToken = generateToken(VERIFICATION_TOKEN_BYTES);
   await repo.updateUser(user.id, { email_verification_token: verificationToken });
 
+  const verifyUrl = `${config.cors.origin}/verify-email?token=${verificationToken}`;
+  const emailResult = await sendEmail({
+    to: email,
+    subject: 'Verify your SPMT account',
+    html: `<p>Hi ${name},</p><p>Please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 1 hour.</p>`,
+  });
+  if (!emailResult.success) {
+    console.log(`\n══════════════════════════════════════════════`);
+    console.log(`  VERIFICATION EMAIL FAILED (${emailResult.error || 'SES unavailable'})`);
+    console.log(`  To: ${email}`);
+    console.log(`  Token: ${verificationToken}`);
+    console.log(`  Verify URL: ${verifyUrl}`);
+    console.log(`  Tip: Verify "${config.aws.ses.fromAddress}" in AWS SES console first`);
+    console.log(`══════════════════════════════════════════════\n`);
+  }
+
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 
   return {
@@ -78,7 +95,7 @@ async function login(email, password, ipAddress) {
   const user = await repo.findByEmail(email);
   if (!user) {
     await audit.log('LOGIN_FAILED', `Failed login attempt for ${email}`, null, ipAddress, audit.SEVERITY.WARN);
-    throw AppError.unauthorized('Invalid email or password');
+    throw AppError.unauthorized('Account does not exist');
   }
 
   if (user.locked_until && new Date(user.locked_until) > new Date()) {
@@ -87,9 +104,10 @@ async function login(email, password, ipAddress) {
     throw AppError.forbidden(`Account is locked. Try again in ${remaining} minutes.`);
   }
 
-  if (user.account_status === 'SUSPENDED') throw AppError.forbidden('Account suspended');
-  if (user.account_status === 'DEACTIVATED') throw AppError.forbidden('Account deactivated');
-  if (user.account_status === 'DELETED') throw AppError.forbidden('Account deleted');
+  if (user.status === 'PENDING') throw AppError.forbidden('Please verify your email before logging in');
+  if (user.status === 'SUSPENDED') throw AppError.forbidden('Account suspended');
+  if (user.status === 'DEACTIVATED') throw AppError.forbidden('Account deactivated');
+  if (user.status === 'DELETED') throw AppError.forbidden('Account deleted');
   if (!user.approved) throw AppError.forbidden('Account pending approval');
 
   const valid = await bcrypt.compare(password, user.password_hash);
@@ -103,7 +121,7 @@ async function login(email, password, ipAddress) {
     }
     await repo.updateLoginAttempts(user.id, attempts);
     await audit.log('LOGIN_FAILED', `Failed attempt ${attempts}/5`, user.id, ipAddress, audit.SEVERITY.WARN);
-    throw AppError.unauthorized('Invalid email or password');
+    throw AppError.unauthorized('Invalid password');
   }
 
   await repo.updateLoginAttempts(user.id, 0);
@@ -138,7 +156,7 @@ async function refreshAccessToken(refreshToken, ipAddress) {
   await repo.revokeRefreshToken(refreshToken);
 
   const user = await repo.findByIdFull(stored.user_id);
-  if (!user || user.account_status !== 'ACTIVE') {
+  if (!user || user.status !== 'ACTIVE') {
     throw AppError.forbidden('Account is not active');
   }
 

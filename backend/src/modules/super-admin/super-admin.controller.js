@@ -11,25 +11,25 @@ const getUsers = async (req, res, next) => {
     const conditions = [];
     const params = [];
     let idx = 1;
-    if (req.query.status) { conditions.push(`account_status = $${idx++}`); params.push(req.query.status); }
+    if (req.query.status) { conditions.push(`status = $${idx++}`); params.push(req.query.status); }
     if (req.query.role) { conditions.push(`role = $${idx++}`); params.push(req.query.role); }
     if (req.query.search) { conditions.push(`(name ILIKE $${idx} OR surname ILIKE $${idx} OR email ILIKE $${idx})`); params.push(`%${req.query.search}%`); idx++; }
     const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
-    const result = await query(`SELECT id, name, surname, email, phone, role, account_status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC`, params);
+    const result = await query(`SELECT id, name, surname, email, phone, role, status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC`, params);
     res.json({ success: true, data: { users: result.rows } });
   } catch (err) { next(err); }
 };
 
 const approveUser = async (req, res, next) => {
-  try { await query("UPDATE users SET approved = TRUE, approved_at = NOW(), account_status = 'ACTIVE' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User approved' }); } catch (err) { next(err); }
+  try { await query("UPDATE users SET approved = TRUE, approved_at = NOW(), status = 'ACTIVE' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User approved' }); } catch (err) { next(err); }
 };
 
 const deactivateUser = async (req, res, next) => {
-  try { await query("UPDATE users SET account_status = 'DEACTIVATED' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User deactivated' }); } catch (err) { next(err); }
+  try { await query("UPDATE users SET status = 'DEACTIVATED' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User deactivated' }); } catch (err) { next(err); }
 };
 
 const reactivateUser = async (req, res, next) => {
-  try { await query("UPDATE users SET account_status = 'ACTIVE' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User reactivated' }); } catch (err) { next(err); }
+  try { await query("UPDATE users SET status = 'ACTIVE' WHERE id = $1", [Number(req.params.id)]); res.json({ success: true, message: 'User reactivated' }); } catch (err) { next(err); }
 };
 
 const changeRole = async (req, res, next) => {

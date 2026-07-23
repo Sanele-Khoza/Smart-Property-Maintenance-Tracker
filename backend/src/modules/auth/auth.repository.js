@@ -1,6 +1,6 @@
 import { query } from '../../db/connection.js';
 
-const SELECT_PROFILE = 'id, name, surname, email, role, phone, account_status, approved, approved_at, last_login, created_at';
+const SELECT_PROFILE = 'id, name, surname, email, role, phone, status, approved, approved_at, last_login, created_at';
 
 const findByEmail = async (email) => {
   const result = await query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);
@@ -19,9 +19,9 @@ const findByIdFull = async (id) => {
 
 const create = async ({ name, surname, email, phone, passwordHash, role, status, approved }) => {
   const result = await query(
-    `INSERT INTO users (name, surname, email, phone, password_hash, role, account_status, approved, email_verification_token, password_changed_at)
+    `INSERT INTO users (name, surname, email, phone, password_hash, role, status, approved, email_verification_token, password_changed_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-     RETURNING id, name, surname, email, role, phone, account_status`,
+     RETURNING id, name, surname, email, role, phone, status`,
     [name, surname, email, phone || null, passwordHash, role, status, approved, null]
   );
   return result.rows[0];
@@ -45,7 +45,7 @@ const findByVerificationToken = async (token) => {
 };
 
 const verifyUser = async (userId) => {
-  await query("UPDATE users SET email_verification_token = NULL, account_status = 'ACTIVE' WHERE id = $1", [userId]);
+  await query("UPDATE users SET email_verification_token = NULL, status = 'ACTIVE' WHERE id = $1", [userId]);
 };
 
 const setResetToken = async (userId, token, expiry) => {
@@ -62,11 +62,11 @@ const updatePassword = async (userId, passwordHash) => {
 };
 
 const deactivateAccount = async (userId) => {
-  await query("UPDATE users SET account_status = 'DEACTIVATED', deactivated_at = NOW() WHERE id = $1", [userId]);
+  await query("UPDATE users SET status = 'DEACTIVATED', deactivated_at = NOW() WHERE id = $1", [userId]);
 };
 
 const reactivateAccount = async (userId) => {
-  await query("UPDATE users SET account_status = 'ACTIVE', deactivated_at = NULL, login_attempts = 0, locked_until = NULL WHERE id = $1", [userId]);
+  await query("UPDATE users SET status = 'ACTIVE', deactivated_at = NULL, login_attempts = 0, locked_until = NULL WHERE id = $1", [userId]);
 };
 
 const saveRefreshToken = async (userId, token, expiresAt) => {

@@ -6,7 +6,7 @@ const getUsers = async (filters = {}) => {
   let idx = 1;
 
   if (filters.status) {
-    conditions.push(`account_status = $${idx++}`);
+    conditions.push(`status = $${idx++}`);
     params.push(filters.status);
   }
   if (filters.role) {
@@ -21,7 +21,7 @@ const getUsers = async (filters = {}) => {
 
   const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
   const result = await query(
-    `SELECT id, name, surname, email, phone, role, account_status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC`,
+    `SELECT id, name, surname, email, phone, role, status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC`,
     params
   );
   return result.rows;
@@ -29,13 +29,13 @@ const getUsers = async (filters = {}) => {
 
 const approveUser = async (id) => {
   await query(
-    "UPDATE users SET approved = TRUE, approved_at = NOW(), account_status = 'ACTIVE' WHERE id = $1",
+    "UPDATE users SET approved = TRUE, approved_at = NOW(), status = 'ACTIVE' WHERE id = $1",
     [id]
   );
 };
 
 const setAccountStatus = async (id, status) => {
-  await query('UPDATE users SET account_status = $1 WHERE id = $2', [status, id]);
+  await query('UPDATE users SET status = $1 WHERE id = $2', [status, id]);
 };
 
 const changeRole = async (id, role) => {

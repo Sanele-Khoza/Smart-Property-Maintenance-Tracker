@@ -17,7 +17,7 @@ const findTicketsByTenant = async (tenantId) => {
 
 const findUserById = async (id) => {
   const result = await query(
-    'SELECT id, name, surname, email, phone, role, account_status, created_at FROM users WHERE id = $1',
+    'SELECT id, name, surname, email, phone, role, status, created_at FROM users WHERE id = $1',
     [id]
   );
   return result.rows[0] || null;

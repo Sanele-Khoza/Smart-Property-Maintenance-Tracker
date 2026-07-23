@@ -19,7 +19,7 @@ const registerSchema = z.object({
   surname: z.string().trim().min(1, 'Surname is required').max(SURNAME_MAX),
   email: z.string().email('Invalid email').max(EMAIL_MAX).transform(e => e.toLowerCase()),
   password: passwordSchema,
-  role: z.enum(['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER', 'SYSTEM_ADMIN']),
+  role: z.enum(['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER']),
   phone: z.string().max(PHONE_MAX).optional().nullable(),
 });
 

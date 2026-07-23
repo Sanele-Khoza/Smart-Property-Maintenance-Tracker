@@ -42,6 +42,9 @@ const config = {
     comprehend: {
       endpointArn: process.env.AWS_COMPREHEND_ENDPOINT_ARN || '',
     },
+    rekognition: {
+      region: process.env.AWS_REKOGNITION_REGION || 'eu-west-1',
+    },
     s3: {
       imagesBucket: process.env.AWS_S3_BUCKET_IMAGES || 'spmt-ticket-images-dev',
       reportsBucket: process.env.AWS_S3_BUCKET_REPORTS || 'spmt-reports-dev',
@@ -56,6 +59,7 @@ const config = {
     ses: {
       fromAddress: process.env.AWS_SES_FROM_ADDRESS || 'noreply@spmt.co.za',
       configurationSet: process.env.AWS_SES_CONFIGURATION_SET || '',
+      region: process.env.AWS_SES_REGION || 'eu-west-1',
     },
     secrets: {
       jwtName: process.env.AWS_SECRETS_JWT_NAME || 'SPMT_JWT_SECRET',

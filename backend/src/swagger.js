@@ -38,7 +38,7 @@ const options = {
             email: { type: 'string', format: 'email' },
             role: { type: 'string', enum: ['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER', 'SYSTEM_ADMIN'] },
             phone: { type: 'string' },
-            account_status: { type: 'string', enum: ['ACTIVE', 'PENDING', 'DEACTIVATED', 'SUSPENDED'] },
+            status: { type: 'string', enum: ['ACTIVE', 'PENDING', 'DEACTIVATED', 'SUSPENDED'] },
             approved: { type: 'boolean' },
             created_at: { type: 'string', format: 'date-time' },
           },

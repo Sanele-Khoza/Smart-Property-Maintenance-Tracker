@@ -77,4 +77,39 @@ async function sendSms(phoneNumberE164, message, isEmergency = false) {
   return { success: false, error: result.error };
 }
 
-export { sendPush, sendSms };
+async function publishTopic(subject, message) {
+  if (!isAwsEnabled()) {
+    logger.info(`[DEV SNS TOPIC] Subject: ${subject} | Message: ${message}`);
+    try {
+      await query(
+        `INSERT INTO notifications (user_id, title, body, delivery_status) VALUES (NULL, $1, $2, 'SIMULATED')`,
+        [subject, message]
+      );
+    } catch { }
+    return { success: true, service: 'dev' };
+  }
+
+  const topicArn = config.aws.sns.topicArn;
+  if (!topicArn) {
+    logger.error('SNS topic ARN not configured');
+    return { success: false, error: 'SNS_TOPIC_ARN_NOT_CONFIGURED' };
+  }
+
+  const isFifo = topicArn.endsWith('.fifo');
+  const result = await withRetry(async ({ signal }) => {
+    const cmd = new PublishCommand({
+      TopicArn: topicArn,
+      Subject: subject,
+      Message: message,
+      ...(isFifo && { MessageGroupId: 'emergency-tickets' }),
+    });
+    const resp = await getClient().send(cmd, { abortSignal: signal });
+    return resp.MessageId;
+  }, { operation: 'sns:publishTopic' });
+
+  if (result.success) return { success: true, messageId: result.result };
+  logger.error(`SNS topic publish failed: ${result.error}`);
+  return { success: false, error: result.error };
+}
+
+export { sendPush, sendSms, publishTopic };

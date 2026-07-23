@@ -1,6 +1,7 @@
 import winston from 'winston';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,6 +29,15 @@ const logger = winston.createLogger({
   ],
   exitOnError: false,
 });
+
+if (process.env.NODE_ENV === 'production' && config.aws.enabled) {
+  import('./cloudwatchTransport.js').then(({ default: CloudWatchTransport }) => {
+    logger.add(new CloudWatchTransport({
+      level: process.env.CLOUDWATCH_LOG_LEVEL || 'info',
+      logGroupName: `/spmt/api/${config.nodeEnv}`,
+    }));
+  }).catch(() => {});
+}
 
 if (process.env.NODE_ENV !== 'production') {
   logger.add(new winston.transports.Console({

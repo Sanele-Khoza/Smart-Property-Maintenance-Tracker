@@ -15,7 +15,7 @@ let client = null;
 function getClient() {
   if (!client) {
     client = new SESClient({
-      region: config.aws.region,
+      region: config.aws.ses.region || config.aws.region,
       credentials: config.aws.accessKeyId && config.aws.secretAccessKey
         ? { accessKeyId: config.aws.accessKeyId, secretAccessKey: config.aws.secretAccessKey }
         : undefined,

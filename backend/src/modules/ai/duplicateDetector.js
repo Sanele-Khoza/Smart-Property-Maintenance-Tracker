@@ -98,4 +98,62 @@ async function findDuplicates(ticketId, unitId) {
   return matches;
 }
 
-export { findDuplicates, cosineSimilarity, tokenize, SIMILARITY_THRESHOLD };
+/**
+ * Pre-creation duplicate check: compares candidate text against recent
+ * same-unit tickets. Returns matches with similarity >= threshold.
+ */
+async function checkForDuplicate(unitId, title, description, excludeId = null) {
+  if (!unitId) return [];
+
+  const windowDate = new Date();
+  windowDate.setDate(windowDate.getDate() - DUPLICATE_WINDOW_DAYS);
+
+  const params = [unitId, windowDate];
+  let excludeClause = '';
+  if (excludeId) {
+    excludeClause = 'AND id != $3';
+    params.push(excludeId);
+  }
+
+  const result = await query(
+    `SELECT id, title, description
+     FROM tickets
+     WHERE unit_id = $1
+       AND created_at >= $2
+       ${excludeClause}
+       AND status NOT IN ('Cancelled', 'Archived')
+     ORDER BY created_at DESC
+     LIMIT 20`,
+    params
+  );
+
+  if (result.rows.length === 0) return [];
+
+  const sourceText = `${title} ${description}`;
+  const sourceTokens = tokenize(sourceText);
+  const allDocs = result.rows.map(r => tokenize(`${r.title} ${r.description}`));
+  const sourceVec = tfidfVector(sourceTokens, [...allDocs, sourceTokens]);
+
+  const matches = [];
+  for (const row of result.rows) {
+    const targetTokens = tokenize(`${row.title} ${row.description}`);
+    const targetVec = tfidfVector(targetTokens, [...allDocs, sourceTokens]);
+    const similarity = cosineSimilarity(sourceVec, targetVec);
+
+    if (similarity >= SIMILARITY_THRESHOLD) {
+      matches.push({
+        duplicateTicketId: row.id,
+        title: row.title,
+        similarityScore: Math.round(similarity * 100) / 100,
+        matchReason: similarity >= 0.8 ? 'Very similar description'
+          : similarity >= 0.6 ? 'Similar description'
+          : 'Partially similar',
+      });
+    }
+  }
+
+  matches.sort((a, b) => b.similarityScore - a.similarityScore);
+  return matches;
+}
+
+export { findDuplicates, checkForDuplicate, cosineSimilarity, tokenize, SIMILARITY_THRESHOLD };

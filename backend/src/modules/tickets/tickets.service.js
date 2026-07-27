@@ -14,6 +14,7 @@ import { sendToUser } from '../../shared/utils/sse.js';
 import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
+import { checkForDuplicate } from '../ai/duplicateDetector.js';
 import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -179,6 +180,19 @@ async function runAiPipeline(ticketId) {
 }
 
 async function create(data, userId) {
+  const duplicates = await checkForDuplicate(data.unit_id, data.title, data.description);
+
+  if (duplicates.length > 0 && !data.force) {
+    const best = duplicates[0];
+    return {
+      success: false,
+      duplicates: true,
+      matches: duplicates,
+      message: best.matchReason,
+      bestScore: best.similarityScore,
+    };
+  }
+
   const ticket = await repo.create({ ...data, tenant_id: userId, status: 'New' });
   await repo.addHistory(ticket.id, ticket.status, userId, null, 'Ticket created');
   await auditLog(ticket.id, 'created', userId, null, { status: ticket.status, title: ticket.title });

@@ -10,6 +10,7 @@ const createTicketSchema = z.object({
   description: z.string().trim().min(1, 'Description is required'),
   priority: z.enum(PRIORITIES).optional(),
   source: z.enum(['tenant_portal', 'email', 'phone', 'system', 'in_person']).optional(),
+  force: z.boolean().optional().default(false),
 });
 
 const updateTicketSchema = z.object({

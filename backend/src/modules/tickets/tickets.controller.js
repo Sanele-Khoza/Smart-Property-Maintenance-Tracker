@@ -55,6 +55,9 @@ const getById = async (req, res, next) => {
 const create = async (req, res, next) => {
   try {
     const result = await service.create(req.validatedBody, req.user.id);
+    if (result.duplicates) {
+      return res.status(409).json(result);
+    }
     if (result.success && result.data?.ticket?.id) {
       classifyTicket(result.data.ticket.id).catch(() => {});
     }

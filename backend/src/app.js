@@ -108,19 +108,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ success: true, data: { csrfToken: generateToken(req, res) } });
 });
 
-/* Auth routes before CSRF — they use JWT, not session cookies */
-app.use('/api/auth', authRoutes);
-
-app.use('/api', doubleCsrfProtection);
-
-/* Authenticated routes get higher rate limit */
 app.use('/api', authLimiter);
 
+/* All JWT-protected routes mount here (CSRF not needed — Bearer token auth) */
 app.use('/uploads', express.static(path.resolve(__dirname, '..', config.upload.uploadDir)));
-
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } }));
+app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketsRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/units', unitsRoutes);
@@ -152,8 +147,6 @@ app.use('/api/search', searchRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/roles', rolesRoutes);
-
-/* New routes */
 app.use('/api/leases', leasesRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/payments', paymentsRoutes);

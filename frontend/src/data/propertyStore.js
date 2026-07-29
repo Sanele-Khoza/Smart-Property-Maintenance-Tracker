@@ -8,10 +8,18 @@ export const addProperty = async (name, address, propertyType, managerName) => {
   try {
     const result = await api('/properties', {
       method: 'POST',
-      body: { name, address, propertyType, managerName },
+      body: { name, address, type: propertyType, managerName },
     });
     if (result.success && result.data) {
-      const newProperty = result.data.property || result.data;
+      const raw = result.data.property || result.data;
+      const newProperty = {
+        propertyId: raw.id,
+        name: raw.name,
+        address: raw.address,
+        propertyType: raw.type,
+        status: raw.status,
+        managerName: managerName || raw.managerName || '',
+      };
       const store = getStore();
       store.properties.push(newProperty);
       saveToLocalStorage();
@@ -29,10 +37,23 @@ export const updateProperty = async (propertyId, updates) => {
   try {
     const result = await api(`/properties/${propertyId}`, {
       method: 'PUT',
-      body: updates,
+      body: {
+        name: updates.name,
+        address: updates.address,
+        type: updates.propertyType || updates.type,
+        status: updates.status,
+      },
     });
     if (result.success && result.data) {
-      const updated = result.data.property || result.data;
+      const raw = result.data.property || result.data;
+      const updated = {
+        propertyId: raw.id || propertyId,
+        name: raw.name,
+        address: raw.address,
+        propertyType: raw.type,
+        status: raw.status,
+        managerName: raw.managerName || updates.managerName || '',
+      };
       const store = getStore();
       const idx = store.properties.findIndex(p => p.propertyId === propertyId || p.id === propertyId);
       if (idx !== -1) store.properties[idx] = updated;

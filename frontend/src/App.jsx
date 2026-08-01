@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getSession, logoutUser, refreshUsers } from './data/authStore';
 import { getTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
-import { setLogoutHandler } from './api/client';
+import { setLogoutHandler, api, getToken } from './api/client';
 import Navbar from './components/common/Navbar';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
@@ -64,10 +64,25 @@ function App() {
 
     const session = getSession();
     if (session) {
-      setUser(session);
-      setPage('app');
-      startSlaPolling();
-      refreshUsers();
+      // Validate the stored session against the backend — stale/expired
+      // tokens get cleared so the user lands on the login page.
+      api('/auth/me', { skipAuthRetry: true })
+        .then((result) => {
+          if (!getToken()) return;
+          if (!result.success) {
+            logoutUser().then(() => { setUser(null); setPage('login'); });
+            return;
+          }
+          setUser(session);
+          setPage('app');
+          startSlaPolling();
+          refreshUsers();
+        })
+        .catch(() => {
+          if (getToken()) {
+            logoutUser().then(() => { setUser(null); setPage('login'); });
+          }
+        });
     } else {
       setPage('login');
     }

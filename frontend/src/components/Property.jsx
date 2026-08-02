@@ -13,7 +13,7 @@ const Property = ({ refreshData, pmName }) => {
   
   // Form state objects: Controlled component state for user input
   // Implements two-way data binding pattern with onChange handlers
-  const [propForm, setPropForm] = useState({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: '' });
+  const [propForm, setPropForm] = useState({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: pmName || '' });
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumber: '', floor: '' });
   const [tenantAssign, setTenantAssign] = useState({ unitId: '', tenantName: '' });
   
@@ -48,12 +48,12 @@ const Property = ({ refreshData, pmName }) => {
    * On success: Clear form, show feedback, sync state. On error: Display error message.
    */
   const handleAddProperty = async () => {
-    const result = await addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName);
+    const result = await addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName || pmName || '');
     if (result.error) {
       setPropMsg({ text: result.error, type: 'error' });
     } else {
       setPropMsg({ text: `Property "${result.data.name}" added!`, type: 'success' });
-      setPropForm({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: '' });
+      setPropForm({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: pmName || '' });
       refresh();
     }
   };

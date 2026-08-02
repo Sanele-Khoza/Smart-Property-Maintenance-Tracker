@@ -62,12 +62,12 @@ const findAll = async (filters = {}) => {
 
 const create = async (data) => {
   const result = await query(
-    `INSERT INTO units (property_id, unit_number, floor, type, bedrooms, bathrooms, size_sqm, monthly_rent)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    `INSERT INTO units (property_id, unit_number, floor, type, bedrooms, bathrooms, size_sqm)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
     [
       data.property_id || data.propertyId, data.unit_number || data.unitNumber, data.floor || null,
       data.type || '1-Bed', data.bedrooms || 1, data.bathrooms || 1,
-      data.size_sqm || data.sizeSqm || null, data.monthly_rent || data.monthlyRent || null,
+      data.size_sqm || data.sizeSqm || null,
     ]
   );
   return result.rows[0];

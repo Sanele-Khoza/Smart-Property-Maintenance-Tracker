@@ -34,16 +34,14 @@ const Tenants = () => {
       map[u.tenantName].units.push(u);
     });
 
-    const unitTenantNames = new Set(Object.keys(map));
-    const propertyTenantNames = new Set();
     tickets.filter(t => t.propertyName && properties.some(p => p.name === t.propertyName)).forEach(t => {
-      if (t.createdBy) propertyTenantNames.add(t.createdBy);
+      if (!t.createdBy) return;
       if (!map[t.createdBy]) map[t.createdBy] = { unitCount: 0, units: [] };
     });
 
     allUsers.filter(u => u.role === 'TENANT').forEach(u => {
       const name = `${u.name} ${u.surname}`;
-      if (!map[name]) map[name] = { unitCount: 0, units: [] };
+      if (!map[name]) return;
       map[name].email = u.email;
       map[name].phone = u.phone;
       map[name].authId = u.id;
@@ -54,7 +52,7 @@ const Tenants = () => {
       const tenantTickets = tickets.filter(t => t.createdBy === name);
       const hasUnit = d.unitCount > 0;
       const hasProperty = tenantTickets.some(t => properties.some(p => p.name === t.propertyName));
-      if (!hasUnit && !hasProperty && !d.authId) return null;
+      if (!hasUnit && !hasProperty) return null;
       return {
         name, email: d.email || '—', phone: d.phone || '—', authId: d.authId || null, authStatus: d.authStatus || null,
         units: d.units, unitCount: d.unitCount, hasUnit, hasAuthRecord: !!d.authId,

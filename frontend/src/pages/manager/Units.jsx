@@ -78,7 +78,7 @@ const Units = () => {
   const executeConfirm = async () => {
     const a = confirmAction; if (!a) return;
     if (a.type === 'vacate') { await vacateUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} vacated.`, 'success'); refresh(); }
-    else if (a.type === 'delete_unit') { await deleteUnit(a.unit.unitId); showAlert(`Unit ${a.unit.unitNumber} deleted.`, 'success'); refresh(); }
+    else if (a.type === 'delete_unit') { const r = await deleteUnit(a.unit.unitId); if (r.success) { showAlert(`Unit ${a.unit.unitNumber} deleted.`, 'success'); } else { showAlert(r.error, 'error'); } refresh(); }
     setConfirmAction(null);
   };
 

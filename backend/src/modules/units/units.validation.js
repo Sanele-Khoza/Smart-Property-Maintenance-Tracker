@@ -24,7 +24,10 @@ const updateUnitSchema = z.object({
 });
 
 const assignUnitSchema = z.object({
-  tenantId: z.number().int().positive('Tenant ID is required'),
+  tenantId: z.string().min(1).optional(),
+  tenantName: z.string().trim().min(1).optional(),
+}).refine((d) => d.tenantId || d.tenantName, {
+  message: 'tenantId or tenantName is required',
 });
 
 export { createUnitSchema, updateUnitSchema, assignUnitSchema };

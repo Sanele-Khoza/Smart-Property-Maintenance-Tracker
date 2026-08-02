@@ -1,14 +1,78 @@
 import { api } from '../api/client.js';
 import { getStore, saveToLocalStorage, isAllowedText } from './storeCore';
+import { getSession } from './authStore';
 
 let propertyCounter = getStore().properties.length + 1;
 let unitCounter = getStore().units.length + 1;
 
+const PROPERTY_TYPE_MAP = {
+  RESIDENTIAL: 'Residential',
+  COMMERCIAL: 'Commercial',
+  'MIXED-USE': 'Mixed-Use',
+  MIXEDUSE: 'Mixed-Use',
+};
+
+const normalizePropertyType = (type) => PROPERTY_TYPE_MAP[type] || type;
+
+const defaultManagerName = () => {
+  const session = getSession();
+  if (session && session.role === 'PROPERTY_MANAGER') {
+    return `${session.name || ''} ${session.surname || ''}`.trim();
+  }
+  return '';
+};
+
+const mapProperty = (p) => ({  propertyId: p.id,
+  name: p.name,
+  address: p.address,
+  propertyType: p.type,
+  status: p.status,
+  managerName: p.managerName || p.manager_name || '',
+  managerEmail: p.managerEmail || p.manager_email || '',
+  managerPhone: p.managerPhone || p.manager_phone || '',
+  unitCount: p.unitCount || p.unit_count || 0,
+});
+
+const mapUnit = (u) => ({
+  unitId: u.id,
+  propertyId: u.propertyId || u.property_id,
+  unitNumber: u.unitNumber || u.unit_number,
+  floor: u.floor || '',
+  type: u.type,
+  bedrooms: u.bedrooms,
+  bathrooms: u.bathrooms,
+  sizeSqm: u.sizeSqm || u.size_sqm,
+  status: (u.status || '').toUpperCase(),
+  tenantName: u.tenantName || u.tenant_name || '',
+  propertyName: u.propertyName || u.property_name || '',
+});
+
+export const syncPropertiesAndUnits = async () => {
+  try {
+    const [propRes, unitRes] = await Promise.all([
+      api('/properties?limit=1000', { skipAuthRetry: true }),
+      api('/units?limit=1000', { skipAuthRetry: true }),
+    ]);
+    const store = getStore();
+    if (propRes.success && Array.isArray(propRes.data.properties)) {
+      store.properties = propRes.data.properties.map(mapProperty);
+    }
+    if (unitRes.success && Array.isArray(unitRes.data.units)) {
+      store.units = unitRes.data.units.map(mapUnit);
+    }
+    saveToLocalStorage();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const addProperty = async (name, address, propertyType, managerName) => {
   try {
+    const resolvedManagerName = managerName || defaultManagerName();
     const result = await api('/properties', {
       method: 'POST',
-      body: { name, address, type: propertyType, managerName },
+      body: { name, address, type: normalizePropertyType(propertyType), managerName: resolvedManagerName },
     });
     if (result.success && result.data) {
       const raw = result.data.property || result.data;
@@ -18,7 +82,7 @@ export const addProperty = async (name, address, propertyType, managerName) => {
         address: raw.address,
         propertyType: raw.type,
         status: raw.status,
-        managerName: managerName || raw.managerName || '',
+        managerName: resolvedManagerName || raw.managerName || '',
       };
       const store = getStore();
       store.properties.push(newProperty);
@@ -40,8 +104,9 @@ export const updateProperty = async (propertyId, updates) => {
       body: {
         name: updates.name,
         address: updates.address,
-        type: updates.propertyType || updates.type,
+        type: normalizePropertyType(updates.propertyType || updates.type),
         status: updates.status,
+        managerName: updates.managerName,
       },
     });
     if (result.success && result.data) {
@@ -92,7 +157,7 @@ export const addUnit = async (propertyId, unitNumber, floor) => {
       body: { propertyId, unitNumber, floor },
     });
     if (result.success && result.data) {
-      const newUnit = result.data.unit || result.data;
+      const newUnit = mapUnit(result.data.unit || result.data);
       const store = getStore();
       store.units.push(newUnit);
       saveToLocalStorage();
@@ -123,7 +188,7 @@ export const assignTenantToUnit = async (unitId, tenantName) => {
       body: { tenantName },
     });
     if (result.success && result.data) {
-      const updated = result.data.unit || result.data;
+      const updated = mapUnit(result.data.unit || result.data);
       const store = getStore();
       const idx = store.units.findIndex(u => u.unitId === unitId || u.id === unitId);
       if (idx !== -1) store.units[idx] = updated;
@@ -140,7 +205,7 @@ export const vacateUnit = async (unitId) => {
   try {
     const result = await api(`/units/${unitId}/vacate`, { method: 'PUT' });
     if (result.success && result.data) {
-      const updated = result.data.unit || result.data;
+      const updated = mapUnit(result.data.unit || result.data);
       const store = getStore();
       const idx = store.units.findIndex(u => u.unitId === unitId || u.id === unitId);
       if (idx !== -1) store.units[idx] = updated;
@@ -160,7 +225,7 @@ export const updateUnit = async (unitId, updates) => {
       body: updates,
     });
     if (result.success && result.data) {
-      const updated = result.data.unit || result.data;
+      const updated = mapUnit(result.data.unit || result.data);
       const store = getStore();
       const idx = store.units.findIndex(u => u.unitId === unitId || u.id === unitId);
       if (idx !== -1) store.units[idx] = updated;

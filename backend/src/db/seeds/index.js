@@ -131,18 +131,20 @@ async function seed(query) {
     );
   }
 
-  /* ── 2. properties ── */
+  /* ── 2. properties (manager_id = owning property manager) ── */
   const properties = [
-    { id: ID.sunset,    name: "Sunset Towers",    type: "Residential", status: "Active", address: "123 Main St, Johannesburg, 2001" },
-    { id: ID.riverside, name: "Riverside Complex", type: "MixedUse",   status: "Active", address: "456 River Rd, Sandton, 2031" },
-    { id: ID.greenwood, name: "Greenwood Estate",  type: "Residential", status: "Active", address: "789 Park Ave, Randburg, 2194" },
-    { id: ID.cbd,       name: "CBD Office Park",   type: "Commercial",  status: "Active", address: "100 Business Blvd, Johannesburg, 2001" },
-    { id: ID.lakeside,  name: "Lakeside Village",  type: "Residential", status: "Active", address: "55 Lake Dr, Midrand, 1685" },
+    { id: ID.sunset,    managerId: ID.john,   name: "Sunset Towers",    type: "Residential", status: "Active", address: "123 Main St, Johannesburg, 2001" },
+    { id: ID.riverside, managerId: ID.john,   name: "Riverside Complex", type: "MixedUse",   status: "Active", address: "456 River Rd, Sandton, 2031" },
+    { id: ID.greenwood, managerId: ID.sarahM, name: "Greenwood Estate",  type: "Residential", status: "Active", address: "789 Park Ave, Randburg, 2194" },
+    { id: ID.cbd,       managerId: ID.sarahM, name: "CBD Office Park",   type: "Commercial",  status: "Active", address: "100 Business Blvd, Johannesburg, 2001" },
+    { id: ID.lakeside,  managerId: ID.nomsa,  name: "Lakeside Village",  type: "Residential", status: "Active", address: "55 Lake Dr, Midrand, 1685" },
   ];
   for (const p of properties) {
     await query(
-      "INSERT INTO properties (id, name, type, status, address) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
-      [p.id, p.name, p.type, p.status, p.address],
+      `INSERT INTO properties (id, name, type, status, address, manager_id) VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type,
+         status = EXCLUDED.status, address = EXCLUDED.address, manager_id = EXCLUDED.manager_id`,
+      [p.id, p.name, p.type, p.status, p.address, p.managerId],
     );
   }
 
@@ -171,15 +173,15 @@ async function seed(query) {
     { id: UNIT[0],  propertyId: ID.sunset,    unitNumber: "101",  floor: "1", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 45,  status: "Occupied", occupantId: ID.sarah },
     { id: UNIT[1],  propertyId: ID.sunset,    unitNumber: "102",  floor: "1", type: "2-Bed",   bedrooms: 2, bathrooms: 1, sizeSqm: 65,  status: "Occupied", occupantId: ID.mike },
     { id: UNIT[2],  propertyId: ID.sunset,    unitNumber: "201",  floor: "2", type: "2-Bed",   bedrooms: 2, bathrooms: 1, sizeSqm: 65,  status: "Vacant",   occupantId: null },
-    { id: UNIT[3],  propertyId: ID.sunset,    unitNumber: "202",  floor: "2", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 48,  status: "Occupied", occupantId: ID.thabo },
+    { id: UNIT[3],  propertyId: ID.sunset,    unitNumber: "202",  floor: "2", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 48,  status: "Vacant",   occupantId: null },
     { id: UNIT[4],  propertyId: ID.sunset,    unitNumber: "301",  floor: "3", type: "3-Bed",   bedrooms: 3, bathrooms: 2, sizeSqm: 95,  status: "Vacant",   occupantId: null },
 
     /* Riverside Complex — managed by John */
     { id: UNIT[5],  propertyId: ID.riverside, unitNumber: "A1",   floor: "1", type: "Studio",  bedrooms: 0, bathrooms: 1, sizeSqm: 30,  status: "Occupied", occupantId: ID.jane },
     { id: UNIT[6],  propertyId: ID.riverside, unitNumber: "A2",   floor: "1", type: "Studio",  bedrooms: 0, bathrooms: 1, sizeSqm: 32,  status: "Vacant",   occupantId: null },
-    { id: UNIT[7],  propertyId: ID.riverside, unitNumber: "B1",   floor: "2", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 42,  status: "Occupied", occupantId: ID.zanele },
+    { id: UNIT[7],  propertyId: ID.riverside, unitNumber: "B1",   floor: "2", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 42,  status: "Vacant",   occupantId: null },
     { id: UNIT[8],  propertyId: ID.riverside, unitNumber: "B2",   floor: "2", type: "1-Bed",   bedrooms: 1, bathrooms: 1, sizeSqm: 40,  status: "Vacant",   occupantId: null },
-    { id: UNIT[9],  propertyId: ID.riverside, unitNumber: "C1",   floor: "3", type: "2-Bed",   bedrooms: 2, bathrooms: 1, sizeSqm: 58,  status: "Occupied", occupantId: ID.linda },
+    { id: UNIT[9],  propertyId: ID.riverside, unitNumber: "C1",   floor: "3", type: "2-Bed",   bedrooms: 2, bathrooms: 1, sizeSqm: 58,  status: "Vacant",   occupantId: null },
 
     /* Greenwood Estate — managed by Sarah M */
     { id: UNIT[10], propertyId: ID.greenwood, unitNumber: "GA-01", floor: "0", type: "3-Bed",  bedrooms: 3, bathrooms: 2, sizeSqm: 120, status: "Vacant",   occupantId: null },
@@ -189,11 +191,11 @@ async function seed(query) {
     { id: UNIT[14], propertyId: ID.greenwood, unitNumber: "GB-02", floor: "1", type: "1-Bed",  bedrooms: 1, bathrooms: 1, sizeSqm: 45,  status: "Vacant",   occupantId: null },
 
     /* CBD Office Park — managed by Sarah M */
-    { id: UNIT[15], propertyId: ID.cbd,       unitNumber: "PH-A",  floor: "5", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 85,  status: "Occupied", occupantId: null },
+    { id: UNIT[15], propertyId: ID.cbd,       unitNumber: "PH-A",  floor: "5", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 85,  status: "Vacant",   occupantId: null },
     { id: UNIT[16], propertyId: ID.cbd,       unitNumber: "PH-B",  floor: "5", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 90,  status: "Vacant",   occupantId: null },
-    { id: UNIT[17], propertyId: ID.cbd,       unitNumber: "1F-A",  floor: "1", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 60,  status: "Occupied", occupantId: null },
+    { id: UNIT[17], propertyId: ID.cbd,       unitNumber: "1F-A",  floor: "1", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 60,  status: "Vacant",   occupantId: null },
     { id: UNIT[18], propertyId: ID.cbd,       unitNumber: "1F-B",  floor: "1", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 55,  status: "Vacant",   occupantId: null },
-    { id: UNIT[19], propertyId: ID.cbd,       unitNumber: "2F-A",  floor: "2", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 70,  status: "Occupied", occupantId: null },
+    { id: UNIT[19], propertyId: ID.cbd,       unitNumber: "2F-A",  floor: "2", type: "Office", bedrooms: 0, bathrooms: 1, sizeSqm: 70,  status: "Vacant",   occupantId: null },
 
     /* Lakeside Village — managed by Nomsa */
     { id: UNIT[20], propertyId: ID.lakeside,  unitNumber: "LV-01", floor: "1", type: "2-Bed",  bedrooms: 2, bathrooms: 2, sizeSqm: 75,  status: "Occupied", occupantId: ID.linda },
@@ -205,7 +207,11 @@ async function seed(query) {
   for (const u of units) {
     await query(
       `INSERT INTO units (id, property_id, unit_number, floor, type, bedrooms, bathrooms, size_sqm, status, occupant_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (id) DO UPDATE SET property_id = EXCLUDED.property_id, unit_number = EXCLUDED.unit_number,
+         floor = EXCLUDED.floor, type = EXCLUDED.type, bedrooms = EXCLUDED.bedrooms,
+         bathrooms = EXCLUDED.bathrooms, size_sqm = EXCLUDED.size_sqm,
+         status = EXCLUDED.status, occupant_id = EXCLUDED.occupant_id`,
       [u.id, u.propertyId, u.unitNumber, u.floor, u.type, u.bedrooms, u.bathrooms, u.sizeSqm, u.status, u.occupantId],
     );
   }
@@ -219,11 +225,11 @@ async function seed(query) {
 
     /* Riverside Complex tickets */
     { id: TICKET[3], unitId: UNIT[5], tenantId: ID.jane,  category: "Plumbing",   title: "Toilet running constantly",           description: "Toilet continues to run after flushing. Needs new flapper valve.",                         priority: "MEDIUM",   status: "Completed",   assignedTo: ID.bob,   source: "tenant_portal", dueDate: new Date("2026-07-20T07:00:00Z") },
-    { id: TICKET[4], unitId: UNIT[7], tenantId: ID.zanele,category: "Electrical", title: "Tripping circuit breaker",            description: "Main breaker trips when kettle and microwave used together.",                              priority: "HIGH",     status: "In Progress", assignedTo: ID.ivy,   source: "tenant_portal", dueDate: new Date("2026-08-03T10:00:00Z") },
+    { id: TICKET[4], unitId: UNIT[22],tenantId: ID.zanele,category: "Electrical", title: "Tripping circuit breaker",            description: "Main breaker trips when kettle and microwave used together.",                              priority: "HIGH",     status: "In Progress", assignedTo: ID.ivy,   source: "tenant_portal", dueDate: new Date("2026-08-03T10:00:00Z") },
 
     /* Greenwood Estate tickets */
     { id: TICKET[5], unitId: UNIT[10],tenantId: null,     category: "HVAC",       title: "Air conditioning not cooling",        description: "AC unit running but not cooling space. Filter seems clean.",                               priority: "HIGH",     status: "Open",        assignedTo: null,     source: "phone",         dueDate: new Date("2026-08-08T11:00:00Z") },
-    { id: TICKET[6], unitId: UNIT[11],tenantId: ID.sarah, category: "Plumbing",   title: "Geysor not heating water",            description: "No hot water from geyser since yesterday morning.",                                        priority: "EMERGENCY",status: "ESCALATED",   assignedTo: ID.henry, source: "tenant_portal", dueDate: new Date("2026-07-28T06:00:00Z") },
+    { id: TICKET[6], unitId: UNIT[11],tenantId: null,     category: "Plumbing",   title: "Geysor not heating water",            description: "No hot water from geyser since yesterday morning.",                                        priority: "EMERGENCY",status: "ESCALATED",   assignedTo: ID.henry, source: "phone",         dueDate: new Date("2026-07-28T06:00:00Z") },
 
     /* CBD Office Park tickets */
     { id: TICKET[7], unitId: UNIT[15],tenantId: null,     category: "Carpentry",  title: "Office door jammed",                  description: "Main entrance door to office PH-A is stuck. Cannot open or close.",                        priority: "HIGH",     status: "Open",        assignedTo: null,     source: "email",         dueDate: new Date("2026-08-10T09:00:00Z") },

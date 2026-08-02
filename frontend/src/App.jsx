@@ -105,6 +105,7 @@ function App() {
   const handleLogin = async (userData) => {
     setUser(userData);
     await syncPropertiesAndUnits();
+    refreshUsers();
     setPage('app');
   };
 

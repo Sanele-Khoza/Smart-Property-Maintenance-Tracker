@@ -2,9 +2,11 @@ import { query } from '../../db/connection.js';
 
 const findById = async (id) => {
   const result = await query(
-    `SELECT u.*, p.name AS property_name, p.address AS property_address
+    `SELECT u.*, p.name AS property_name, p.address AS property_address,
+            TRIM(CONCAT(occ.name, ' ', occ.surname)) AS tenant_name
      FROM units u
      LEFT JOIN properties p ON p.id = u.property_id
+     LEFT JOIN users occ ON occ.id = u.occupant_id
      WHERE u.id = $1`,
     [id]
   );
@@ -18,7 +20,7 @@ const findAll = async (filters = {}) => {
 
   if (filters.property_id || filters.propertyId) {
     conditions.push(`u.property_id = $${idx++}`);
-    params.push(Number(filters.property_id || filters.propertyId));
+    params.push(filters.property_id || filters.propertyId);
   }
   if (filters.status) {
     conditions.push(`u.status = $${idx++}`);
@@ -26,7 +28,7 @@ const findAll = async (filters = {}) => {
   }
   if (filters.occupant_id || filters.occupantId) {
     conditions.push(`u.occupant_id = $${idx++}`);
-    params.push(Number(filters.occupant_id || filters.occupantId));
+    params.push(filters.occupant_id || filters.occupantId);
   }
   if (filters.search) {
     conditions.push(`(u.unit_number ILIKE $${idx} OR p.name ILIKE $${idx})`);
@@ -44,9 +46,11 @@ const findAll = async (filters = {}) => {
   );
   const total = parseInt(countResult.rows[0].count, 10);
 
-  let sql = `SELECT u.*, p.name AS property_name, p.address AS property_address
+  let sql = `SELECT u.*, p.name AS property_name, p.address AS property_address,
+            TRIM(CONCAT(occ.name, ' ', occ.surname)) AS tenant_name
      FROM units u
      LEFT JOIN properties p ON p.id = u.property_id
+     LEFT JOIN users occ ON occ.id = u.occupant_id
      ${whereClause}
      ORDER BY p.name ASC, u.unit_number ASC`;
   if (limit !== null) { sql += ` LIMIT $${idx++}`; params.push(limit); }
@@ -61,7 +65,7 @@ const create = async (data) => {
     `INSERT INTO units (property_id, unit_number, floor, type, bedrooms, bathrooms, size_sqm, monthly_rent)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
     [
-      Number(data.property_id || data.propertyId), data.unit_number || data.unitNumber, data.floor || null,
+      data.property_id || data.propertyId, data.unit_number || data.unitNumber, data.floor || null,
       data.type || '1-Bed', data.bedrooms || 1, data.bathrooms || 1,
       data.size_sqm || data.sizeSqm || null, data.monthly_rent || data.monthlyRent || null,
     ]
@@ -73,11 +77,12 @@ const update = async (id, data) => {
   const entries = Object.entries(data).filter(([_, v]) => v !== undefined);
   if (entries.length === 0) return findById(id);
 
+  const columnMap = { propertyId: 'property_id', occupantId: 'occupant_id', unitNumber: 'unit_number' };
   const setClauses = [];
   const params = [];
   let idx = 1;
   for (const [key, value] of entries) {
-    setClauses.push(`${key} = $${idx++}`);
+    setClauses.push(`${columnMap[key] || key} = $${idx++}`);
     params.push(value);
   }
   params.push(id);
@@ -91,19 +96,19 @@ const update = async (id, data) => {
 const assign = async (unitId, tenantId) => {
   await query(
     "UPDATE units SET occupant_id = $1, status = 'Occupied' WHERE id = $2",
-    [Number(tenantId), Number(unitId)]
+    [tenantId, unitId]
   );
 };
 
 const vacate = async (unitId) => {
   await query(
     "UPDATE units SET occupant_id = NULL, status = 'Vacant' WHERE id = $1",
-    [Number(unitId)]
+    [unitId]
   );
 };
 
 const remove = async (id) => {
-  await query('DELETE FROM units WHERE id = $1', [Number(id)]);
+  await query('DELETE FROM units WHERE id = $1', [id]);
 };
 
 const findByOccupant = async (tenantId) => {
@@ -118,4 +123,12 @@ const findByOccupant = async (tenantId) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, assign, vacate, remove, findByOccupant };
+const findTenantIdByName = async (name, surname) => {
+  const result = await query(
+    `SELECT id FROM users WHERE name = $1 AND COALESCE(surname, '') = $2 AND role = 'TENANT' LIMIT 1`,
+    [name, surname]
+  );
+  return result.rows[0] || null;
+};
+
+export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName };

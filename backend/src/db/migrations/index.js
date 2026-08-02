@@ -25,6 +25,7 @@ async function run(query) {
     { name: '019_notification_preferences', file: '019_notification_preferences.js' },
     { name: '020_ai_entity_queue', file: '020_ai_entity_queue.js' },
     { name: '021_routing_assignments', file: '021_routing_assignments.js' },
+    { name: '022_properties_manager', file: '022_properties_manager.js' },
   ];
 
   await query(`

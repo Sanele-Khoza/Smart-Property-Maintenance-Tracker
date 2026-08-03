@@ -15,6 +15,6 @@ router.post('/', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANA
 router.put('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), validate(updateUnitSchema), auditLog('UNIT_UPDATED', req => ({ type: 'unit', id: req.params.id })), ctrl.update);
 router.put('/:id/assign', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), validate(assignUnitSchema), auditLog('UNIT_ASSIGNED', req => ({ type: 'unit', id: req.params.id })), ctrl.assign);
 router.put('/:id/vacate', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), auditLog('UNIT_VACATED', req => ({ type: 'unit', id: req.params.id })), ctrl.vacate);
-router.delete('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN), auditLog('UNIT_DELETED', req => ({ type: 'unit', id: req.params.id })), ctrl.remove);
+router.delete('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), auditLog('UNIT_DELETED', req => ({ type: 'unit', id: req.params.id })), ctrl.remove);
 
 export default router;

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const createUnitSchema = z.object({
-  propertyId: z.number().int().positive('Property is required'),
+  propertyId: z.string().min(1, 'Property is required'),
   unitNumber: z.string().trim().min(1, 'Unit number is required').max(20),
   floor: z.string().max(10).optional().nullable(),
   type: z.string().max(30).optional(),

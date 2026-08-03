@@ -87,7 +87,7 @@ const Properties = () => {
     const a = confirmAction; if (!a) return;
     if (a.type === 'deactivate') { await updatePropertyStatus(a.property.propertyId, 'INACTIVE'); showAlert(`"${a.property.name}" deactivated.`, 'success'); refresh(); }
     else if (a.type === 'reactivate') { await updatePropertyStatus(a.property.propertyId, 'ACTIVE'); showAlert(`"${a.property.name}" reactivated.`, 'success'); refresh(); }
-    else if (a.type === 'delete') { await deleteProperty(a.property.propertyId); showAlert(`"${a.property.name}" deleted.`, 'success'); refresh(); }
+    else if (a.type === 'delete') { const r = await deleteProperty(a.property.propertyId); if (r.success) { showAlert(`"${a.property.name}" deleted.`, 'success'); } else { showAlert(r.error, 'error'); } refresh(); }
     setConfirmAction(null);
   };
 

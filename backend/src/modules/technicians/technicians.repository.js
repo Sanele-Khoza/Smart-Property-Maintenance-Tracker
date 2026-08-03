@@ -38,6 +38,14 @@ const create = async (data) => {
   return result.rows[0];
 };
 
+const COLUMN_MAP = {
+  availability_status: 'status',
+  companyName: 'company_name',
+  currentWorkload: 'current_workload',
+  gpsLatitude: 'gps_location',
+  gpsLongitude: 'gps_location',
+};
+
 const update = async (id, data) => {
   const entries = Object.entries(data).filter(([_, v]) => v !== undefined);
   if (entries.length === 0) return findById(id);
@@ -46,7 +54,15 @@ const update = async (id, data) => {
   const params = [];
   let idx = 1;
   for (const [key, value] of entries) {
-    setClauses.push(`${key} = $${idx++}`);
+    const column = COLUMN_MAP[key] || key;
+    if (column === 'gps_location') {
+      const lat = data.gpsLatitude ?? data.gps_location_lat;
+      const lng = data.gpsLongitude ?? data.gps_location_lng;
+      setClauses.push(`${column} = point($${idx++}, $${idx++}), last_location_update = NOW()`);
+      params.push(lat, lng);
+      continue;
+    }
+    setClauses.push(`${column} = $${idx++}`);
     params.push(value);
   }
   params.push(id);

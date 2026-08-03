@@ -15,7 +15,7 @@ export {
 } from './ticketStore';
 
 export {
-  getTechnicians, updateTechnicianStatus, updateTechnician, getProviders,
+  getTechnicians, updateTechnicianStatus, updateTechnician, getProviders, syncTechnicians,
 } from './technicianStore';
 
 export {

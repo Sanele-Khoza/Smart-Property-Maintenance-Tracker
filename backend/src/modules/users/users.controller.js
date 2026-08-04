@@ -33,8 +33,12 @@ const getPendingUsers = async (req, res, next) => {
 
 const approveUser = async (req, res, next) => {
   try {
-    await query("UPDATE users SET approved = TRUE, approved_at = NOW(), status = 'ACTIVE' WHERE id = $1", [req.params.id]);
-    res.json({ data: { message: 'User approved' }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const result = await query(
+      "UPDATE users SET approved = TRUE, approved_at = NOW(), status = 'ACTIVE' WHERE id = $1 RETURNING id, name, surname, email, phone, role, status, approved, approved_at",
+      [req.params.id]
+    );
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    res.json({ data: { user: result.rows[0] }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 

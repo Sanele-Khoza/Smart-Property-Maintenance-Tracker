@@ -8,7 +8,7 @@ const router = Router();
 
 router.get('/', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.getUsers);
 router.get('/pending', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.getPendingUsers);
-router.put('/:id/approve', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.approveUser);
+router.put('/:id/approve', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.approveUser);
 router.put('/:id/deactivate', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.deactivateUser);
 router.put('/:id/reactivate', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.reactivateUser);
 router.put('/:id/role', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.changeRole);

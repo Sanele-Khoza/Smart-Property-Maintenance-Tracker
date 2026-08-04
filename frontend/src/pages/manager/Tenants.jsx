@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaUsers, FaExclamationTriangle, FaBuilding, FaDoorOpen, FaTicketAlt, FaUserCheck, FaUserSlash, FaSearch, FaEnvelope, FaPhone, FaCheckCircle, FaTimesCircle, FaUserPlus, FaCheck } from 'react-icons/fa';
 import { getUnits, getProperties, getTickets } from '../../data/store';
-import { getUsers, updateUser } from '../../data/authStore';
+import { getUsers, approveManager, refreshUsers } from '../../data/authStore';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
@@ -13,17 +13,23 @@ const Tenants = () => {
   const propIds = new Set(properties.map(p => p.propertyId));
   const [units] = useState(() => getUnits().filter(u => propIds.has(u.propertyId)));
   const [tickets] = useState(getTickets);
-  const [allUsers] = useState(() => getUsers());
+  const [allUsers, setAllUsers] = useState(() => getUsers());
   const [alert, setAlert] = useState({ msg: '', type: '' });
   const [search, setSearch] = useState('');
   const [expandedTenant, setExpandedTenant] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    return () => { cancelled = true; };
+  }, []);
 
   const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };
   const refresh = () => window.location.reload();
 
   const pendingApprovals = allUsers.filter(u =>
     (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
-    u.status === 'Pending'
+    String(u.status).toUpperCase() === 'PENDING'
   );
 
   const tenantData = useMemo(() => {
@@ -65,7 +71,7 @@ const Tenants = () => {
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 
   const handleApprove = async (userId) => {
-    const r = await updateUser(userId, { status: 'Active' });
+    const r = await approveManager(userId);
     if (r.success) { showAlert(`Account approved.`, 'success'); refresh(); }
     else showAlert(r.error, 'error');
   };

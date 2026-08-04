@@ -27,7 +27,7 @@ const changeStatusSchema = z.object({
 });
 
 const assignTicketSchema = z.object({
-  technician_id: z.number().int().positive('Valid technician required'),
+  technician_id: z.string().min(1, 'Valid technician required'),
   note: z.string().optional().nullable(),
 });
 

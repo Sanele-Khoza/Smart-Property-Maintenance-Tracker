@@ -140,7 +140,11 @@ export const approveManager = async (userId) => {
     const result = await api(`/users/${userId}/approve`, { method: 'PUT' });
     if (result.success) {
       const updated = normalizeUser(result.data?.user || result.data);
-      usersCache = usersCache.map(u => u.id === userId ? updated : u);
+      if (updated.id) {
+        usersCache = usersCache.map(u => u.id === userId ? updated : u);
+      } else {
+        usersCache = usersCache.map(u => u.id === userId ? { ...u, status: 'ACTIVE', approved: true } : u);
+      }
       saveUsersCache();
       return { success: true, data: updated };
     }

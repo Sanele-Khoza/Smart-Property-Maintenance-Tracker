@@ -49,7 +49,7 @@ export function runSlaCheck() {
   const result = { warned: [], escalated: [] };
 
   for (const ticket of tickets) {
-    if (['Closed', 'Completed (Provider)', 'Escalated'].includes(ticket.status)) continue;
+    if (['Completed', 'Tenant Confirmed', 'Closed', 'Cancelled', 'Archived', 'Escalated'].includes(ticket.status)) continue;
 
     const status = getSlaStatus(ticket);
     if (!status) continue;
@@ -79,7 +79,7 @@ export async function startSlaPolling() {
   pollingIntervalId = setInterval(async () => {
     try { await refreshTickets(); } catch {}
     runSlaCheck();
-  }, 5 * 60 * 1000);
+  }, 15 * 1000);
 }
 
 export function stopSlaPolling() {

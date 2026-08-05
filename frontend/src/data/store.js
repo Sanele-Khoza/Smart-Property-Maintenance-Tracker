@@ -8,8 +8,10 @@ export {
 
 export {
   createTicket, getTickets, getTicketsByUnit, getTicketById,
-  updateTicketStatus, assignTicket, declineTicketAssignment, reopenTicket,
+  updateTicketStatus, assignTicket, reopenTicket,
   updateTicketCategory, updateTicketRating, submitJobCompletion,
+  acceptJob, startJob, waitForParts, partsReceived,
+  confirmTicketCompletion, closeTicket,
   getTicketsByStatus, getOpenTickets, getTicketsByProvider,
   getStats, refreshTickets, TICKET_TRANSITIONS, PRIORITY_ORDER,
 } from './ticketStore';

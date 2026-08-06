@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getSession, logoutUser, refreshUsers } from './data/authStore';
-import { getTickets, syncPropertiesAndUnits, syncTechnicians } from './data/store';
+import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
 import { setLogoutHandler, api, getToken } from './api/client';
 import Navbar from './components/common/Navbar';
@@ -76,6 +76,7 @@ function App() {
           setUser(session);
           await syncPropertiesAndUnits();
           await syncTechnicians();
+          await refreshTickets();
           setPage('app');
           startSlaPolling();
           refreshUsers();
@@ -107,6 +108,7 @@ function App() {
     setUser(userData);
     await syncPropertiesAndUnits();
     await syncTechnicians();
+    await refreshTickets();
     refreshUsers();
     setPage('app');
   };

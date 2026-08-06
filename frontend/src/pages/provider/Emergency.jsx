@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FaExclamationTriangle, FaBolt, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaWrench, FaStar, FaMapMarkerAlt, FaClock, FaPlay, FaBell, FaTrophy, FaUsers } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getTickets, getTechnicians, updateTicketStatus } from '../../data/store';
+import { getTickets, getTechnicians, acceptJob, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 
 const Emergency = () => {
@@ -20,7 +20,7 @@ const Emergency = () => {
 
   const openEmergencyJobs = tickets.filter(t =>
     (!t.assignedTo || t.assignedTo !== providerName) &&
-    t.status === 'Open' &&
+    t.status === 'New' &&
     (t.priority === 'URGENT' || t.priority === 'EMERGENCY')
   );
 
@@ -33,8 +33,8 @@ const Emergency = () => {
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
   const handleAccept = async (ticketId) => {
-    const r = await updateTicketStatus(ticketId, 'In Progress');
-    if (r.success) { refresh(); showMsg(`${ticketId} accepted — job started`, 'success'); }
+    const r = await acceptJob(ticketId);
+    if (r.success) { refresh(); showMsg(`${ticketId} accepted`, 'success'); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -153,14 +153,14 @@ const Emergency = () => {
                       )}
                       {t.status === 'In Progress' && (
                         <button className="btn btn-teal btn-sm" onClick={async () => {
-                          const r = await updateTicketStatus(t.ticketId, 'Completed (Provider)');
+                          const r = await submitJobCompletion(t.ticketId, '', []);
                           if (r.success) { refresh(); showMsg(`${t.ticketId} marked complete`, 'success'); }
                           else { showMsg(r.error, 'error'); }
                         }}>
                           Complete
                         </button>
                       )}
-                      {t.status === 'Completed (Provider)' && <span className="badge badge-completed">Awaiting Close</span>}
+                      {t.status === 'Completed' && <span className="badge badge-completed">Awaiting Confirmation</span>}
                     </td>
                   </tr>
                 ))}

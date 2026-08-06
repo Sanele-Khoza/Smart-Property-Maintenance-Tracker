@@ -48,7 +48,7 @@ const SystemAdminDashboard = ({ activePage }) => {
   const properties = allData.properties || [];
   const units = allData.units || [];
 
-  const openTickets = tickets.filter(t => t.status === 'Open');
+  const openTickets = tickets.filter(t => t.status === 'New');
   const assignedTickets = tickets.filter(t => t.status === 'Assigned');
   const inProgressTickets = tickets.filter(t => t.status === 'In Progress');
   const completedTickets = tickets.filter(t => t.status === 'Completed');

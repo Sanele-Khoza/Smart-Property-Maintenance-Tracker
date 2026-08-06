@@ -30,12 +30,12 @@ const Reports = () => {
       case 'Ticket Volume': return (
         <div className="card">
           <div className="card-title"><FaChartLine /> Ticket Volume</div>
-          <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Total tickets: {tickets.length} | Open: {tickets.filter(t => t.status === 'Open').length} | Closed: {tickets.filter(t => t.status === 'Closed' || t.status === 'Completed (Provider)').length}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Total tickets: {tickets.length} | Open: {tickets.filter(t => t.status === 'New').length} | Closed: {tickets.filter(t => t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed').length}</p>
           <table className="data-table" style={{ fontSize: 11 }}>
             <thead><tr><th>Property</th><th>Total</th><th>Open</th><th>In Progress</th><th>Closed</th><th>Escalated</th></tr></thead>
             <tbody>{properties.map(p => {
               const pt = tickets.filter(t => t.propertyName === p.name);
-              return (<tr key={p.propertyId}><td>{p.name}</td><td className="cell-mono">{pt.length}</td><td className="cell-mono">{pt.filter(t => t.status === 'Open').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'In Progress').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'Closed' || t.status === 'Completed (Provider)').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'Escalated').length}</td></tr>);
+              return (<tr key={p.propertyId}><td>{p.name}</td><td className="cell-mono">{pt.length}</td><td className="cell-mono">{pt.filter(t => t.status === 'New').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'In Progress').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed').length}</td><td className="cell-mono">{pt.filter(t => t.status === 'Escalated').length}</td></tr>);
             })}</tbody>
           </table>
         </div>
@@ -44,7 +44,7 @@ const Reports = () => {
         <div className="card">
           <div className="card-title"><FaClock /> Avg Resolution Time</div>
           {(() => {
-            const closed = tickets.filter(t => t.status === 'Closed' || t.status === 'Completed (Provider)');
+            const closed = tickets.filter(t => t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed');
             const avgByPriority = {};
             closed.forEach(t => {
               if (!avgByPriority[t.priority]) avgByPriority[t.priority] = { total: 0, count: 0 };
@@ -102,7 +102,7 @@ const Reports = () => {
             <thead><tr><th>Provider</th><th>Assigned</th><th>In Progress</th><th>Completed</th><th>Rating</th><th>Workload</th></tr></thead>
             <tbody>{providers.map(pr => {
               const assigned = tickets.filter(t => t.assignedTo === pr.name);
-              return (<tr key={pr.id}><td><strong>{pr.name}</strong></td><td className="cell-mono">{assigned.length}</td><td className="cell-mono">{assigned.filter(t => t.status === 'In Progress').length}</td><td className="cell-mono">{assigned.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed').length}</td><td className="cell-mono"><span style={{ color: pr.rating >= 4 ? 'var(--teal)' : pr.rating >= 2 ? 'var(--amber)' : 'var(--danger)' }}>{pr.rating.toFixed(1)}</span></td><td className="cell-mono">{pr.currentWorkload}</td></tr>);
+              return (<tr key={pr.id}><td><strong>{pr.name}</strong></td><td className="cell-mono">{assigned.length}</td><td className="cell-mono">{assigned.filter(t => t.status === 'In Progress').length}</td><td className="cell-mono">{assigned.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length}</td><td className="cell-mono"><span style={{ color: pr.rating >= 4 ? 'var(--teal)' : pr.rating >= 2 ? 'var(--amber)' : 'var(--danger)' }}>{pr.rating.toFixed(1)}</span></td><td className="cell-mono">{pr.currentWorkload}</td></tr>);
             })}</tbody>
           </table>
         </div>

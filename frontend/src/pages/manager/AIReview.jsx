@@ -5,7 +5,7 @@ import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
 const STATUS_STYLES = {
-  'Open': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'New': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
   'Manual Review': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
   'CONFLICT': { bg: 'rgba(220,60,60,0.15)', color: '#dc3c3c' },
 };

@@ -30,7 +30,7 @@ const Analytics = () => {
       if (map[cKey]) map[cKey].created++;
       const u = new Date(t.updatedAt);
       const uKey = u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (map[uKey] && ['Completed (Provider)', 'Closed'].includes(t.status)) map[uKey].resolved++;
+      if (map[uKey] && ['Completed', 'Tenant Confirmed', 'Closed'].includes(t.status)) map[uKey].resolved++;
     });
     return Object.values(map);
   }, [tickets]);
@@ -56,7 +56,7 @@ const Analytics = () => {
   const providerPerformance = useMemo(() => {
     return technicians.map(tech => {
       const assigned = tickets.filter(t => t.assignedTo === tech.name);
-      const resolved = assigned.filter(t => ['Completed (Provider)', 'Closed'].includes(t.status));
+      const resolved = assigned.filter(t => ['Completed', 'Tenant Confirmed', 'Closed'].includes(t.status));
       return {
         name: tech.name.split(' ')[0],
         jobs: assigned.length,

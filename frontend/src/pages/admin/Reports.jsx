@@ -70,13 +70,16 @@ const Reports = () => {
   }, [filteredTickets]);
 
   const statusLabels = {
-    'Open': 'Open',
+    'New': 'New',
+    'AI Classified': 'AI Classified',
     'Assigned': 'Assigned',
+    'Accepted': 'Accepted',
     'In Progress': 'In Progress',
-    'Completed (Provider)': 'Completed',
+    'Waiting for Parts': 'Waiting',
+    'Completed': 'Completed',
+    'Tenant Confirmed': 'Tenant Confirmed',
     'Closed': 'Closed',
     'Manual Review': 'Manual Review',
-    'Waiting for Parts': 'Waiting',
     'Reopened': 'Reopened',
     'Escalated': 'Escalated',
   };
@@ -145,7 +148,7 @@ const Reports = () => {
   const providerStats = useMemo(() => {
     return technicians.map(tech => {
       const techTickets = filteredTickets.filter(t => t.assignedTo === tech.name);
-      const resolved = techTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed');
+      const resolved = techTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed');
       const onTime = resolved.filter(t => {
         const sla = slaConfig.find(s => s.priority === t.priority);
         if (!sla) return true;

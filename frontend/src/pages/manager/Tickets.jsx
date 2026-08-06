@@ -1,18 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter } from 'react-icons/fa';
-import { getTickets, getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
+import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
+import useTickets from '../../hooks/useTickets';
 
 const STATUS_STYLES = {
-  'Open': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'New': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'AI Classified': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
   'Manual Review': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
   'Assigned': { bg: 'rgba(50,120,220,0.15)', color: '#3278dc' },
+  'Accepted': { bg: 'rgba(50,120,220,0.15)', color: '#3278dc' },
   'In Progress': { bg: 'rgba(45,183,145,0.15)', color: '#2db791' },
   'Waiting for Parts': { bg: 'rgba(130,80,200,0.15)', color: '#8250c8' },
-  'Completed (Provider)': { bg: 'rgba(45,183,145,0.15)', color: '#2db791' },
+  'Completed': { bg: 'rgba(45,183,145,0.15)', color: '#2db791' },
+  'Tenant Confirmed': { bg: 'rgba(45,183,145,0.15)', color: '#2db791' },
   'Closed': { bg: 'rgba(120,120,130,0.15)', color: '#787882' },
+  'Cancelled': { bg: 'rgba(120,120,130,0.15)', color: '#787882' },
+  'Archived': { bg: 'rgba(120,120,130,0.15)', color: '#787882' },
+  'On Hold': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
   'Reopened': { bg: 'rgba(230,140,30,0.15)', color: '#e68c1e' },
   'Escalated': { bg: 'rgba(220,60,60,0.15)', color: '#dc3c3c' },
 };
@@ -25,31 +32,39 @@ const PRIORITY_STYLES = {
 };
 
 const TICKET_TRANSITIONS = {
-  'Open': ['Manual Review', 'Assigned', 'Escalated'],
-  'Manual Review': ['Open', 'Assigned', 'Escalated'],
-  'Assigned': ['In Progress', 'Escalated'],
-  'In Progress': ['Waiting for Parts', 'Completed (Provider)', 'Escalated'],
-  'Waiting for Parts': ['In Progress', 'Escalated'],
-  'Completed (Provider)': ['Closed', 'Reopened'],
-  'Closed': ['Reopened'],
-  'Reopened': ['Assigned', 'In Progress', 'Escalated'],
-  'Escalated': ['Assigned', 'In Progress'],
+  'New': ['AI Classified', 'Manual Review', 'Cancelled'],
+  'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
+  'Manual Review': ['AI Classified', 'Cancelled'],
+  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+  'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+  'Waiting for Parts': ['In Progress', 'On Hold'],
+  'Completed': ['Tenant Confirmed', 'Reopened'],
+  'Tenant Confirmed': ['Closed'],
+  'Closed': [],
+  'Cancelled': ['Archived'],
+  'Archived': ['Reopened'],
+  'On Hold': ['In Progress', 'Cancelled'],
+  'Reopened': ['Assigned', 'In Progress', 'Cancelled'],
+  'Escalated': ['Manual Review', 'Assigned'],
 };
 
 const TRANSITION_LABELS = {
-  'Manual Review': 'Review', 'Assigned': 'Assign', 'In Progress': 'Progress',
-  'Waiting for Parts': 'Wait Parts', 'Completed (Provider)': 'Complete',
-  'Closed': 'Close', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
+  'AI Classified': 'AI', 'Manual Review': 'Review', 'Assigned': 'Assign',
+  'Accepted': 'Accept', 'In Progress': 'Progress',
+  'Waiting for Parts': 'Wait Parts', 'Completed': 'Complete',
+  'Tenant Confirmed': 'Confirm', 'Closed': 'Close', 'Cancelled': 'Cancel',
+  'Archived': 'Archive', 'On Hold': 'Hold', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
 };
 
-const TABS = ['All', 'Open', 'Assigned', 'In Progress', 'Needs Review', 'SLA Warning', 'SLA Breached', 'Completed'];
+const TABS = ['All', 'New', 'Assigned', 'Accepted', 'In Progress', 'Needs Review', 'SLA Warning', 'SLA Breached', 'Completed'];
 
 const Tickets = () => {
   const session = getSession();
   const pmName = session ? `${session.name} ${session.surname}` : '';
   const [allProperties] = useState(getProperties);
   const propNames = useMemo(() => new Set(allProperties.filter(p => p.managerName === pmName).map(p => p.name)), [allProperties, pmName]);
-  const [allTickets, setAllTickets] = useState(getTickets);
+  const [allTickets, refreshTickets] = useTickets();
   const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)) , [allTickets, propNames]);
   const [providers] = useState(getProviders);
   const [categories] = useState(getCategories());
@@ -73,15 +88,15 @@ const Tickets = () => {
   const [confirmTransition, setConfirmTransition] = useState(null);
 
   useEffect(() => {
-    const handleSlaBreach = () => setAllTickets(getTickets());
-    const handleSlaWarning = () => setAllTickets(getTickets());
+    const handleSlaBreach = () => refreshTickets();
+    const handleSlaWarning = () => refreshTickets();
     window.addEventListener('spmt:sla-breach', handleSlaBreach);
     window.addEventListener('spmt:sla-warning', handleSlaWarning);
     return () => {
       window.removeEventListener('spmt:sla-breach', handleSlaBreach);
       window.removeEventListener('spmt:sla-warning', handleSlaWarning);
     };
-  }, []);
+  }, [refreshTickets]);
 
   const refresh = () => {
     setAlert({ msg: '', type: '' });
@@ -111,7 +126,7 @@ const Tickets = () => {
   };
 
   const getSlaStatus = (ticket) => {
-    if (['Closed', 'Completed (Provider)'].includes(ticket.status)) {
+    if (['Completed', 'Tenant Confirmed', 'Closed'].includes(ticket.status)) {
       return { label: '\u2713 Resolved', pctElapsed: 100, color: 'var(--teal)', state: 'resolved' };
     }
     const s = computeSlaStatus(ticket);
@@ -123,10 +138,11 @@ const Tickets = () => {
     if (activeTab === 'Needs Review' && !t.conflictDetected && !t.manualReviewRequired) return false;
     if (activeTab === 'SLA Warning') { const s = getSlaStatus(t); if (!s || s.state !== 'warning') return false; }
     if (activeTab === 'SLA Breached') { const s = getSlaStatus(t); if (!s || s.state !== 'breached') return false; }
-    if (activeTab === 'Open' && t.status !== 'Open') return false;
+    if (activeTab === 'New' && t.status !== 'New') return false;
     if (activeTab === 'Assigned' && t.status !== 'Assigned') return false;
+    if (activeTab === 'Accepted' && t.status !== 'Accepted') return false;
     if (activeTab === 'In Progress' && t.status !== 'In Progress') return false;
-    if (activeTab === 'Completed' && t.status !== 'Closed' && t.status !== 'Completed (Provider)') return false;
+    if (activeTab === 'Completed' && t.status !== 'Completed' && t.status !== 'Tenant Confirmed' && t.status !== 'Closed') return false;
     if (statusFilter && t.status !== statusFilter) return false;
     if (priorityFilter && t.priority !== priorityFilter) return false;
     if (searchText && !t.title.toLowerCase().includes(searchText.toLowerCase()) && !t.ticketId.toLowerCase().includes(searchText.toLowerCase())) return false;
@@ -138,7 +154,7 @@ const Tickets = () => {
 
   const stats = [
     { label: 'Total', value: tickets.length, icon: FaTicketAlt },
-    { label: 'Open', value: tickets.filter(t => t.status === 'Open').length, icon: FaTicketAlt },
+    { label: 'New', value: tickets.filter(t => t.status === 'New').length, icon: FaTicketAlt },
     { label: 'In Progress', value: tickets.filter(t => t.status === 'In Progress').length, icon: FaRedo },
     { label: 'Needs Review', value: needsReview, icon: FaBrain },
     { label: 'Conflict', value: tickets.filter(t => t.conflictDetected).length, icon: FaExclamationTriangle },
@@ -147,13 +163,14 @@ const Tickets = () => {
 
   const tabCounts = {
     'All': tickets.length,
-    'Open': tickets.filter(t => t.status === 'Open').length,
+    'New': tickets.filter(t => t.status === 'New').length,
     'Assigned': tickets.filter(t => t.status === 'Assigned').length,
+    'Accepted': tickets.filter(t => t.status === 'Accepted').length,
     'In Progress': tickets.filter(t => t.status === 'In Progress').length,
     'Needs Review': needsReview,
     'SLA Warning': tickets.filter(t => getSlaStatus(t)?.state === 'warning').length,
     'SLA Breached': slaBreached,
-    'Completed': tickets.filter(t => t.status === 'Closed' || t.status === 'Completed (Provider)').length,
+    'Completed': tickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length,
   };
 
   const uniqueStatuses = [...new Set(tickets.map(t => t.status))].sort();
@@ -247,8 +264,8 @@ const Tickets = () => {
                 filtered.map(t => {
                   const st = STATUS_STYLES[t.status] || {};
                   const pt = PRIORITY_STYLES[t.priority] || {};
-                  const canAssign = ['Open', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
-                  const canReopen = ['Closed', 'Completed (Provider)'].includes(t.status);
+                  const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
+                  const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
                   const expanded = expandedRows[t.ticketId];

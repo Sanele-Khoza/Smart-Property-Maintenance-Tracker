@@ -5,9 +5,11 @@ import { getSession } from '../../data/authStore';
 
 const STATUS_COLORS = {
   'Assigned': '#3278dc',
+  'Accepted': '#3278dc',
   'In Progress': '#2db791',
   'Waiting for Parts': '#8250c8',
-  'Completed (Provider)': '#2db791',
+  'Completed': '#2db791',
+  'Tenant Confirmed': '#2db791',
   'Scheduled': '#f0b432',
 };
 

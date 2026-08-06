@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamationTriangle, FaCheckCircle, FaClock, FaBrain } from 'react-icons/fa';
 import Property from '../../components/Property';
 import Assignment from '../../components/Assignment';
-import { getStats, getTickets, getProperties, getUnits } from '../../data/store';
+import { getStats, getProperties, getUnits } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import StatusBadge from '../../components/common/StatusBadge';
+import useTickets from '../../hooks/useTickets';
 import Overview from '../manager/Overview';
 import Properties from '../manager/Properties';
 import Units from '../manager/Units';
@@ -19,7 +20,7 @@ import AIReview from '../manager/AIReview';
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
   const pmName = session ? `${session.name} ${session.surname}` : '';
-  const [allTickets, setAllTickets] = useState(getTickets());
+  const [allTickets] = useTickets();
   const [allProperties, setAllProperties] = useState(getProperties());
   const [allUnits, setAllUnits] = useState(getUnits());
   const [selectedImage, setSelectedImage] = useState(null);
@@ -32,13 +33,12 @@ const PropertyManagerDashboard = ({ activePage }) => {
   const units = useMemo(() => allUnits.filter(u => properties.some(p => p.propertyId === u.propertyId)), [allUnits, properties]);
 
   const refresh = () => {
-    setAllTickets(getTickets());
     setAllProperties(getProperties());
     setAllUnits(getUnits());
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const openTickets = tickets.filter(t => t.status === 'Open');
+  const openTickets = tickets.filter(t => t.status === 'New');
   const assignedTickets = tickets.filter(t => t.status === 'Assigned');
   const inProgressTickets = tickets.filter(t => t.status === 'In Progress');
   const completedTickets = tickets.filter(t => t.status === 'Completed');

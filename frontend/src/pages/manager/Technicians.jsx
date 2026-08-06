@@ -21,7 +21,7 @@ const Technicians = () => {
   const pmName = session ? `${session.name} ${session.surname}` : '';
   const [technicians, setTechnicians] = useState(getTechnicians);
   const [allProperties] = useState(getProperties);
-  const [allTickets] = useState(() => getTickets().filter(t => t.status === 'Open' || t.status === 'Assigned' || t.status === 'Reopened'));
+  const [allTickets] = useState(() => getTickets().filter(t => t.status === 'New' || t.status === 'Assigned' || t.status === 'Reopened'));
   const propNames = useMemo(() => new Set(allProperties.filter(p => p.managerName === pmName).map(p => p.name)), [allProperties, pmName]);
   const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)), [allTickets, propNames]);
   const [alert, setAlert] = useState({ msg: '', type: '' });

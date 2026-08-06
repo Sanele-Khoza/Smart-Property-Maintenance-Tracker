@@ -261,7 +261,7 @@ const Tenants = () => {
                                         <td style={{ padding: '4px 8px' }}>{t.title}</td>
                                         <td style={{ padding: '4px 8px' }}>
                                           <span className={`badge ${
-                                            t.status === 'Closed' || t.status === 'Completed (Provider)' ? 'badge-completed' :
+                                            t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed' ? 'badge-completed' :
                                             t.status === 'Assigned' || t.status === 'In Progress' ? 'badge-info' :
                                             t.status === 'Escalated' || t.status === 'Reopened' ? 'badge-warning' :
                                             'badge-danger'

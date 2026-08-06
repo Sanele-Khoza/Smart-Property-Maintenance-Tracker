@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Ticket from '../../components/Ticket';
-import { getStats, getTickets } from '../../data/store';
+import useTickets from '../../hooks/useTickets';
 import Overview from '../tenant/Overview';
 import Profile from '../tenant/Profile';
 import MyProperty from '../tenant/MyProperty';
@@ -9,15 +9,7 @@ import TicketTracking from '../tenant/TicketTracking';
 import Notification from '../tenant/Notification';
 
 const TenantDashboard = ({ currentUser, activePage }) => {
-  const [stats, setStats] = useState(getStats());
-  const [tickets, setTickets] = useState(getTickets());
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const refresh = () => {
-    setStats(getStats());
-    setTickets(getTickets());
-    setRefreshTrigger(prev => prev + 1);
-  };
+  const [tickets, refresh] = useTickets();
 
   const myTickets = tickets.filter(t => t.createdBy === currentUser || (currentUser === 'Tenant' && t.createdBy === 'John Tenant'));
 
@@ -40,7 +32,7 @@ const TenantDashboard = ({ currentUser, activePage }) => {
                       <div className="stat-label">Total Tickets</div>
                     </div>
                     <div className="stat-card">
-                      <div className="stat-value">{myTickets.filter(t => t.status === 'Open').length}</div>
+                      <div className="stat-value">{myTickets.filter(t => t.status === 'New').length}</div>
                       <div className="stat-label">Open</div>
                     </div>
                     <div className="stat-card">

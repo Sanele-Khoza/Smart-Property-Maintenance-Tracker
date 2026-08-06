@@ -14,7 +14,7 @@ const SECTIONS = [
     category: 'Ticket Management', icon: FaCog,
     items: [
       { q: 'How does the AI classification work?', a: 'Tickets are classified by two AWS services: Comprehend (text analysis) and Rekognition (image analysis). Each returns a category and confidence score. If they agree, the result is accepted. If they disagree and either confidence is below 0.60, the ticket goes to Manual Review. If both are at or above 0.60 with disagreement, a Conflict flag is set.' },
-      { q: 'What is the ticket lifecycle?', a: 'Open → Manual Review/Assigned → In Progress → Waiting for Parts/Completed (Provider) → Closed → Reopened. Escalated is available from several states. Each transition is validated by a state machine (TICKET_TRANSITIONS).' },
+      { q: 'What is the ticket lifecycle?', a: 'New → AI Classified → Assigned → Accepted → In Progress → Waiting for Parts/Completed → Tenant Confirmed → Closed. Reopened is available from Completed/Archived; Escalated from several states. Each transition is validated by the backend state machine.' },
       { q: 'How do I override an AI category?', a: 'Use the Tag button on any ticket row. The override is logged as CATEGORY_OVERRIDE (BR-006) in the audit trail showing the AI original category and the new value.' },
       { q: 'What is the reopen policy?', a: 'Only Closed or Completed tickets can be reopened, and a justification of at least 10 characters is required (REQ-041). The reason is recorded in the audit log.' },
     ],

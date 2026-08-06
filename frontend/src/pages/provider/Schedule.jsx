@@ -39,7 +39,7 @@ const Schedule = () => {
     assigned: myTickets.filter(t => t.status === 'Assigned').length,
     inProgress: myTickets.filter(t => t.status === 'In Progress').length,
     waiting: myTickets.filter(t => t.status === 'Waiting for Parts').length,
-    completed: myTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed').length,
+    completed: myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length,
   };
 
   return (
@@ -77,7 +77,7 @@ const Schedule = () => {
                   dayTickets.map(t => (
                     <div key={t.ticketId} style={{
                       padding: '3px 4px', marginBottom: 2, borderRadius: 2, fontSize: 9,
-                      background: t.status === 'Completed (Provider)' || t.status === 'Closed' ? 'rgba(45,183,145,0.1)' :
+                      background: t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed' ? 'rgba(45,183,145,0.1)' :
                         t.status === 'In Progress' ? 'rgba(243,156,18,0.1)' : 'rgba(52,152,219,0.1)',
                       cursor: 'default',
                     }}>

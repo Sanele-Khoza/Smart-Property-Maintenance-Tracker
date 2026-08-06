@@ -28,15 +28,25 @@ function toSnakeTicket(row) {
     updated_at: row.updated_at,
     property_name: row.property_name ?? null,
     unit_number: row.unit_number ?? null,
+    created_by_name: row.created_by_name ?? null,
+    assigned_to_name: row.assigned_to_name ?? null,
   };
 }
 
+const TICKET_JOINS = `
+  LEFT JOIN units u ON u.id = t.unit_id
+  LEFT JOIN properties p ON p.id = u.property_id
+  LEFT JOIN users tenant_user ON tenant_user.id = t.tenant_id
+  LEFT JOIN service_providers sp ON sp.id = t.assigned_to
+`;
+
 const findById = async (id) => {
   const result = await query(
-    `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id
+    `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
+            TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
+            sp.name AS assigned_to_name
      FROM tickets t
-     LEFT JOIN units u ON u.id = t.unit_id
-     LEFT JOIN properties p ON p.id = u.property_id
+     ${TICKET_JOINS}
      WHERE t.id = $1`,
     [id]
   );
@@ -67,6 +77,10 @@ const findAll = async (filters = {}) => {
   if (filters.unit_id) {
     conditions.push(`t.unit_id = $${idx++}`);
     params.push(filters.unit_id);
+  }
+  if (filters.manager_id) {
+    conditions.push(`p.manager_id = $${idx++}`);
+    params.push(filters.manager_id);
   }
   if (filters.search) {
     conditions.push(`(t.title ILIKE $${idx} OR t.description ILIKE $${idx})`);
@@ -100,15 +114,16 @@ const findAll = async (filters = {}) => {
   const offset = filters.offset ? parseInt(filters.offset) : null;
 
   const countResult = await query(
-    `SELECT COUNT(*) FROM tickets t ${whereClause}`,
+    `SELECT COUNT(*) FROM tickets t ${TICKET_JOINS} ${whereClause}`,
     params
   );
   const total = parseInt(countResult.rows[0].count, 10);
 
-  let sql = `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id
+  let sql = `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
+                    TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
+                    sp.name AS assigned_to_name
              FROM tickets t
-             LEFT JOIN units u ON u.id = t.unit_id
-             LEFT JOIN properties p ON p.id = u.property_id
+             ${TICKET_JOINS}
              ${whereClause}
              ORDER BY ${orderField} ${safeDir}`;
 

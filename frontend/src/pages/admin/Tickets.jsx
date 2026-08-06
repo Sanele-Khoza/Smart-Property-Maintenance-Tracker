@@ -5,23 +5,30 @@ import {
   FaChartBar, FaBrain, FaHistory, FaFilter, FaRedo, FaExchangeAlt, FaTrash
 } from 'react-icons/fa';
 import {
-  getTickets, getTicketById, updateTicketStatus, assignTicket, reopenTicket,
+  getTicketById, updateTicketStatus, assignTicket, reopenTicket,
   updateTicketCategory, getProviders, getProperties, getCategories,
   getAuditLogs, getInferenceLogs
 } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
 import Alert from '../../components/common/Alert';
+import useTickets from '../../hooks/useTickets';
 
 const STATUS_STYLES = {
-  'Open':                { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
-  'Manual Review':       { bg: 'rgba(240,180,50,0.15)',  color: '#f0b432' },
-  'Assigned':            { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
-  'In Progress':         { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
-  'Waiting for Parts':   { bg: 'rgba(130,80,200,0.15)',  color: '#8250c8' },
-  'Completed (Provider)':{ bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
-  'Closed':              { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
-  'Reopened':            { bg: 'rgba(230,140,30,0.15)',   color: '#e68c1e' },
-  'Escalated':           { bg: 'rgba(220,60,60,0.15)',    color: '#dc3c3c' },
+  'New':                { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'AI Classified':      { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'Manual Review':      { bg: 'rgba(240,180,50,0.15)',  color: '#f0b432' },
+  'Assigned':           { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
+  'Accepted':           { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
+  'In Progress':        { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Waiting for Parts':  { bg: 'rgba(130,80,200,0.15)',  color: '#8250c8' },
+  'Completed':          { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Tenant Confirmed':   { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Closed':             { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'Cancelled':          { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'Archived':           { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'On Hold':            { bg: 'rgba(240,180,50,0.15)',   color: '#f0b432' },
+  'Reopened':           { bg: 'rgba(230,140,30,0.15)',   color: '#e68c1e' },
+  'Escalated':          { bg: 'rgba(220,60,60,0.15)',    color: '#dc3c3c' },
 };
 
 const PRIORITY_STYLES = {
@@ -32,30 +39,33 @@ const PRIORITY_STYLES = {
 };
 
 const TICKET_TRANSITIONS = {
-  'Open':                ['Manual Review', 'Assigned', 'Escalated'],
-  'Manual Review':       ['Open', 'Assigned', 'Escalated'],
-  'Assigned':            ['In Progress', 'Escalated'],
-  'In Progress':         ['Waiting for Parts', 'Completed (Provider)', 'Escalated'],
-  'Waiting for Parts':   ['In Progress', 'Escalated'],
-  'Completed (Provider)':['Closed', 'Reopened'],
-  'Closed':              ['Reopened'],
-  'Reopened':            ['Assigned', 'In Progress', 'Escalated'],
-  'Escalated':           ['Assigned', 'In Progress'],
+  'New':                ['AI Classified', 'Manual Review', 'Cancelled'],
+  'AI Classified':      ['Assigned', 'Manual Review', 'Cancelled'],
+  'Manual Review':      ['AI Classified', 'Cancelled'],
+  'Assigned':           ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Accepted':           ['In Progress', 'Cancelled', 'On Hold'],
+  'In Progress':        ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+  'Waiting for Parts':  ['In Progress', 'On Hold'],
+  'Completed':          ['Tenant Confirmed', 'Reopened'],
+  'Tenant Confirmed':   ['Closed'],
+  'Closed':             [],
+  'Cancelled':          ['Archived'],
+  'Archived':           ['Reopened'],
+  'On Hold':            ['In Progress', 'Cancelled'],
+  'Reopened':           ['Assigned', 'In Progress', 'Cancelled'],
+  'Escalated':          ['Manual Review', 'Assigned'],
 };
 
 const TRANSITION_LABELS = {
-  'Manual Review': 'Review',
-  'Assigned': 'Assign',
-  'In Progress': 'Progress',
-  'Waiting for Parts': 'Wait Parts',
-  'Completed (Provider)': 'Complete',
-  'Closed': 'Close',
-  'Reopened': 'Reopen',
-  'Escalated': 'Escalate',
+  'AI Classified': 'AI', 'Manual Review': 'Review', 'Assigned': 'Assign',
+  'Accepted': 'Accept', 'In Progress': 'Progress',
+  'Waiting for Parts': 'Wait Parts', 'Completed': 'Complete',
+  'Tenant Confirmed': 'Confirm', 'Closed': 'Close', 'Cancelled': 'Cancel',
+  'Archived': 'Archive', 'On Hold': 'Hold', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
 };
 
 const Tickets = () => {
-  const [tickets, setTickets] = useState(getTickets);
+  const [tickets, refresh] = useTickets();
   const [providers] = useState(getProviders);
   const [properties] = useState(getProperties);
   const [categories] = useState(getCategories());
@@ -77,7 +87,6 @@ const Tickets = () => {
   const [categoryValue, setCategoryValue] = useState('');
   const [confirmTransition, setConfirmTransition] = useState(null);
 
-  const refresh = () => setTickets(getTickets());
   const showAlert = (msg, type) => {
     setAlert({ msg, type });
     setTimeout(() => setAlert({ msg: '', type: '' }), 5000);
@@ -96,7 +105,7 @@ const Tickets = () => {
 
   const stats = [
     { label: 'Total', value: tickets.length, icon: FaTicketAlt },
-    { label: 'Open', value: tickets.filter(t => t.status === 'Open').length, icon: FaTicketAlt },
+    { label: 'New', value: tickets.filter(t => t.status === 'New').length, icon: FaTicketAlt },
     { label: 'Manual Review', value: tickets.filter(t => t.status === 'Manual Review').length, icon: FaBrain },
     { label: 'In Progress', value: tickets.filter(t => t.status === 'In Progress').length, icon: FaRedo },
     { label: 'Conflict', value: tickets.filter(t => t.conflictDetected).length, icon: FaExclamationTriangle },
@@ -232,8 +241,8 @@ const Tickets = () => {
                 filtered.map(t => {
                   const st = STATUS_STYLES[t.status] || {};
                   const pt = PRIORITY_STYLES[t.priority] || {};
-                  const canAssign = ['Open', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
-                  const canReopen = ['Closed', 'Completed (Provider)'].includes(t.status);
+                  const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
+                  const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
                   const expanded = expandedRows[t.ticketId];

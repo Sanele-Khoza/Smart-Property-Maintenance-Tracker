@@ -12,7 +12,7 @@ const MyPerformance = () => {
   const myTickets = tickets.filter(t => t.assignedTo === providerName);
   const myTech = technicians.find(t => t.name === providerName);
 
-  const completed = myTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed');
+  const completed = myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed');
   const rated = completed.filter(t => t.rating);
   const avgRating = rated.length > 0 ? rated.reduce((s, t) => s + t.rating, 0) / rated.length : null;
 
@@ -25,7 +25,7 @@ const MyPerformance = () => {
     const month = t.createdAt.substring(0, 7) || 'Unknown';
     if (!timeline[month]) timeline[month] = { total: 0, completed: 0 };
     timeline[month].total++;
-    if (t.status === 'Completed (Provider)' || t.status === 'Closed') timeline[month].completed++;
+    if (t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed') timeline[month].completed++;
   });
 
   const recentMonths = Object.entries(timeline).sort().slice(-6);

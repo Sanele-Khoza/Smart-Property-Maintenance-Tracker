@@ -14,7 +14,7 @@ const WorkHistory = () => {
 
   const completedTickets = tickets.filter(t =>
     t.assignedTo === providerName &&
-    (t.status === 'Completed (Provider)' || t.status === 'Closed')
+    (t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed')
   );
 
   const filtered = completedTickets.filter(t => {

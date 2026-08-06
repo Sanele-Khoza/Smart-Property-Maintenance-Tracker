@@ -41,8 +41,8 @@ const Assignment = ({ refreshData, pmName }) => {
   // Query predicates: Filter ticket collection by state (functional programming style)
   // openTickets: unassigned tickets available for dispatch
   // activeTickets: tickets in progress (neither Open nor Completed)
-  const openTickets = tickets.filter(t => t.status === 'Open');
-  const activeTickets = tickets.filter(t => !['Open', 'Completed'].includes(t.status));
+  const openTickets = tickets.filter(t => t.status === 'New');
+  const activeTickets = tickets.filter(t => !['New', 'Completed', 'Tenant Confirmed', 'Closed', 'Cancelled', 'Archived'].includes(t.status));
 
   /**
    * Event handler: Dispatch ticket assignment
@@ -83,10 +83,18 @@ const Assignment = ({ refreshData, pmName }) => {
    */
   const getAvailableNextStatus = (ticketStatus) => {
     const transitions = {
-      'Open': ['Assigned'],
-      'Assigned': ['In Progress'],
-      'In Progress': ['Completed'],
-      'Completed': [],
+      'New': ['AI Classified', 'Manual Review', 'Cancelled'],
+      'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
+      'Manual Review': ['AI Classified', 'Cancelled'],
+      'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+      'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+      'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+      'Waiting for Parts': ['In Progress', 'On Hold'],
+      'Completed': ['Tenant Confirmed', 'Reopened'],
+      'Tenant Confirmed': ['Closed'],
+      'Closed': [],
+      'Reopened': ['Assigned', 'In Progress', 'Cancelled'],
+      'Escalated': ['Manual Review', 'Assigned'],
     };
     return transitions[ticketStatus] || [];
   };

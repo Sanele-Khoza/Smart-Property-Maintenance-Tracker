@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter } from 'react-icons/fa';
+import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser } from 'react-icons/fa';
 import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
@@ -75,7 +75,7 @@ const Tickets = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [searchText, setSearchText] = useState('');
-  const [expandedRows, setExpandedRows] = useState({});
+  const [showDetails, setShowDetails] = useState(null);
   const [showReassign, setShowReassign] = useState(null);
   const [reassignProvider, setReassignProvider] = useState('');
   const [showAllProviders, setShowAllProviders] = useState(false);
@@ -268,11 +268,10 @@ const Tickets = () => {
                   const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
-                  const expanded = expandedRows[t.ticketId];
                   const sla = getSlaStatus(t);
                   return (
-                    <React.Fragment key={t.ticketId}>
-                      <tr style={{
+                      <tr onClick={() => setShowDetails(t)} style={{
+                        cursor: 'pointer',
                         backgroundColor: sla?.state === 'breached' ? 'rgba(220,60,60,0.04)' : sla?.state === 'warning' ? 'rgba(240,180,50,0.04)' : '',
                         borderLeft: sla?.state === 'breached' ? '3px solid var(--danger)' : sla?.state === 'warning' ? '3px solid var(--amber)' : '3px solid transparent',
                         borderRight: sla?.state === 'breached' ? `3px solid ${sla.color}` : sla?.state === 'warning' ? `3px solid ${sla.color}` : '3px solid transparent',
@@ -299,38 +298,14 @@ const Tickets = () => {
                         <td style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.createdAt}</td>
                         <td>
                           <div className="action-cell">
-                            <button className="btn btn-secondary btn-sm" onClick={() => setExpandedRows(p => ({ ...p, [t.ticketId]: !p[t.ticketId] }))}><FaEye /></button>
-                            {tc.filter(s => s !== 'Reopened').map(s => <button key={s} className="btn btn-secondary btn-sm" onClick={() => handleTransition(t.ticketId, s)} style={{ fontSize: 9, padding: '2px 5px' }}>{TRANSITION_LABELS[s] || s}</button>)}
-                            {tc.includes('Reopened') && <button className="btn btn-secondary btn-sm" onClick={() => { setShowReopen(t); setReopenText(''); setReopenError(''); }} style={{ fontSize: 9, padding: '2px 5px' }}><FaUndo /> Reopen</button>}
-                            {canAssign && <button className="btn btn-teal btn-sm" onClick={() => { setShowReassign(t); setReassignProvider(''); }}><FaUserCheck /></button>}
-                            <button className="btn btn-secondary btn-sm" onClick={() => { setShowCategoryModal(t); setCategoryValue(t.category || ''); }}><FaTag /></button>
+                            <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowDetails(t); }} title="View full details"><FaEye /></button>
+                            {tc.filter(s => s !== 'Reopened').map(s => <button key={s} className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); handleTransition(t.ticketId, s); }} style={{ fontSize: 9, padding: '2px 5px' }}>{TRANSITION_LABELS[s] || s}</button>)}
+                            {tc.includes('Reopened') && <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowReopen(t); setReopenText(''); setReopenError(''); }} style={{ fontSize: 9, padding: '2px 5px' }}><FaUndo /> Reopen</button>}
+                            {canAssign && <button className="btn btn-teal btn-sm" onClick={(e) => { e.stopPropagation(); setShowReassign(t); setReassignProvider(''); }}><FaUserCheck /></button>}
+                            <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowCategoryModal(t); setCategoryValue(t.category || ''); }}><FaTag /></button>
                           </div>
                         </td>
                       </tr>
-                      {expanded && (
-                        <tr className="expanded-row"><td colSpan="14" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)' }}>
-                          <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
-                            <div style={{ flex: 2, minWidth: 240 }}>
-                              <strong>Description:</strong>
-                              <p style={{ margin: '4px 0', color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{t.description}</p>
-                              <strong style={{ marginTop: 8, display: 'block' }}>Audit Trail:</strong>
-                              {auditLogs.filter(l => l.ticketId === t.ticketId).map(l => (
-                                <div key={l.id} style={{ padding: '2px 0', fontSize: 10, color: 'var(--text-dim)', borderBottom: '1px solid var(--border)' }}>
-                                  <span style={{ color: 'var(--text)' }}>{l.actor}</span> — {l.action}: {l.comment}
-                                  <span style={{ float: 'right' }}>{new Date(l.timestamp).toLocaleString()}</span>
-                                </div>
-                              ))}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 160 }}>
-                              <strong>AI Inferences:</strong>
-                              {inferenceLogs.filter(l => l.ticketId === t.ticketId).length > 0 ? inferenceLogs.filter(l => l.ticketId === t.ticketId).map(l => (
-                                <div key={l.id} style={{ padding: '2px 0', fontSize: 10, color: 'var(--text-dim)' }}><FaBrain style={{ fontSize: 8, marginRight: 3 }} />{l.adapter} ({l.inputType}): {Math.round(l.confidence * 100)}% → {l.result}{l.conflictDetected && <span className="badge badge-danger" style={{ fontSize: 7, marginLeft: 4 }}>CONFLICT</span>}</div>
-                              )) : <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>No AI inference data</span>}
-                            </div>
-                          </div>
-                        </td></tr>
-                      )}
-                    </React.Fragment>
                   );
                 })
               )}
@@ -422,6 +397,81 @@ const Tickets = () => {
           </div>
         </div>
       )}
+
+      {showDetails && (() => {
+        const t = showDetails;
+        const dtSt = STATUS_STYLES[t.status] || {};
+        const dtPt = PRIORITY_STYLES[t.priority] || {};
+        const dtSla = getSlaStatus(t);
+        const dtOverride = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
+        const ticketAudit = auditLogs.filter(l => l.ticketId === t.ticketId);
+        const ticketInferences = inferenceLogs.filter(l => l.ticketId === t.ticketId);
+        return (
+          <div className="modal" onClick={() => setShowDetails(null)}>
+            <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
+              <div className="edit-modal-header">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FaTicketAlt /> Ticket #{t.ticketId}
+                  <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600, backgroundColor: dtSt.bg || '', color: dtSt.color || 'var(--text)' }}>{t.status}</span>
+                  <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 700, backgroundColor: dtPt.bg || '', color: dtPt.color || 'var(--text)' }}>{t.priority}</span>
+                </span>
+                <button className="modal-close-btn" onClick={() => setShowDetails(null)}><FaTimes /></button>
+              </div>
+              <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600 }}>Title</label>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{t.title}</div>
+                </div>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600 }}>Description</label>
+                  <p style={{ margin: '4px 0', color: 'var(--text-dim)', whiteSpace: 'pre-wrap', fontSize: 13 }}>{t.description}</p>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px', fontSize: 12, marginBottom: 12 }}>
+                  <div><FaBuilding style={{ marginRight: 4, fontSize: 10 }} /> <strong>Property:</strong> {t.propertyName || '—'}</div>
+                  <div><FaBox style={{ marginRight: 4, fontSize: 10 }} /> <strong>Unit:</strong> {t.unitNumber ? `Unit ${t.unitNumber}` : '—'}</div>
+                  <div><FaUser style={{ marginRight: 4, fontSize: 10 }} /> <strong>Submitted by:</strong> {t.createdBy || '—'}</div>
+                  <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Created:</strong> {t.createdAt || '—'}</div>
+                  <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Updated:</strong> {t.updatedAt || '—'}</div>
+                  <div><FaUserCheck style={{ marginRight: 4, fontSize: 10 }} /> <strong>Assigned to:</strong> {t.assignedTo || '—'}</div>
+                  <div><FaTag style={{ marginRight: 4, fontSize: 10 }} /> <strong>Category:</strong> {t.category || '—'}</div>
+                  <div><FaBrain style={{ marginRight: 4, fontSize: 10 }} /> <strong>AI original:</strong> {t.aiOriginalCategory ? <span>{t.aiOriginalCategory} {dtOverride && <span style={{ color: 'var(--amber)' }}>(overridden)</span>}</span> : '—'}</div>
+                  <div><FaBrain style={{ marginRight: 4, fontSize: 10 }} /> <strong>Confidence:</strong> {t.combinedConfidence != null ? `${Math.round(t.combinedConfidence * 100)}%` : '—'}</div>
+                  <div><FaExclamationTriangle style={{ marginRight: 4, fontSize: 10 }} /> <strong>SLA:</strong> <span style={{ color: dtSla.color }}>{dtSla.label}</span></div>
+                </div>
+                {t.conflictDetected && <div className="alert alert-error" style={{ fontSize: 11, padding: '6px 10px', marginBottom: 12 }}><FaExclamationTriangle style={{ marginRight: 4 }} />AI conflict detected — manual review recommended.</div>}
+                {t.images && t.images.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <strong style={{ fontSize: 11 }}>Attachments ({t.images.length})</strong>
+                    <div className="image-preview-grid" style={{ marginTop: 4 }}>
+                      {t.images.map((img, idx) => <div key={idx} className="image-preview" style={{ width: 72, height: 72 }}><img src={img.data || img} alt={`Attachment ${idx + 1}`} /></div>)}
+                    </div>
+                  </div>
+                )}
+                <div style={{ marginBottom: 12 }}>
+                  <strong style={{ fontSize: 11 }}>Audit Trail</strong>
+                  {ticketAudit.length > 0 ? ticketAudit.map(l => (
+                    <div key={l.id} style={{ padding: '3px 0', fontSize: 11, color: 'var(--text-dim)', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--text)' }}>{l.actor}</span> — {l.action}: {l.comment}
+                      <span style={{ float: 'right' }}>{new Date(l.timestamp).toLocaleString()}</span>
+                    </div>
+                  )) : <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>No audit entries.</div>}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <strong style={{ fontSize: 11 }}>AI Inferences</strong>
+                  {ticketInferences.length > 0 ? ticketInferences.map(l => (
+                    <div key={l.id} style={{ padding: '3px 0', fontSize: 11, color: 'var(--text-dim)' }}>
+                      <FaBrain style={{ fontSize: 8, marginRight: 3 }} />{l.adapter} ({l.inputType}): {Math.round(l.confidence * 100)}% → {l.result}{l.conflictDetected && <span className="badge badge-danger" style={{ fontSize: 7, marginLeft: 4 }}>CONFLICT</span>}
+                    </div>
+                  )) : <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>No AI inference data.</div>}
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowDetails(null)}><FaEye /> Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

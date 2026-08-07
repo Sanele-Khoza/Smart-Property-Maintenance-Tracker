@@ -12,7 +12,7 @@ const Schedule = () => {
   const [tickets] = useState(getTickets());
   const [weekOffset, setWeekOffset] = useState(0);
 
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
+  const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
   const today = new Date();
   const startOfWeek = new Date(today);

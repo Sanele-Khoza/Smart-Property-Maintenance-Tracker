@@ -13,7 +13,7 @@ const WorkHistory = () => {
   const [expandedId, setExpandedId] = useState(null);
 
   const completedTickets = tickets.filter(t =>
-    t.assignedTo === providerName &&
+    (t.assignedTo === providerName || (session && t.assignedToId === session.id)) &&
     (t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed')
   );
 

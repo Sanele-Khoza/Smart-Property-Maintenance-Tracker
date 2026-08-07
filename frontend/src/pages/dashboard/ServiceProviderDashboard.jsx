@@ -25,8 +25,9 @@ const ServiceProviderDashboard = ({ activePage }) => {
 
   const session = getSession();
   const providerName = session ? `${session.name} ${session.surname}` : 'Mike Provider';
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
-  const openTickets = tickets.filter(t => t.status === 'New' && t.assignedTo !== providerName);
+  const isMine = (t) => t.assignedTo === providerName || (session && t.assignedToId === session.id);
+  const myTickets = tickets.filter(isMine);
+  const openTickets = tickets.filter(t => t.status === 'New' && !isMine(t));
 
   const handleWorkflow = async (ticketId, promise, newStatus) => {
     const result = await promise;

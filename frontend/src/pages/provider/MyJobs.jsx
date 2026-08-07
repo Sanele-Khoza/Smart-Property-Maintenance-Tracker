@@ -16,7 +16,7 @@ const MyJobs = ({ onViewDetails }) => {
   const [expandedId, setExpandedId] = useState(null);
   const [msg, setMsg] = useState({ text: '', type: '' });
 
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
+  const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
   const filtered = myTickets.filter(t => {
     if (filter !== 'all' && t.status !== filter) return false;

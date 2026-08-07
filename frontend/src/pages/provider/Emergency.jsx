@@ -13,13 +13,15 @@ const Emergency = () => {
 
   const refresh = () => setTickets(getTickets());
 
+  const isMine = (t) => t.assignedTo === providerName || (session && t.assignedToId === session.id);
+
   const myEmergencyTickets = tickets.filter(t =>
-    t.assignedTo === providerName &&
+    isMine(t) &&
     (t.priority === 'URGENT' || t.priority === 'EMERGENCY')
   );
 
   const openEmergencyJobs = tickets.filter(t =>
-    (!t.assignedTo || t.assignedTo !== providerName) &&
+    !isMine(t) &&
     t.status === 'New' &&
     (t.priority === 'URGENT' || t.priority === 'EMERGENCY')
   );

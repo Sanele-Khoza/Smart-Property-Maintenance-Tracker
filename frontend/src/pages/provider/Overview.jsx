@@ -7,7 +7,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 const Overview = () => {
   const session = getSession();
   const myName = session ? `${session.name} ${session.surname}` : '';
-  const myTickets = getTickets().filter(t => t.assignedTo === myName);
+  const myTickets = getTickets().filter(t => t.assignedTo === myName || (session && t.assignedToId === session.id));
   const allTechs = getTechnicians();
 
   const activeJobs = myTickets.filter(t => t.status === 'Assigned' || t.status === 'In Progress');
@@ -15,7 +15,7 @@ const Overview = () => {
   const emergencyJobs = myTickets.filter(t => t.priority === 'EMERGENCY');
   const peersAvailable = allTechs.filter(t => t.availabilityStatus === 'AVAILABLE').length;
 
-  const myTech = allTechs.find(t => t.name === myName);
+  const myTech = allTechs.find(t => t.id === session?.id || t.name === myName);
   const specialisations = myTech?.specialisations || [];
 
   const recentActive = activeJobs.slice(0, 3);

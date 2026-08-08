@@ -98,7 +98,6 @@ const TicketTracking = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Priority</th>
@@ -113,7 +112,6 @@ const TicketTracking = () => {
               <tbody>
                 {filtered.map(t => (
                   <tr key={t.ticketId}>
-                    <td className="cell-mono">{t.ticketId}</td>
                     <td><strong>{t.title}</strong></td>
                     <td><StatusBadge status={t.status} /></td>
                     <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{t.priority}</span></td>
@@ -138,7 +136,7 @@ const TicketTracking = () => {
       {selected && (
         <div className="card" style={{ marginTop: 12 }}>
           <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span><FaTicketAlt /> {selected.ticketId} — {selected.title}</span>
+            <span><FaTicketAlt /> {selected.title}</span>
             <button className="modal-close-btn" aria-label="Close ticket details" title="Close" onClick={() => setSelected(null)}>×</button>
           </div>
           <table className="table">

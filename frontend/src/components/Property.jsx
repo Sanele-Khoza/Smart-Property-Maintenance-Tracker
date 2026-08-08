@@ -181,7 +181,6 @@ const Property = ({ refreshData, pmName }) => {
               {properties.map(p => (
                 <div className="data-item" key={p.propertyId}>
                   <div>
-                    <div className="data-item-id">{p.propertyId}</div>
                     <div className="data-item-name">{p.name}</div>
                     <div className="data-item-meta">{p.address}</div>
                   </div>
@@ -200,7 +199,6 @@ const Property = ({ refreshData, pmName }) => {
               {units.map(u => (
                 <div className="data-item" key={u.unitId}>
                   <div>
-                    <div className="data-item-id">{u.unitId}</div>
                     <div className="data-item-name">Unit {u.unitNumber}</div>
                     <div className="data-item-meta">{u.propertyName} | Floor {u.floor || 'N/A'}</div>
                   </div>

@@ -178,7 +178,7 @@ const Tickets = () => {
 
   const handleTransition = async (ticketId, newStatus) => {
     const r = await updateTicketStatus(ticketId, newStatus);
-    if (r.success) { showAlert(`Ticket ${ticketId} → ${newStatus}`, 'success'); }
+    if (r.success) { showAlert(`Status updated to ${newStatus}`, 'success'); }
     else showAlert(r.error, 'error');
   };
 
@@ -187,7 +187,7 @@ const Tickets = () => {
     if (!reassignProvider) return;
     const prov = providers.find(p => p.name === reassignProvider);
     const r = await assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
-    if (r.success) { showAlert(`Reassigned ${showReassign.ticketId}`, 'success'); setShowReassign(null); }
+    if (r.success) { showAlert('Ticket reassigned', 'success'); setShowReassign(null); }
     else showAlert(r.error, 'error');
   };
 
@@ -258,7 +258,7 @@ const Tickets = () => {
         </div>
         <div className="admin-table-wrapper">
           <table className="admin-table">
-            <thead><tr><th>ID</th><th>Title</th><th>Property</th><th>Unit</th><th>Status</th><th>Priority</th><th>Category</th><th>AI Orig.</th><th>Conf.</th><th>Badges</th><th>SLA</th><th>Assigned</th><th>Created</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Title</th><th>Property</th><th>Unit</th><th>Status</th><th>Priority</th><th>Category</th><th>AI Orig.</th><th>Conf.</th><th>Badges</th><th>SLA</th><th>Assigned</th><th>Created</th><th>Actions</th></tr></thead>
             <tbody>
               {filtered.length === 0 ? <tr><td colSpan="14" style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>No tickets match.</td></tr> : (
                 filtered.map(t => {
@@ -276,7 +276,6 @@ const Tickets = () => {
                         borderLeft: sla?.state === 'breached' ? '3px solid var(--danger)' : sla?.state === 'warning' ? '3px solid var(--amber)' : '3px solid transparent',
                         borderRight: sla?.state === 'breached' ? `3px solid ${sla.color}` : sla?.state === 'warning' ? `3px solid ${sla.color}` : '3px solid transparent',
                       }}>
-                        <td className="cell-mono">{t.ticketId}</td>
                         <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>{t.title}</td>
                         <td>{t.propertyName}</td>
                         <td className="cell-mono">{t.unitNumber}</td>
@@ -317,7 +316,7 @@ const Tickets = () => {
       {showReassign && (
         <div className="modal" onClick={() => setShowReassign(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <div className="edit-modal-header"><span><FaUserCheck /> Reassign — {showReassign.ticketId}</span><button className="modal-close-btn" onClick={() => setShowReassign(null)}><FaTimes /></button></div>
+            <div className="edit-modal-header"><span><FaUserCheck /> Reassign</span><button className="modal-close-btn" onClick={() => setShowReassign(null)}><FaTimes /></button></div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Routing Recommendations <span className="req-ref">REQ-033-035</span></div>
               {(() => {
@@ -375,7 +374,7 @@ const Tickets = () => {
       {showReopen && (
         <div className="modal" onClick={() => setShowReopen(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
-            <div className="edit-modal-header"><span><FaUndo /> Reopen — {showReopen.ticketId}</span><button className="modal-close-btn" onClick={() => setShowReopen(null)}><FaTimes /></button></div>
+            <div className="edit-modal-header"><span><FaUndo /> Reopen</span><button className="modal-close-btn" onClick={() => setShowReopen(null)}><FaTimes /></button></div>
             <form onSubmit={handleReopen}>
               {reopenError && <Alert msg={reopenError} type="error" />}
               <div className="form-group"><label>Justification <span style={{ color: 'var(--danger)', fontSize: 10 }}>≥10 chars (REQ-041)</span></label><textarea className="form-input" rows={3} value={reopenText} onChange={e => setReopenText(e.target.value)} placeholder="Why reopen?" required /><div style={{ fontSize: 10, marginTop: 4, color: reopenText.trim().length >= 10 ? 'var(--teal)' : 'var(--text-dim)' }}>{reopenText.trim().length}/10</div></div>
@@ -388,7 +387,7 @@ const Tickets = () => {
       {showCategoryModal && (
         <div className="modal" onClick={() => setShowCategoryModal(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
-            <div className="edit-modal-header"><span><FaTag /> Override Category — {showCategoryModal.ticketId}</span><button className="modal-close-btn" onClick={() => setShowCategoryModal(null)}><FaTimes /></button></div>
+            <div className="edit-modal-header"><span><FaTag /> Override Category</span><button className="modal-close-btn" onClick={() => setShowCategoryModal(null)}><FaTimes /></button></div>
             <form onSubmit={handleCategoryOverride}>
               {showCategoryModal.aiOriginalCategory && showCategoryModal.aiOriginalCategory !== categoryValue && <p style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 8 }}><FaExclamationTriangle style={{ marginRight: 4 }} />AI originally: <strong>{showCategoryModal.aiOriginalCategory}</strong>. Override logged (BR-006).</p>}
               <div className="form-group"><label>New Category</label><select className="form-select" value={categoryValue} onChange={e => setCategoryValue(e.target.value)} required>{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
@@ -411,7 +410,7 @@ const Tickets = () => {
             <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
               <div className="edit-modal-header">
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <FaTicketAlt /> Ticket #{t.ticketId}
+                  <FaTicketAlt /> Ticket
                   <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600, backgroundColor: dtSt.bg || '', color: dtSt.color || 'var(--text)' }}>{t.status}</span>
                   <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 700, backgroundColor: dtPt.bg || '', color: dtPt.color || 'var(--text)' }}>{t.priority}</span>
                 </span>

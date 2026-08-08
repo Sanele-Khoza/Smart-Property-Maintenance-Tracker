@@ -62,6 +62,10 @@ import notificationPreferencesRoutes from './modules/notification-preferences/no
 import aiRoutes from './modules/ai/ai.routes.js';
 import routingRoutes from './modules/routing/routing.routes.js';
 
+/* Ratings Feature */
+import ratingsRoutes from './modules/ratings/ratings.routes.js';
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -163,6 +167,9 @@ app.use('/api/realtime', realtimeRoutes);
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/routing', routingRoutes);
+
+/* ratings feature routes */
+app.use('/api/ratings', ratingsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

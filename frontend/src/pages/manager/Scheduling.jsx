@@ -5,9 +5,11 @@ import { getSession } from '../../data/authStore';
 
 const STATUS_COLORS = {
   'Assigned': '#3278dc',
+  'Accepted': '#3278dc',
   'In Progress': '#2db791',
   'Waiting for Parts': '#8250c8',
-  'Completed (Provider)': '#2db791',
+  'Completed': '#2db791',
+  'Tenant Confirmed': '#2db791',
   'Scheduled': '#f0b432',
 };
 
@@ -96,7 +98,7 @@ const Scheduling = () => {
                       borderLeft: `2px solid ${color}`, backgroundColor: `${color}10`,
                       cursor: 'default',
                     }} title={`${t.title}\n${t.assignedTo || 'Unassigned'}\n${t.status}`}>
-                      <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.ticketId}: {t.title}</div>
+                      <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
                       <div style={{ color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 3 }}>
                         <FaUser style={{ fontSize: 7 }} />{t.assignedTo || '—'}
                         {tech && <><FaMapMarkerAlt style={{ fontSize: 7, marginLeft: 2 }} />{tech.gpsLatitude?.toFixed(2)},{tech.gpsLongitude?.toFixed(2)}</>}

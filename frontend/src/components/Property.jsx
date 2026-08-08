@@ -13,7 +13,7 @@ const Property = ({ refreshData, pmName }) => {
   
   // Form state objects: Controlled component state for user input
   // Implements two-way data binding pattern with onChange handlers
-  const [propForm, setPropForm] = useState({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: '' });
+  const [propForm, setPropForm] = useState({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: pmName || '' });
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumber: '', floor: '' });
   const [tenantAssign, setTenantAssign] = useState({ unitId: '', tenantName: '' });
   
@@ -48,12 +48,12 @@ const Property = ({ refreshData, pmName }) => {
    * On success: Clear form, show feedback, sync state. On error: Display error message.
    */
   const handleAddProperty = async () => {
-    const result = await addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName);
+    const result = await addProperty(propForm.name, propForm.address, propForm.propertyType, propForm.managerName || pmName || '');
     if (result.error) {
       setPropMsg({ text: result.error, type: 'error' });
     } else {
       setPropMsg({ text: `Property "${result.data.name}" added!`, type: 'success' });
-      setPropForm({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: '' });
+      setPropForm({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: pmName || '' });
       refresh();
     }
   };
@@ -181,7 +181,6 @@ const Property = ({ refreshData, pmName }) => {
               {properties.map(p => (
                 <div className="data-item" key={p.propertyId}>
                   <div>
-                    <div className="data-item-id">{p.propertyId}</div>
                     <div className="data-item-name">{p.name}</div>
                     <div className="data-item-meta">{p.address}</div>
                   </div>
@@ -200,7 +199,6 @@ const Property = ({ refreshData, pmName }) => {
               {units.map(u => (
                 <div className="data-item" key={u.unitId}>
                   <div>
-                    <div className="data-item-id">{u.unitId}</div>
                     <div className="data-item-name">Unit {u.unitNumber}</div>
                     <div className="data-item-meta">{u.propertyName} | Floor {u.floor || 'N/A'}</div>
                   </div>

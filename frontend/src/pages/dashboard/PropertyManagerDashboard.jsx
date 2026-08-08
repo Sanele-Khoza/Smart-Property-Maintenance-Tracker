@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamationTriangle, FaCheckCircle, FaClock, FaBrain } from 'react-icons/fa';
 import Property from '../../components/Property';
 import Assignment from '../../components/Assignment';
-import { getStats, getTickets, getProperties, getUnits } from '../../data/store';
+import { getStats, getProperties, getUnits } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import StatusBadge from '../../components/common/StatusBadge';
+import useTickets from '../../hooks/useTickets';
 import Overview from '../manager/Overview';
 import Properties from '../manager/Properties';
 import Units from '../manager/Units';
@@ -19,7 +20,7 @@ import AIReview from '../manager/AIReview';
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
   const pmName = session ? `${session.name} ${session.surname}` : '';
-  const [allTickets, setAllTickets] = useState(getTickets());
+  const [allTickets] = useTickets();
   const [allProperties, setAllProperties] = useState(getProperties());
   const [allUnits, setAllUnits] = useState(getUnits());
   const [selectedImage, setSelectedImage] = useState(null);
@@ -32,13 +33,12 @@ const PropertyManagerDashboard = ({ activePage }) => {
   const units = useMemo(() => allUnits.filter(u => properties.some(p => p.propertyId === u.propertyId)), [allUnits, properties]);
 
   const refresh = () => {
-    setAllTickets(getTickets());
     setAllProperties(getProperties());
     setAllUnits(getUnits());
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const openTickets = tickets.filter(t => t.status === 'Open');
+  const openTickets = tickets.filter(t => t.status === 'New');
   const assignedTickets = tickets.filter(t => t.status === 'Assigned');
   const inProgressTickets = tickets.filter(t => t.status === 'In Progress');
   const completedTickets = tickets.filter(t => t.status === 'Completed');
@@ -84,7 +84,6 @@ const PropertyManagerDashboard = ({ activePage }) => {
                       return (
                         <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <span className="badge badge-open">Open</span>
                           </div>
                           <div className="ticket-desc"><strong>{t.title}</strong><br />{t.description.substring(0, 80)}...</div>
@@ -148,7 +147,6 @@ const PropertyManagerDashboard = ({ activePage }) => {
                   return (
                     <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                       <div className="ticket-header">
-                        <span className="ticket-id">{t.ticketId}</span>
                         <StatusBadge status={t.status} />
                       </div>
                       <div className="ticket-desc">{t.title}</div>
@@ -166,7 +164,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
               <div className="modal" onClick={() => setSelectedTicketDetails(null)} style={{ alignItems: 'flex-start', paddingTop: 60 }}>
                 <div className="card" style={{ maxWidth: 600, margin: 'auto', background: 'var(--surface2)', maxHeight: '80vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h3 style={{ color: 'var(--amber)' }}>Ticket #{selectedTicketDetails.ticketId}</h3>
+                    <h3 style={{ color: 'var(--amber)' }}>Ticket Details</h3>
                     <StatusBadge status={selectedTicketDetails.status} />
                   </div>
                   <div className="ticket-details">

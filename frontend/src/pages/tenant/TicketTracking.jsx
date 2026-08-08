@@ -1,20 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaTicketAlt, FaSearch, FaEye, FaStar, FaHistory, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getTickets, getAuditLogs, updateTicketRating } from '../../data/store';
+import { getAuditLogs, updateTicketRating, confirmTicketCompletion, refreshTickets as fetchTickets } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import useTickets from '../../hooks/useTickets';
 
 const TicketTracking = () => {
   const session = getSession();
   const currentUser = session ? `${session.name} ${session.surname}` : '';
-  const [tickets, setTickets] = useState(getTickets());
+  const currentUserId = session?.id;
+  const tickets = useTickets();
   const [auditLogs] = useState(getAuditLogs());
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [rating, setRating] = useState({ ticketId: null, stars: 0, comment: '', hover: 0 });
   const [msg, setMsg] = useState({ text: '', type: '' });
 
-  const myTickets = useMemo(() => tickets.filter(t => t.createdBy === currentUser || t.createdBy === 'John Tenant' && currentUser === 'John Tenant'), [tickets, currentUser]);
+  const myTickets = useMemo(() => {
+    if (!currentUserId) return [];
+    return tickets.filter(t => t.createdById === currentUserId || t.createdBy === currentUser);
+  }, [tickets, currentUser, currentUserId]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   const filtered = myTickets.filter(t =>
     !search || t.ticketId.toLowerCase().includes(search.toLowerCase()) ||
@@ -28,8 +37,19 @@ const TicketTracking = () => {
     const r = await updateTicketRating(ticketId, rating.stars, rating.comment);
     if (r.success) {
       setMsg({ text: `Rating submitted: ${rating.stars}/5`, type: 'success' });
-      setTickets(getTickets());
       setRating({ ticketId: null, stars: 0, comment: '', hover: 0 });
+      setSelected(prev => prev ? { ...prev, rating: rating.stars, ratingComment: rating.comment.trim() } : prev);
+    } else {
+      setMsg({ text: r.error, type: 'error' });
+    }
+    setTimeout(() => setMsg({ text: '', type: '' }), 3000);
+  };
+
+  const handleConfirm = async (satisfied) => {
+    const r = await confirmTicketCompletion(selected.ticketId, satisfied, '');
+    if (r.success) {
+      setMsg({ text: satisfied ? 'Completion confirmed.' : 'Ticket reopened — you can add more details.', type: 'success' });
+      setSelected(prev => prev ? { ...prev, status: satisfied ? 'Tenant Confirmed' : 'Reopened' } : prev);
     } else {
       setMsg({ text: r.error, type: 'error' });
     }
@@ -78,7 +98,6 @@ const TicketTracking = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Priority</th>
@@ -93,7 +112,6 @@ const TicketTracking = () => {
               <tbody>
                 {filtered.map(t => (
                   <tr key={t.ticketId}>
-                    <td className="cell-mono">{t.ticketId}</td>
                     <td><strong>{t.title}</strong></td>
                     <td><StatusBadge status={t.status} /></td>
                     <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{t.priority}</span></td>
@@ -118,7 +136,7 @@ const TicketTracking = () => {
       {selected && (
         <div className="card" style={{ marginTop: 12 }}>
           <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span><FaTicketAlt /> {selected.ticketId} — {selected.title}</span>
+            <span><FaTicketAlt /> {selected.title}</span>
             <button className="modal-close-btn" aria-label="Close ticket details" title="Close" onClick={() => setSelected(null)}>×</button>
           </div>
           <table className="table">
@@ -145,6 +163,16 @@ const TicketTracking = () => {
                 ))}
               </div>
             </>
+          )}
+          {selected.status === 'Completed' && (
+            <div className="card" style={{ marginTop: 12, background: 'var(--surface2)' }}>
+              <div className="card-title"><FaCheckCircle /> Confirm Completion</div>
+              <p style={{ fontSize: 12, color: 'var(--text-mid)', marginBottom: 8 }}>Has the issue been resolved to your satisfaction?</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-teal" onClick={() => handleConfirm(true)}><FaCheckCircle /> Yes, it's resolved</button>
+                <button className="btn btn-secondary" onClick={() => handleConfirm(false)}><FaTimesCircle /> No — reopen ticket</button>
+              </div>
+            </div>
           )}
           {selected.status === 'Closed' && !selected.rating && (
             <div className="card" style={{ marginTop: 12, background: 'var(--surface2)' }}>

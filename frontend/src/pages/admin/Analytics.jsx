@@ -30,7 +30,7 @@ const Analytics = () => {
       if (map[cKey]) map[cKey].created++;
       const u = new Date(t.updatedAt);
       const uKey = u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (map[uKey] && ['Completed (Provider)', 'Closed'].includes(t.status)) map[uKey].resolved++;
+      if (map[uKey] && ['Completed', 'Tenant Confirmed', 'Closed'].includes(t.status)) map[uKey].resolved++;
     });
     return Object.values(map);
   }, [tickets]);
@@ -56,7 +56,7 @@ const Analytics = () => {
   const providerPerformance = useMemo(() => {
     return technicians.map(tech => {
       const assigned = tickets.filter(t => t.assignedTo === tech.name);
-      const resolved = assigned.filter(t => ['Completed (Provider)', 'Closed'].includes(t.status));
+      const resolved = assigned.filter(t => ['Completed', 'Tenant Confirmed', 'Closed'].includes(t.status));
       return {
         name: tech.name.split(' ')[0],
         jobs: assigned.length,
@@ -128,8 +128,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dailyVolume}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#5a8aaa' }} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} />
                 <Bar dataKey="created" name="Created" fill="#3278dc" radius={[2, 2, 0, 0]} />
                 <Bar dataKey="resolved" name="Resolved" fill="#2db791" radius={[2, 2, 0, 0]} />
@@ -144,8 +144,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={avgResolutionByPriority} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
-                <YAxis dataKey="priority" type="category" tick={{ fontSize: 11, fill: 'var(--text-dim)' }} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+                <YAxis dataKey="priority" type="category" tick={{ fontSize: 11, fill: '#5a8aaa' }} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} formatter={(v) => `${v}h`} />
                 <Bar dataKey="avgHours" name="Avg Hours" radius={[0, 2, 2, 0]}>
                   {avgResolutionByPriority.map((e, i) => <Cell key={i} fill={e.fill} />)}
@@ -161,8 +161,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={slaCompliance}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="priority" tick={{ fontSize: 11, fill: 'var(--text-dim)' }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-dim)' }} unit="%" />
+                <XAxis dataKey="priority" tick={{ fontSize: 11, fill: '#5a8aaa' }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#5a8aaa' }} unit="%" />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} formatter={(v) => `${v}%`} />
                 <Bar dataKey="compliant" name="Compliance %" radius={[2, 2, 0, 0]}>
                   {slaCompliance.map((e, i) => <Cell key={i} fill={e.fill} />)}
@@ -192,8 +192,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={providerPerformance}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#5a8aaa' }} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} />
                 <Bar dataKey="jobs" name="Total Jobs" fill="#3278dc" radius={[2, 2, 0, 0]} />
                 <Bar dataKey="resolved" name="Resolved" fill="#2db791" radius={[2, 2, 0, 0]} />
@@ -208,8 +208,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={priorityDist}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="priority" tick={{ fontSize: 11, fill: 'var(--text-dim)' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                <XAxis dataKey="priority" tick={{ fontSize: 11, fill: '#5a8aaa' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#5a8aaa' }} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} />
                 <Bar dataKey="count" name="Tickets" radius={[2, 2, 0, 0]}>
                   {priorityDist.map((e, i) => <Cell key={i} fill={e.fill} />)}
@@ -225,9 +225,9 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={aiConfidence}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="adapter" tick={{ fontSize: 11, fill: 'var(--text-dim)' }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} unit="%" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} unit="ms" />
+                <XAxis dataKey="adapter" tick={{ fontSize: 11, fill: '#5a8aaa' }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#5a8aaa' }} unit="%" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#5a8aaa' }} unit="ms" />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} />
                 <Bar yAxisId="left" dataKey="avgConfidence" name="Avg Confidence %" fill="#2db791" radius={[2, 2, 0, 0]} />
                 <Bar yAxisId="right" dataKey="avgLatency" name="Avg Latency (ms)" fill="#f0b432" radius={[2, 2, 0, 0]} />
@@ -242,8 +242,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={dailyVolume}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#5a8aaa' }} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', fontSize: 12 }} />
                 <Line type="monotone" dataKey="created" name="Created" stroke="#3278dc" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="resolved" name="Resolved" stroke="#2db791" strokeWidth={2} dot={{ r: 3 }} />

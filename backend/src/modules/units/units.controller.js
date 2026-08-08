@@ -24,7 +24,13 @@ const getById = async (req, res, next) => {
 
 const create = async (req, res, next) => { try { const result = await service.create(req.validatedBody); res.status(201).json(result); } catch (err) { next(err); } };
 const update = async (req, res, next) => { try { const result = await service.update(req.params.id, req.validatedBody); res.json(result); } catch (err) { next(err); } };
-const assign = async (req, res, next) => { try { const result = await service.assign(req.params.id, req.body.tenantId); res.json(result); } catch (err) { next(err); } };
+const assign = async (req, res, next) => {
+  try {
+    const body = req.validatedBody || req.body;
+    const result = await service.assign(req.params.id, body.tenantId, body.tenantName);
+    res.json(result);
+  } catch (err) { next(err); }
+};
 const vacate = async (req, res, next) => { try { const result = await service.vacate(req.params.id); res.json(result); } catch (err) { next(err); } };
 const remove = async (req, res, next) => { try { const result = await service.remove(req.params.id); res.json(result); } catch (err) { next(err); } };
 

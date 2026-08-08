@@ -3,13 +3,14 @@ import { z } from 'zod';
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'EMERGENCY'];
 
 const createTicketSchema = z.object({
-  property_id: z.number().int().positive().optional().nullable(),
-  unit_id: z.number().int().positive().optional().nullable(),
-  category_id: z.number().int().positive().optional().nullable(),
+  property_id: z.string().min(1).optional().nullable(),
+  unit_id: z.string().min(1).optional().nullable(),
+  category_id: z.string().min(1).optional().nullable(),
   title: z.string().trim().min(1, 'Title is required').max(300),
   description: z.string().trim().min(1, 'Description is required'),
   priority: z.enum(PRIORITIES).optional(),
   source: z.enum(['tenant_portal', 'email', 'phone', 'system', 'in_person']).optional(),
+  force: z.boolean().optional().default(false),
 });
 
 const updateTicketSchema = z.object({
@@ -26,7 +27,7 @@ const changeStatusSchema = z.object({
 });
 
 const assignTicketSchema = z.object({
-  technician_id: z.number().int().positive('Valid technician required'),
+  technician_id: z.string().min(1, 'Valid technician required'),
   note: z.string().optional().nullable(),
 });
 
@@ -97,3 +98,4 @@ export {
   acceptSchema, startWorkSchema, waitingPartsSchema, partsReceivedSchema,
   tenantConfirmSchema, closeSchema, noteOnlySchema,
 };
+

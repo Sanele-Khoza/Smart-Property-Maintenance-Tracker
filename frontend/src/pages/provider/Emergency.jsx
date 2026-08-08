@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FaExclamationTriangle, FaBolt, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaWrench, FaStar, FaMapMarkerAlt, FaClock, FaPlay, FaBell, FaTrophy, FaUsers } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getTickets, getTechnicians, updateTicketStatus } from '../../data/store';
+import { getTickets, getTechnicians, acceptJob, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 
 const Emergency = () => {
@@ -13,14 +13,16 @@ const Emergency = () => {
 
   const refresh = () => setTickets(getTickets());
 
+  const isMine = (t) => t.assignedTo === providerName || (session && t.assignedToId === session.id);
+
   const myEmergencyTickets = tickets.filter(t =>
-    t.assignedTo === providerName &&
+    isMine(t) &&
     (t.priority === 'URGENT' || t.priority === 'EMERGENCY')
   );
 
   const openEmergencyJobs = tickets.filter(t =>
-    (!t.assignedTo || t.assignedTo !== providerName) &&
-    t.status === 'Open' &&
+    !isMine(t) &&
+    t.status === 'New' &&
     (t.priority === 'URGENT' || t.priority === 'EMERGENCY')
   );
 
@@ -33,8 +35,8 @@ const Emergency = () => {
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
   const handleAccept = async (ticketId) => {
-    const r = await updateTicketStatus(ticketId, 'In Progress');
-    if (r.success) { refresh(); showMsg(`${ticketId} accepted — job started`, 'success'); }
+    const r = await acceptJob(ticketId);
+    if (r.success) { refresh(); showMsg('Emergency job accepted', 'success'); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -76,7 +78,6 @@ const Emergency = () => {
             <table className="table">
               <thead>
                 <tr style={{ background: 'rgba(192,57,43,0.08)' }}>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Property</th>
                   <th>Unit</th>
@@ -90,7 +91,6 @@ const Emergency = () => {
                   const aa = getAutoAssignTime(t);
                   return (
                     <tr key={t.ticketId} style={{ background: aa?.isOverdue ? 'rgba(192,57,43,0.06)' : 'transparent' }}>
-                      <td className="cell-mono" style={{ color: 'var(--danger)', fontWeight: 700 }}>{t.ticketId}</td>
                       <td><strong>{t.title}</strong></td>
                       <td>{t.propertyName}</td>
                       <td>Unit {t.unitNumber}</td>
@@ -127,7 +127,6 @@ const Emergency = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Property / Unit</th>
@@ -139,7 +138,6 @@ const Emergency = () => {
               <tbody>
                 {myEmergencyTickets.map(t => (
                   <tr key={t.ticketId}>
-                    <td className="cell-mono" style={{ color: 'var(--danger)', fontWeight: 700 }}>{t.ticketId}</td>
                     <td><strong>{t.title}</strong></td>
                     <td><StatusBadge status={t.status} /></td>
                     <td style={{ fontSize: 12 }}>{t.propertyName} / Unit {t.unitNumber}</td>
@@ -153,14 +151,14 @@ const Emergency = () => {
                       )}
                       {t.status === 'In Progress' && (
                         <button className="btn btn-teal btn-sm" onClick={async () => {
-                          const r = await updateTicketStatus(t.ticketId, 'Completed (Provider)');
-                          if (r.success) { refresh(); showMsg(`${t.ticketId} marked complete`, 'success'); }
+                          const r = await submitJobCompletion(t.ticketId, '', []);
+                          if (r.success) { refresh(); showMsg('Job marked complete', 'success'); }
                           else { showMsg(r.error, 'error'); }
                         }}>
                           Complete
                         </button>
                       )}
-                      {t.status === 'Completed (Provider)' && <span className="badge badge-completed">Awaiting Close</span>}
+                      {t.status === 'Completed' && <span className="badge badge-completed">Awaiting Confirmation</span>}
                     </td>
                   </tr>
                 ))}

@@ -255,7 +255,6 @@ const AuditLogs = () => {
           <thead>
             <tr>
               <th scope="col">ID</th>
-              <th scope="col">Ticket ID</th>
               <th scope="col">Actor</th>
               <th scope="col">Action</th>
               <th scope="col">Previous → New Status</th>
@@ -265,14 +264,13 @@ const AuditLogs = () => {
           </thead>
           <tbody>
             {data.length === 0 ? (
-              <tr><td colSpan="7" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>
+              <tr><td colSpan="6" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>
                 <FaHistory style={{ marginRight: 6 }} />No audit log entries found.
               </td></tr>
             ) : (
               data.map(entry => (
                 <tr key={entry.id}>
                   <td className="cell-mono" style={{ fontSize: 10 }}>{entry.id}</td>
-                  <td className="cell-mono">{entry.ticketId || '—'}</td>
                   <td>{entry.actor}</td>
                   <td><span className="badge badge-info" style={{ fontSize: 10 }}>{entry.action.replace(/_/g, ' ')}</span></td>
                   <td style={{ fontSize: 12 }}>

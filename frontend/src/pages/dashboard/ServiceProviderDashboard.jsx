@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaArrowLeft } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getTickets, updateTicketStatus } from '../../data/store';
+import { acceptJob, startJob, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
+import useTickets from '../../hooks/useTickets';
 import Overview from '../provider/Overview';
 import Profile from '../provider/Profile';
 import MyJobs from '../provider/MyJobs';
@@ -16,29 +17,24 @@ import WorkHistory from '../provider/WorkHistory';
 import Reports from '../provider/Reports';
 
 const ServiceProviderDashboard = ({ activePage }) => {
-  const [tickets, setTickets] = useState(getTickets());
+  const [tickets, refresh] = useTickets();
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [drillDownTicketId, setDrillDownTicketId] = useState(null);
-
-  const refresh = () => {
-    setTickets(getTickets());
-    setRefreshTrigger(prev => prev + 1);
-  };
 
   const session = getSession();
   const providerName = session ? `${session.name} ${session.surname}` : 'Mike Provider';
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
-  const openTickets = tickets.filter(t => t.status === 'Open' && t.assignedTo !== providerName);
+  const isMine = (t) => t.assignedTo === providerName || (session && t.assignedToId === session.id);
+  const myTickets = tickets.filter(isMine);
+  const openTickets = tickets.filter(t => t.status === 'New' && !isMine(t));
 
-  const handleStatusUpdate = async (ticketId, newStatus) => {
-    const result = await updateTicketStatus(ticketId, newStatus);
+  const handleWorkflow = async (ticketId, promise, newStatus) => {
+    const result = await promise;
     if (result.error) {
       setStatusMsg({ text: result.error, type: 'error' });
     } else {
-      setStatusMsg({ text: `Ticket ${ticketId} updated to ${newStatus}`, type: 'success' });
+      setStatusMsg({ text: `Status updated to ${newStatus}`, type: 'success' });
       refresh();
       setTimeout(() => setStatusMsg({ text: '', type: '' }), 3000);
     }
@@ -70,7 +66,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
               <div className="stat-card"><div className="stat-value">{myTickets.length}</div><div className="stat-label">My Tickets</div></div>
               <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'Assigned').length}</div><div className="stat-label">Assigned</div></div>
               <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'In Progress').length}</div><div className="stat-label">In Progress</div></div>
-              <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed').length}</div><div className="stat-label">Completed</div></div>
+              <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length}</div><div className="stat-label">Completed</div></div>
             </div>
             <div className="main-cols">
               <div>
@@ -83,7 +79,6 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       {myTickets.map(t => (
                         <div className="ticket-card" key={t.ticketId}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <StatusBadge status={t.status} />
                           </div>
                           <div className="ticket-desc">
@@ -107,17 +102,22 @@ const ServiceProviderDashboard = ({ activePage }) => {
                           </div>
                           <div className="ticket-actions">
                             {t.status === 'Assigned' && (
-                              <button className="btn btn-primary btn-sm" onClick={() => handleStatusUpdate(t.ticketId, 'In Progress')}>
+                              <button className="btn btn-primary btn-sm" onClick={() => handleWorkflow(t.ticketId, acceptJob(t.ticketId), 'Accepted')}>
+                                Accept Job
+                              </button>
+                            )}
+                            {t.status === 'Accepted' && (
+                              <button className="btn btn-primary btn-sm" onClick={() => handleWorkflow(t.ticketId, startJob(t.ticketId), 'In Progress')}>
                                 Start Job
                               </button>
                             )}
                             {t.status === 'In Progress' && (
-                              <button className="btn btn-teal btn-sm" onClick={() => handleStatusUpdate(t.ticketId, 'Completed (Provider)')}>
+                              <button className="btn btn-teal btn-sm" onClick={() => handleWorkflow(t.ticketId, submitJobCompletion(t.ticketId, '', []), 'Completed')}>
                                 Mark Completed
                               </button>
                             )}
-                            {t.status === 'Completed (Provider)' && (
-                              <span className="badge badge-completed" style={{ fontSize: 10 }}>Awaiting Close</span>
+                            {t.status === 'Completed' && (
+                              <span className="badge badge-completed" style={{ fontSize: 10 }}>Awaiting Confirmation</span>
                             )}
                             <button className="btn btn-secondary btn-sm" onClick={() => setSelectedTicketDetails(t)}>
                               View Details
@@ -139,7 +139,6 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       {openTickets.map(t => (
                         <div className="ticket-card" key={t.ticketId} style={{ cursor: 'pointer' }} onClick={() => setSelectedTicketDetails(t)}>
                           <div className="ticket-header">
-                            <span className="ticket-id">{t.ticketId}</span>
                             <span className="badge badge-open">Open</span>
                           </div>
                           <div className="ticket-desc">
@@ -162,7 +161,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
               <div className="modal" onClick={() => setSelectedTicketDetails(null)} style={{ alignItems: 'flex-start', paddingTop: 60 }}>
                 <div className="card" style={{ maxWidth: 600, margin: 'auto', background: 'var(--surface2)', maxHeight: '80vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h3 style={{ color: 'var(--amber)' }}>Ticket #{selectedTicketDetails.ticketId}</h3>
+                    <h3 style={{ color: 'var(--amber)' }}>Ticket Details</h3>
                     <StatusBadge status={selectedTicketDetails.status} />
                   </div>
                   <div className="ticket-details">

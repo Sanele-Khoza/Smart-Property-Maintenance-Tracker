@@ -30,12 +30,21 @@ async function update(id, data) {
   return { success: true, data: { unit }, message: 'Unit updated' };
 }
 
-async function assign(unitId, tenantId) {
+async function assign(unitId, tenantId, tenantName) {
   const unit = await repo.findById(unitId);
   if (!unit) throw AppError.notFound('Unit not found');
 
+  let resolvedTenantId = tenantId;
+  if (!resolvedTenantId && tenantName) {
+    const parts = String(tenantName).trim().split(/\s+/);
+    const found = await repo.findTenantIdByName(parts[0] || '', parts.slice(1).join(' ') || '');
+    if (!found) throw AppError.notFound('Tenant not found');
+    resolvedTenantId = found.id;
+  }
+  if (!resolvedTenantId) throw AppError.badRequest('Tenant ID or name is required');
+
   /* BR-001: check tenant is not already in another unit */
-  const existingUnit = await repo.findByOccupant(tenantId);
+  const existingUnit = await repo.findByOccupant(resolvedTenantId);
   if (existingUnit) {
     throw AppError.conflict(
       `Tenant is already assigned to unit ${existingUnit.unit_number} in ${existingUnit.property_name}`
@@ -45,7 +54,7 @@ async function assign(unitId, tenantId) {
     throw AppError.conflict(`Unit ${unit.unit_number} already has an occupant`);
   }
 
-  await repo.assign(unitId, tenantId);
+  await repo.assign(unitId, resolvedTenantId);
   const updated = await repo.findById(unitId);
   return { success: true, data: { unit: updated }, message: 'Unit assigned' };
 }

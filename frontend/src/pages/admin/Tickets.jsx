@@ -5,23 +5,30 @@ import {
   FaChartBar, FaBrain, FaHistory, FaFilter, FaRedo, FaExchangeAlt, FaTrash
 } from 'react-icons/fa';
 import {
-  getTickets, getTicketById, updateTicketStatus, assignTicket, reopenTicket,
+  getTicketById, updateTicketStatus, assignTicket, reopenTicket,
   updateTicketCategory, getProviders, getProperties, getCategories,
   getAuditLogs, getInferenceLogs
 } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
 import Alert from '../../components/common/Alert';
+import useTickets from '../../hooks/useTickets';
 
 const STATUS_STYLES = {
-  'Open':                { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
-  'Manual Review':       { bg: 'rgba(240,180,50,0.15)',  color: '#f0b432' },
-  'Assigned':            { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
-  'In Progress':         { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
-  'Waiting for Parts':   { bg: 'rgba(130,80,200,0.15)',  color: '#8250c8' },
-  'Completed (Provider)':{ bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
-  'Closed':              { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
-  'Reopened':            { bg: 'rgba(230,140,30,0.15)',   color: '#e68c1e' },
-  'Escalated':           { bg: 'rgba(220,60,60,0.15)',    color: '#dc3c3c' },
+  'New':                { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'AI Classified':      { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'Manual Review':      { bg: 'rgba(240,180,50,0.15)',  color: '#f0b432' },
+  'Assigned':           { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
+  'Accepted':           { bg: 'rgba(50,120,220,0.15)',  color: '#3278dc' },
+  'In Progress':        { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Waiting for Parts':  { bg: 'rgba(130,80,200,0.15)',  color: '#8250c8' },
+  'Completed':          { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Tenant Confirmed':   { bg: 'rgba(45,183,145,0.15)',  color: '#2db791' },
+  'Closed':             { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'Cancelled':          { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'Archived':           { bg: 'rgba(120,120,130,0.15)',  color: '#787882' },
+  'On Hold':            { bg: 'rgba(240,180,50,0.15)',   color: '#f0b432' },
+  'Reopened':           { bg: 'rgba(230,140,30,0.15)',   color: '#e68c1e' },
+  'Escalated':          { bg: 'rgba(220,60,60,0.15)',    color: '#dc3c3c' },
 };
 
 const PRIORITY_STYLES = {
@@ -32,30 +39,33 @@ const PRIORITY_STYLES = {
 };
 
 const TICKET_TRANSITIONS = {
-  'Open':                ['Manual Review', 'Assigned', 'Escalated'],
-  'Manual Review':       ['Open', 'Assigned', 'Escalated'],
-  'Assigned':            ['In Progress', 'Escalated'],
-  'In Progress':         ['Waiting for Parts', 'Completed (Provider)', 'Escalated'],
-  'Waiting for Parts':   ['In Progress', 'Escalated'],
-  'Completed (Provider)':['Closed', 'Reopened'],
-  'Closed':              ['Reopened'],
-  'Reopened':            ['Assigned', 'In Progress', 'Escalated'],
-  'Escalated':           ['Assigned', 'In Progress'],
+  'New':                ['AI Classified', 'Manual Review', 'Cancelled'],
+  'AI Classified':      ['Assigned', 'Manual Review', 'Cancelled'],
+  'Manual Review':      ['AI Classified', 'Cancelled'],
+  'Assigned':           ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Accepted':           ['In Progress', 'Cancelled', 'On Hold'],
+  'In Progress':        ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+  'Waiting for Parts':  ['In Progress', 'On Hold'],
+  'Completed':          ['Tenant Confirmed', 'Reopened'],
+  'Tenant Confirmed':   ['Closed'],
+  'Closed':             [],
+  'Cancelled':          ['Archived'],
+  'Archived':           ['Reopened'],
+  'On Hold':            ['In Progress', 'Cancelled'],
+  'Reopened':           ['Assigned', 'In Progress', 'Cancelled'],
+  'Escalated':          ['Manual Review', 'Assigned'],
 };
 
 const TRANSITION_LABELS = {
-  'Manual Review': 'Review',
-  'Assigned': 'Assign',
-  'In Progress': 'Progress',
-  'Waiting for Parts': 'Wait Parts',
-  'Completed (Provider)': 'Complete',
-  'Closed': 'Close',
-  'Reopened': 'Reopen',
-  'Escalated': 'Escalate',
+  'AI Classified': 'AI', 'Manual Review': 'Review', 'Assigned': 'Assign',
+  'Accepted': 'Accept', 'In Progress': 'Progress',
+  'Waiting for Parts': 'Wait Parts', 'Completed': 'Complete',
+  'Tenant Confirmed': 'Confirm', 'Closed': 'Close', 'Cancelled': 'Cancel',
+  'Archived': 'Archive', 'On Hold': 'Hold', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
 };
 
 const Tickets = () => {
-  const [tickets, setTickets] = useState(getTickets);
+  const [tickets, refresh] = useTickets();
   const [providers] = useState(getProviders);
   const [properties] = useState(getProperties);
   const [categories] = useState(getCategories());
@@ -77,7 +87,6 @@ const Tickets = () => {
   const [categoryValue, setCategoryValue] = useState('');
   const [confirmTransition, setConfirmTransition] = useState(null);
 
-  const refresh = () => setTickets(getTickets());
   const showAlert = (msg, type) => {
     setAlert({ msg, type });
     setTimeout(() => setAlert({ msg: '', type: '' }), 5000);
@@ -96,7 +105,7 @@ const Tickets = () => {
 
   const stats = [
     { label: 'Total', value: tickets.length, icon: FaTicketAlt },
-    { label: 'Open', value: tickets.filter(t => t.status === 'Open').length, icon: FaTicketAlt },
+    { label: 'New', value: tickets.filter(t => t.status === 'New').length, icon: FaTicketAlt },
     { label: 'Manual Review', value: tickets.filter(t => t.status === 'Manual Review').length, icon: FaBrain },
     { label: 'In Progress', value: tickets.filter(t => t.status === 'In Progress').length, icon: FaRedo },
     { label: 'Conflict', value: tickets.filter(t => t.conflictDetected).length, icon: FaExclamationTriangle },
@@ -110,7 +119,7 @@ const Tickets = () => {
   const handleTransition = async (ticketId, newStatus) => {
     const r = await updateTicketStatus(ticketId, newStatus);
     if (r.success) {
-      showAlert(`Ticket ${ticketId} → ${newStatus}`, 'success');
+      showAlert(`Status updated to ${newStatus}`, 'success');
       refresh();
     } else {
       showAlert(r.error, 'error');
@@ -123,7 +132,7 @@ const Tickets = () => {
     const prov = providers.find(p => p.name === reassignProvider);
     const r = await assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
     if (r.success) {
-      showAlert(`Reassigned ${showReassign.ticketId} to ${reassignProvider}`, 'success');
+      showAlert(`Ticket reassigned to ${reassignProvider}`, 'success');
       setShowReassign(null);
       refresh();
     } else {
@@ -139,7 +148,7 @@ const Tickets = () => {
     }
     const r = await reopenTicket(showReopen.ticketId, reopenText.trim());
     if (r.success) {
-      showAlert(`Ticket ${showReopen.ticketId} reopened.`, 'success');
+      showAlert('Ticket reopened.', 'success');
       setShowReopen(null);
       refresh();
     } else {
@@ -209,7 +218,6 @@ const Tickets = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th scope="col">ID</th>
                 <th scope="col">Title</th>
                 <th scope="col">Property</th>
                 <th scope="col">Unit</th>
@@ -227,13 +235,13 @@ const Tickets = () => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="14" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No tickets match the current filter.</td></tr>
+                <tr><td colSpan="13" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No tickets match the current filter.</td></tr>
               ) : (
                 filtered.map(t => {
                   const st = STATUS_STYLES[t.status] || {};
                   const pt = PRIORITY_STYLES[t.priority] || {};
-                  const canAssign = ['Open', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
-                  const canReopen = ['Closed', 'Completed (Provider)'].includes(t.status);
+                  const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
+                  const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
                   const expanded = expandedRows[t.ticketId];
@@ -241,7 +249,6 @@ const Tickets = () => {
                   return (
                   <React.Fragment key={t.ticketId}>
                   <tr>
-                    <td className="cell-mono">{t.ticketId}</td>
                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>{t.title}</td>
                     <td>{t.propertyName}</td>
                     <td className="cell-mono">{t.unitNumber}</td>
@@ -320,7 +327,7 @@ const Tickets = () => {
                   </tr>
                   {expanded && (
                     <tr className="expanded-row">
-                      <td colSpan="14" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                      <td colSpan="13" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
                           <div style={{ flex: 2, minWidth: 240 }}>
                             <strong>Description:</strong>
@@ -363,7 +370,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowReassign(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaUserCheck /> Reassign — {showReassign.ticketId}</span>
+              <span><FaUserCheck /> Reassign</span>
               <button className="modal-close-btn" onClick={() => setShowReassign(null)} aria-label="Close reassign modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleReassign}>
@@ -387,7 +394,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowReopen(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaUndo /> Reopen — {showReopen.ticketId}</span>
+              <span><FaUndo /> Reopen</span>
               <button className="modal-close-btn" onClick={() => setShowReopen(null)} aria-label="Close reopen modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleReopen}>
@@ -412,7 +419,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowCategoryModal(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaTag /> Override Category — {showCategoryModal.ticketId}</span>
+              <span><FaTag /> Override Category</span>
               <button className="modal-close-btn" onClick={() => setShowCategoryModal(null)} aria-label="Close category modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleCategoryOverride}>

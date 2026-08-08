@@ -15,7 +15,7 @@ const Overview = () => {
   const auditLogs = getAuditLogs();
   const recentLogs = auditLogs.slice(-4).reverse();
 
-  const openTickets = tickets.filter(t => t.status === 'Open');
+  const openTickets = tickets.filter(t => t.status === 'New');
   const needsAI = tickets.filter(t => t.conflictDetected || t.manualReviewRequired);
 
   const availableTechs = getTechnicians().filter(

@@ -41,8 +41,8 @@ const Assignment = ({ refreshData, pmName }) => {
   // Query predicates: Filter ticket collection by state (functional programming style)
   // openTickets: unassigned tickets available for dispatch
   // activeTickets: tickets in progress (neither Open nor Completed)
-  const openTickets = tickets.filter(t => t.status === 'Open');
-  const activeTickets = tickets.filter(t => !['Open', 'Completed'].includes(t.status));
+  const openTickets = tickets.filter(t => t.status === 'New');
+  const activeTickets = tickets.filter(t => !['New', 'Completed', 'Tenant Confirmed', 'Closed', 'Cancelled', 'Archived'].includes(t.status));
 
   /**
    * Event handler: Dispatch ticket assignment
@@ -83,10 +83,18 @@ const Assignment = ({ refreshData, pmName }) => {
    */
   const getAvailableNextStatus = (ticketStatus) => {
     const transitions = {
-      'Open': ['Assigned'],
-      'Assigned': ['In Progress'],
-      'In Progress': ['Completed'],
-      'Completed': [],
+      'New': ['AI Classified', 'Manual Review', 'Cancelled'],
+      'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
+      'Manual Review': ['AI Classified', 'Cancelled'],
+      'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+      'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+      'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+      'Waiting for Parts': ['In Progress', 'On Hold'],
+      'Completed': ['Tenant Confirmed', 'Reopened'],
+      'Tenant Confirmed': ['Closed'],
+      'Closed': [],
+      'Reopened': ['Assigned', 'In Progress', 'Cancelled'],
+      'Escalated': ['Manual Review', 'Assigned'],
     };
     return transitions[ticketStatus] || [];
   };
@@ -107,7 +115,7 @@ const Assignment = ({ refreshData, pmName }) => {
               <option value="">— Select open ticket —</option>
               {openTickets.map(t => (
                 <option key={t.ticketId} value={t.ticketId}>
-                  {t.ticketId}: {t.title.substring(0, 50)}...
+                  {t.title.substring(0, 50)}...
                 </option>
               ))}
             </select>
@@ -142,7 +150,7 @@ const Assignment = ({ refreshData, pmName }) => {
               onChange={e => setStatusForm(f => ({ ...f, ticketId: e.target.value, newStatus: '' }))}>
               <option value="">— Select ticket —</option>
               {activeTickets.map(t => (
-                <option key={t.ticketId} value={t.ticketId}>{t.ticketId} [{t.status}] - {t.title}</option>
+                <option key={t.ticketId} value={t.ticketId}>{t.title} [{t.status}]</option>
               ))}
             </select>
           </div>
@@ -188,7 +196,6 @@ const Assignment = ({ refreshData, pmName }) => {
               {[...tickets].reverse().map(t => (
                 <div className="ticket-card" key={t.ticketId}>
                   <div className="ticket-header">
-                    <span className="ticket-id">{t.ticketId}</span>
                     <StatusBadge status={t.status} />
                   </div>
                   <div className="ticket-desc"><strong>{t.title}</strong><br />{t.description.substring(0, 100)}...</div>
@@ -196,7 +203,7 @@ const Assignment = ({ refreshData, pmName }) => {
                     <div className="ticket-images">
                       {t.images.slice(0, 3).map((img, idx) => (
                         <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img)}>
-                          <img src={img} alt={`Ticket ${t.ticketId}`} />
+                          <img src={img} alt={t.title} />
                         </div>
                       ))}
                       {t.images.length > 3 && <span className="ticket-meta">+{t.images.length - 3} more</span>}

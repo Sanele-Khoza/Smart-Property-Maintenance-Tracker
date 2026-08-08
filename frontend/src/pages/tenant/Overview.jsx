@@ -9,9 +9,9 @@ const Overview = () => {
   const myName = session ? `${session.name} ${session.surname}` : '';
   const myTickets = getTickets().filter(t => t.createdBy === myName);
 
-  const open = myTickets.filter(t => t.status === 'Open').length;
+  const open = myTickets.filter(t => t.status === 'New').length;
   const inProgress = myTickets.filter(t => t.status === 'In Progress').length;
-  const completed = myTickets.filter(t => t.status === 'Closed' || t.status === 'Completed (Provider)').length;
+  const completed = myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length;
   const recent = myTickets.slice(-3).reverse();
 
   return (
@@ -51,7 +51,6 @@ const Overview = () => {
           <div className="data-list">
             {recent.map(t => (
               <div key={t.ticketId} className="data-item">
-                <span className="data-item-id">{t.ticketId}</span>
                 <span className="data-item-name">{t.title}</span>
                 <StatusBadge status={t.status} />
               </div>

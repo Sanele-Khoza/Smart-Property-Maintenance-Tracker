@@ -3,18 +3,21 @@ export { resetData, getAllData } from './storeCore';
 export {
   addProperty, getProperties, updateProperty, updatePropertyStatus, deleteProperty,
   addUnit, getUnits, getUnitById, updateUnit, assignTenantToUnit, vacateUnit, deleteUnit,
+  syncPropertiesAndUnits,
 } from './propertyStore';
 
 export {
   createTicket, getTickets, getTicketsByUnit, getTicketById,
-  updateTicketStatus, assignTicket, declineTicketAssignment, reopenTicket,
+  updateTicketStatus, assignTicket, reopenTicket,
   updateTicketCategory, updateTicketRating, submitJobCompletion,
+  acceptJob, startJob, waitForParts, partsReceived,
+  confirmTicketCompletion, closeTicket,
   getTicketsByStatus, getOpenTickets, getTicketsByProvider,
   getStats, refreshTickets, TICKET_TRANSITIONS, PRIORITY_ORDER,
 } from './ticketStore';
 
 export {
-  getTechnicians, updateTechnicianStatus, updateTechnician, getProviders,
+  getTechnicians, updateTechnicianStatus, updateTechnician, getProviders, syncTechnicians,
 } from './technicianStore';
 
 export {

@@ -81,7 +81,6 @@ const Schedule = () => {
                         t.status === 'In Progress' ? 'rgba(243,156,18,0.1)' : 'rgba(52,152,219,0.1)',
                       cursor: 'default',
                     }}>
-                      <div style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 8 }}>{t.ticketId}</div>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
                       <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>{t.propertyName} / U{t.unitNumber}</div>
                     </div>
@@ -98,7 +97,6 @@ const Schedule = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Priority</th>
@@ -110,7 +108,6 @@ const Schedule = () => {
             <tbody>
               {myTickets.map(t => (
                 <tr key={t.ticketId}>
-                  <td className="cell-mono">{t.ticketId}</td>
                   <td>{t.title}</td>
                   <td><StatusBadge status={t.status} /></td>
                   <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : 'badge-open'}`}>{t.priority}</span></td>

@@ -119,7 +119,7 @@ const Tickets = () => {
   const handleTransition = async (ticketId, newStatus) => {
     const r = await updateTicketStatus(ticketId, newStatus);
     if (r.success) {
-      showAlert(`Ticket ${ticketId} → ${newStatus}`, 'success');
+      showAlert(`Status updated to ${newStatus}`, 'success');
       refresh();
     } else {
       showAlert(r.error, 'error');
@@ -132,7 +132,7 @@ const Tickets = () => {
     const prov = providers.find(p => p.name === reassignProvider);
     const r = await assignTicket(showReassign.ticketId, reassignProvider, prov?.id);
     if (r.success) {
-      showAlert(`Reassigned ${showReassign.ticketId} to ${reassignProvider}`, 'success');
+      showAlert(`Ticket reassigned to ${reassignProvider}`, 'success');
       setShowReassign(null);
       refresh();
     } else {
@@ -148,7 +148,7 @@ const Tickets = () => {
     }
     const r = await reopenTicket(showReopen.ticketId, reopenText.trim());
     if (r.success) {
-      showAlert(`Ticket ${showReopen.ticketId} reopened.`, 'success');
+      showAlert('Ticket reopened.', 'success');
       setShowReopen(null);
       refresh();
     } else {
@@ -218,7 +218,6 @@ const Tickets = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th scope="col">ID</th>
                 <th scope="col">Title</th>
                 <th scope="col">Property</th>
                 <th scope="col">Unit</th>
@@ -236,7 +235,7 @@ const Tickets = () => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="14" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No tickets match the current filter.</td></tr>
+                <tr><td colSpan="13" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No tickets match the current filter.</td></tr>
               ) : (
                 filtered.map(t => {
                   const st = STATUS_STYLES[t.status] || {};
@@ -250,7 +249,6 @@ const Tickets = () => {
                   return (
                   <React.Fragment key={t.ticketId}>
                   <tr>
-                    <td className="cell-mono">{t.ticketId}</td>
                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>{t.title}</td>
                     <td>{t.propertyName}</td>
                     <td className="cell-mono">{t.unitNumber}</td>
@@ -329,7 +327,7 @@ const Tickets = () => {
                   </tr>
                   {expanded && (
                     <tr className="expanded-row">
-                      <td colSpan="14" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                      <td colSpan="13" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
                           <div style={{ flex: 2, minWidth: 240 }}>
                             <strong>Description:</strong>
@@ -372,7 +370,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowReassign(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaUserCheck /> Reassign — {showReassign.ticketId}</span>
+              <span><FaUserCheck /> Reassign</span>
               <button className="modal-close-btn" onClick={() => setShowReassign(null)} aria-label="Close reassign modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleReassign}>
@@ -396,7 +394,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowReopen(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaUndo /> Reopen — {showReopen.ticketId}</span>
+              <span><FaUndo /> Reopen</span>
               <button className="modal-close-btn" onClick={() => setShowReopen(null)} aria-label="Close reopen modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleReopen}>
@@ -421,7 +419,7 @@ const Tickets = () => {
         <div className="modal" onClick={() => setShowCategoryModal(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaTag /> Override Category — {showCategoryModal.ticketId}</span>
+              <span><FaTag /> Override Category</span>
               <button className="modal-close-btn" onClick={() => setShowCategoryModal(null)} aria-label="Close category modal"><FaTimes /></button>
             </div>
             <form onSubmit={handleCategoryOverride}>

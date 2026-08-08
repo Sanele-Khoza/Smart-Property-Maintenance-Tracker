@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getSession, logoutUser, refreshUsers } from './data/authStore';
-import { getTickets } from './data/store';
+import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
-import { setLogoutHandler } from './api/client';
+import { setLogoutHandler, api, getToken } from './api/client';
 import Navbar from './components/common/Navbar';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
@@ -64,10 +64,28 @@ function App() {
 
     const session = getSession();
     if (session) {
-      setUser(session);
-      setPage('app');
-      startSlaPolling();
-      refreshUsers();
+      // Validate the stored session against the backend — stale/expired
+      // tokens get cleared so the user lands on the login page.
+      api('/auth/me', { skipAuthRetry: true })
+        .then(async (result) => {
+          if (!getToken()) return;
+          if (!result.success) {
+            logoutUser().then(() => { setUser(null); setPage('login'); });
+            return;
+          }
+          setUser(session);
+          await syncPropertiesAndUnits();
+          await syncTechnicians();
+          await refreshTickets();
+          setPage('app');
+          startSlaPolling();
+          refreshUsers();
+        })
+        .catch(() => {
+          if (getToken()) {
+            logoutUser().then(() => { setUser(null); setPage('login'); });
+          }
+        });
     } else {
       setPage('login');
     }
@@ -76,7 +94,7 @@ function App() {
       const { ticketId, priority } = e.detail;
       if (Notification.permission === 'granted') {
         new Notification('SLA Breach', {
-          body: `${ticketId} (${priority}) — resolution deadline exceeded.`,
+          body: `A ${priority} ticket — resolution deadline exceeded.`,
         });
       } else {
         console.warn(`SLA BREACH: ${ticketId} (${priority}) — resolution deadline exceeded.`);
@@ -86,8 +104,12 @@ function App() {
     return () => window.removeEventListener('spmt:sla-breach', handleSlaBreach);
   }, []);
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (userData) => {
     setUser(userData);
+    await syncPropertiesAndUnits();
+    await syncTechnicians();
+    await refreshTickets();
+    refreshUsers();
     setPage('app');
   };
 

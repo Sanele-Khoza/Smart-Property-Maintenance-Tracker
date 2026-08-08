@@ -5,7 +5,7 @@ import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
 const STATUS_STYLES = {
-  'Open': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
+  'New': { bg: 'rgba(100,120,150,0.15)', color: '#8a9bb5' },
   'Manual Review': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
   'CONFLICT': { bg: 'rgba(220,60,60,0.15)', color: '#dc3c3c' },
 };
@@ -63,9 +63,9 @@ const AIReview = () => {
         </div>
         <div className="admin-table-wrapper">
           <table className="admin-table">
-            <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>AI Orig.</th><th>Category</th><th>Conf.</th><th>Issue</th><th>AI Inferences</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>AI Orig.</th><th>Category</th><th>Conf.</th><th>Issue</th><th>AI Inferences</th><th>Actions</th></tr></thead>
             <tbody>
-              {filtered.length === 0 ? <tr><td colSpan="10" style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>No tickets require AI review.</td></tr> : (
+              {filtered.length === 0 ? <tr><td colSpan="9" style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>No tickets require AI review.</td></tr> : (
                 filtered.map(t => {
                   const isConflict = t.conflictDetected;
                   const isReview = t.manualReviewRequired;
@@ -73,7 +73,6 @@ const AIReview = () => {
                   return (
                     <React.Fragment key={t.ticketId}>
                       <tr style={{ backgroundColor: isConflict ? 'rgba(220,60,60,0.03)' : 'rgba(240,180,50,0.03)' }}>
-                        <td className="cell-mono">{t.ticketId}</td>
                         <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</td>
                         <td><span style={STATUS_STYLES[t.status] || STATUS_STYLES.Open}>{t.status}</span></td>
                         <td><span className={`badge ${t.priority === 'URGENT' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : t.priority === 'MEDIUM' ? 'badge-info' : 'badge-completed'}`}>{t.priority}</span></td>
@@ -97,7 +96,7 @@ const AIReview = () => {
                         </td>
                       </tr>
                       {expandedRows[t.ticketId] && (
-                        <tr className="expanded-row"><td colSpan="10" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)' }}>
+                        <tr className="expanded-row"><td colSpan="9" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
                             <div style={{ flex: 2, minWidth: 240 }}>
                               <strong>Description:</strong>
@@ -135,7 +134,7 @@ const AIReview = () => {
       {showCategoryModal && (
         <div className="modal" onClick={() => setShowCategoryModal(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
-            <div className="edit-modal-header"><span><FaTag /> Override Category — {showCategoryModal.ticketId}</span><button className="modal-close-btn" onClick={() => setShowCategoryModal(null)}><FaTimes /></button></div>
+            <div className="edit-modal-header"><span><FaTag /> Override Category</span><button className="modal-close-btn" onClick={() => setShowCategoryModal(null)}><FaTimes /></button></div>
             <form onSubmit={handleCategoryOverride}>
               {showCategoryModal.aiOriginalCategory && showCategoryModal.aiOriginalCategory !== categoryValue && (
                 <p style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 8 }}><FaExclamationTriangle style={{ marginRight: 4 }} />AI originally: <strong>{showCategoryModal.aiOriginalCategory}</strong>.</p>

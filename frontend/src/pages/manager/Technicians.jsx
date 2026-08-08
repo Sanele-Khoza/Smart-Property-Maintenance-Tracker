@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { FaWrench, FaStar, FaMapMarkerAlt, FaPhone, FaEnvelope, FaCheckCircle, FaClock, FaBan, FaExclamationTriangle, FaSearch, FaUserCheck, FaTimes } from 'react-icons/fa';
-import { getTechnicians, updateTechnicianStatus, getTickets, assignTicket, getProperties } from '../../data/store';
+import { getTechnicians, updateTechnicianStatus, assignTicket, getProperties } from '../../data/store';
 import { getSession } from '../../data/authStore';
+import useTickets from '../../hooks/useTickets';
 import Alert from '../../components/common/Alert';
 
 const ALERT_THRESHOLD = 2.0;
@@ -21,9 +22,9 @@ const Technicians = () => {
   const pmName = session ? `${session.name} ${session.surname}` : '';
   const [technicians, setTechnicians] = useState(getTechnicians);
   const [allProperties] = useState(getProperties);
-  const [allTickets] = useState(() => getTickets().filter(t => t.status === 'Open' || t.status === 'Assigned' || t.status === 'Reopened'));
+  const [allTickets] = useTickets();
   const propNames = useMemo(() => new Set(allProperties.filter(p => p.managerName === pmName).map(p => p.name)), [allProperties, pmName]);
-  const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)), [allTickets, propNames]);
+  const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName) && ['New', 'Assigned', 'Reopened'].includes(t.status)), [allTickets, propNames]);
   const [alert, setAlert] = useState({ msg: '', type: '' });
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,7 +51,7 @@ const Technicians = () => {
     const tech = technicians.find(t => t.id === assignTarget);
     if (!ticket || !tech) return;
     const r = await assignTicket(assignTicketId, tech.name, tech.id);
-    if (r.success) { showAlert(`${ticket.ticketId} assigned to ${tech.name}.`, 'success'); setAssignTarget(null); }
+    if (r.success) { refresh(); showAlert(`Ticket assigned to ${tech.name}.`, 'success'); setAssignTarget(null); }
     else showAlert(r.error, 'error');
   };
 
@@ -159,8 +160,8 @@ const Technicians = () => {
                 <label>Select Ticket</label>
                 <select className="form-select" value={assignTicketId} onChange={e => setAssignTicketId(e.target.value)} required>
                   <option value="">— Choose a ticket —</option>
-                  {tickets.filter(t => !t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.ticketId}: {t.title.substring(0, 40)}</option>)}
-                  {tickets.filter(t => t.assignedTo).length > 0 && <optgroup label="Reassign from current provider">{tickets.filter(t => t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.ticketId}: {t.title.substring(0, 30)} ({t.assignedTo})</option>)}</optgroup>}
+                  {tickets.filter(t => !t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.title.substring(0, 40)}</option>)}
+                  {tickets.filter(t => t.assignedTo).length > 0 && <optgroup label="Reassign from current provider">{tickets.filter(t => t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.title.substring(0, 30)} ({t.assignedTo})</option>)}</optgroup>}
                 </select>
               </div>
               <div className="form-actions">

@@ -244,7 +244,6 @@ const Tenants = () => {
                                 <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
                                   <thead>
                                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                      <th style={{ textAlign: 'left', padding: '4px 8px' }}>ID</th>
                                       <th style={{ textAlign: 'left', padding: '4px 8px' }}>Title</th>
                                       <th style={{ textAlign: 'left', padding: '4px 8px' }}>Status</th>
                                       <th style={{ textAlign: 'left', padding: '4px 8px' }}>Priority</th>
@@ -257,11 +256,10 @@ const Tenants = () => {
                                   <tbody>
                                     {tenant.tickets.map(t => (
                                       <tr key={t.ticketId} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td className="cell-mono" style={{ padding: '4px 8px' }}>{t.ticketId}</td>
                                         <td style={{ padding: '4px 8px' }}>{t.title}</td>
                                         <td style={{ padding: '4px 8px' }}>
                                           <span className={`badge ${
-                                            t.status === 'Closed' || t.status === 'Completed (Provider)' ? 'badge-completed' :
+                                            t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed' ? 'badge-completed' :
                                             t.status === 'Assigned' || t.status === 'In Progress' ? 'badge-info' :
                                             t.status === 'Escalated' || t.status === 'Reopened' ? 'badge-warning' :
                                             'badge-danger'

@@ -1692,3 +1692,25 @@ textarea:focus-visible {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* ── Report charts ───────────────────────────────────── */
+.chart-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-block-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.recharts-wrapper {
+  max-width: 100%;
+}

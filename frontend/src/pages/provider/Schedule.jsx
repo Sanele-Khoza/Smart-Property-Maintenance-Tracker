@@ -12,7 +12,7 @@ const Schedule = () => {
   const [tickets] = useState(getTickets());
   const [weekOffset, setWeekOffset] = useState(0);
 
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
+  const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -39,7 +39,7 @@ const Schedule = () => {
     assigned: myTickets.filter(t => t.status === 'Assigned').length,
     inProgress: myTickets.filter(t => t.status === 'In Progress').length,
     waiting: myTickets.filter(t => t.status === 'Waiting for Parts').length,
-    completed: myTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed').length,
+    completed: myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length,
   };
 
   return (
@@ -77,11 +77,10 @@ const Schedule = () => {
                   dayTickets.map(t => (
                     <div key={t.ticketId} style={{
                       padding: '3px 4px', marginBottom: 2, borderRadius: 2, fontSize: 9,
-                      background: t.status === 'Completed (Provider)' || t.status === 'Closed' ? 'rgba(45,183,145,0.1)' :
+                      background: t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed' ? 'rgba(45,183,145,0.1)' :
                         t.status === 'In Progress' ? 'rgba(243,156,18,0.1)' : 'rgba(52,152,219,0.1)',
                       cursor: 'default',
                     }}>
-                      <div style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 8 }}>{t.ticketId}</div>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
                       <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>{t.propertyName} / U{t.unitNumber}</div>
                     </div>
@@ -98,7 +97,6 @@ const Schedule = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Priority</th>
@@ -110,7 +108,6 @@ const Schedule = () => {
             <tbody>
               {myTickets.map(t => (
                 <tr key={t.ticketId}>
-                  <td className="cell-mono">{t.ticketId}</td>
                   <td>{t.title}</td>
                   <td><StatusBadge status={t.status} /></td>
                   <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : 'badge-open'}`}>{t.priority}</span></td>

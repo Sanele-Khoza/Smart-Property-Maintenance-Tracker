@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaUsers, FaExclamationTriangle, FaBuilding, FaDoorOpen, FaTicketAlt, FaUserCheck, FaUserSlash, FaSearch, FaEnvelope, FaPhone, FaCheckCircle, FaTimesCircle, FaUserPlus, FaCheck } from 'react-icons/fa';
 import { getUnits, getProperties, getTickets } from '../../data/store';
-import { getUsers, updateUser } from '../../data/authStore';
+import { getUsers, approveManager, refreshUsers } from '../../data/authStore';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
@@ -13,17 +13,23 @@ const Tenants = () => {
   const propIds = new Set(properties.map(p => p.propertyId));
   const [units] = useState(() => getUnits().filter(u => propIds.has(u.propertyId)));
   const [tickets] = useState(getTickets);
-  const [allUsers] = useState(() => getUsers());
+  const [allUsers, setAllUsers] = useState(() => getUsers());
   const [alert, setAlert] = useState({ msg: '', type: '' });
   const [search, setSearch] = useState('');
   const [expandedTenant, setExpandedTenant] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    return () => { cancelled = true; };
+  }, []);
 
   const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };
   const refresh = () => window.location.reload();
 
   const pendingApprovals = allUsers.filter(u =>
     (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
-    u.status === 'Pending'
+    String(u.status).toUpperCase() === 'PENDING'
   );
 
   const tenantData = useMemo(() => {
@@ -34,16 +40,14 @@ const Tenants = () => {
       map[u.tenantName].units.push(u);
     });
 
-    const unitTenantNames = new Set(Object.keys(map));
-    const propertyTenantNames = new Set();
     tickets.filter(t => t.propertyName && properties.some(p => p.name === t.propertyName)).forEach(t => {
-      if (t.createdBy) propertyTenantNames.add(t.createdBy);
+      if (!t.createdBy) return;
       if (!map[t.createdBy]) map[t.createdBy] = { unitCount: 0, units: [] };
     });
 
     allUsers.filter(u => u.role === 'TENANT').forEach(u => {
       const name = `${u.name} ${u.surname}`;
-      if (!map[name]) map[name] = { unitCount: 0, units: [] };
+      if (!map[name]) return;
       map[name].email = u.email;
       map[name].phone = u.phone;
       map[name].authId = u.id;
@@ -54,7 +58,7 @@ const Tenants = () => {
       const tenantTickets = tickets.filter(t => t.createdBy === name);
       const hasUnit = d.unitCount > 0;
       const hasProperty = tenantTickets.some(t => properties.some(p => p.name === t.propertyName));
-      if (!hasUnit && !hasProperty && !d.authId) return null;
+      if (!hasUnit && !hasProperty) return null;
       return {
         name, email: d.email || '—', phone: d.phone || '—', authId: d.authId || null, authStatus: d.authStatus || null,
         units: d.units, unitCount: d.unitCount, hasUnit, hasAuthRecord: !!d.authId,
@@ -67,7 +71,7 @@ const Tenants = () => {
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 
   const handleApprove = async (userId) => {
-    const r = await updateUser(userId, { status: 'Active' });
+    const r = await approveManager(userId);
     if (r.success) { showAlert(`Account approved.`, 'success'); refresh(); }
     else showAlert(r.error, 'error');
   };
@@ -140,8 +144,8 @@ const Tenants = () => {
                         {tenant.tickets.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>No tickets.</div> : (
                           <div><div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Ticket History ({tenant.tickets.length})</div>
                           <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
-                            <thead><tr style={{ borderBottom: '1px solid var(--border)' }}><th style={{ textAlign: 'left', padding: '4px 8px' }}>ID</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Title</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Status</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Priority</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Unit</th></tr></thead>
-                            <tbody>{tenant.tickets.map(t => (<tr key={t.ticketId} style={{ borderBottom: '1px solid var(--border)' }}><td className="cell-mono" style={{ padding: '4px 8px' }}>{t.ticketId}</td><td style={{ padding: '4px 8px' }}>{t.title}</td><td style={{ padding: '4px 8px' }}><span className={`badge ${t.status === 'Closed' || t.status === 'Completed (Provider)' ? 'badge-completed' : t.status === 'Assigned' || t.status === 'In Progress' ? 'badge-info' : 'badge-warning'}`}>{t.status}</span></td><td style={{ padding: '4px 8px' }}><span className={`badge ${t.priority === 'URGENT' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : t.priority === 'MEDIUM' ? 'badge-info' : 'badge-completed'}`}>{t.priority}</span></td><td className="cell-mono" style={{ padding: '4px 8px' }}>{t.unitNumber}</td></tr>))}</tbody>
+                            <thead><tr style={{ borderBottom: '1px solid var(--border)' }}><th style={{ textAlign: 'left', padding: '4px 8px' }}>Title</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Status</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Priority</th><th style={{ textAlign: 'left', padding: '4px 8px' }}>Unit</th></tr></thead>
+                            <tbody>{tenant.tickets.map(t => (<tr key={t.ticketId} style={{ borderBottom: '1px solid var(--border)' }}><td style={{ padding: '4px 8px' }}>{t.title}</td><td style={{ padding: '4px 8px' }}><span className={`badge ${t.status === 'Closed' || t.status === 'Completed' || t.status === 'Tenant Confirmed' ? 'badge-completed' : t.status === 'Assigned' || t.status === 'In Progress' ? 'badge-info' : 'badge-warning'}`}>{t.status}</span></td><td style={{ padding: '4px 8px' }}><span className={`badge ${t.priority === 'URGENT' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : t.priority === 'MEDIUM' ? 'badge-info' : 'badge-completed'}`}>{t.priority}</span></td><td className="cell-mono" style={{ padding: '4px 8px' }}>{t.unitNumber}</td></tr>))}</tbody>
                           </table></div>
                         )}
                       </td></tr>

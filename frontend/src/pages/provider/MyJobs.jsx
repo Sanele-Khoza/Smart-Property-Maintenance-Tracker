@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import { FaTicketAlt, FaSearch, FaCheck, FaTimes, FaPlay, FaPause, FaWrench, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaEye, FaUndo } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getTickets, updateTicketStatus, declineTicketAssignment } from '../../data/store';
+import { acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import useTickets from '../../hooks/useTickets';
 
-const STATUS_TABS = ['all', 'Assigned', 'In Progress', 'Waiting for Parts', 'Completed (Provider)'];
+const STATUS_TABS = ['all', 'Assigned', 'Accepted', 'In Progress', 'Waiting for Parts', 'Completed'];
 
 const MyJobs = ({ onViewDetails }) => {
   const session = getSession();
   const providerName = session ? `${session.name} ${session.surname}` : '';
-  const [tickets, setTickets] = useState(getTickets());
+  const [tickets, refresh] = useTickets();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
-  const [declineReason, setDeclineReason] = useState('');
-  const [decliningId, setDecliningId] = useState(null);
   const [msg, setMsg] = useState({ text: '', type: '' });
 
-  const myTickets = tickets.filter(t => t.assignedTo === providerName);
+  const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
   const filtered = myTickets.filter(t => {
     if (filter !== 'all' && t.status !== filter) return false;
@@ -27,52 +26,39 @@ const MyJobs = ({ onViewDetails }) => {
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 3000); };
 
-  const refresh = () => setTickets(getTickets());
-
-  const handleStatus = async (ticketId, newStatus) => {
-    const r = await updateTicketStatus(ticketId, newStatus);
-    if (r.success) { refresh(); showMsg(`${ticketId} → ${newStatus}`, 'success'); }
-    else { showMsg(r.error, 'error'); }
-  };
-
-  const handleDecline = async (ticketId) => {
-    const r = await declineTicketAssignment(ticketId, providerName, declineReason);
-    if (r.success) { refresh(); showMsg(`${ticketId} declined.`, 'success'); setDecliningId(null); setDeclineReason(''); }
-    else { showMsg(r.error, 'error'); }
-  };
-
   const countByStatus = (status) => status === 'all' ? myTickets.length : myTickets.filter(t => t.status === status).length;
+
+  const run = async (promise, successText) => {
+    const r = await promise;
+    if (r.success) { refresh(); showMsg(successText, 'success'); }
+    else { showMsg(r.error, 'error'); }
+  };
 
   const ActionButtons = ({ t }) => {
     switch (t.status) {
       case 'Assigned':
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn btn-teal btn-sm" onClick={() => handleStatus(t.ticketId, 'In Progress')} title="Accept job"><FaPlay /> Accept</button>
-            {decliningId === t.ticketId ? (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <input className="form-input" style={{ width: 140, padding: '4px 6px', fontSize: 10 }} placeholder="Reason (optional)" value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
-                <button className="btn btn-danger btn-sm" onClick={() => handleDecline(t.ticketId)}><FaTimes /> Confirm</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => { setDecliningId(null); setDeclineReason(''); }}>Cancel</button>
-              </div>
-            ) : (
-              <button className="btn btn-secondary btn-sm" onClick={() => setDecliningId(t.ticketId)} title="Decline assignment"><FaTimes /> Decline</button>
-            )}
+            <button className="btn btn-teal btn-sm" onClick={() => run(acceptJob(t.ticketId), 'Job accepted.')} title="Accept job"><FaPlay /> Accept</button>
           </div>
+        );
+      case 'Accepted':
+        return (
+          <button className="btn btn-teal btn-sm" onClick={() => run(startJob(t.ticketId), 'Job started.')} title="Start work"><FaPlay /> Start</button>
         );
       case 'In Progress':
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => handleStatus(t.ticketId, 'Waiting for Parts')}><FaPause /> Waiting for Parts</button>
-            <button className="btn btn-teal btn-sm" onClick={() => handleStatus(t.ticketId, 'Completed (Provider)')}><FaCheck /> Complete</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => run(waitForParts(t.ticketId), 'Waiting for parts set.')}><FaPause /> Waiting for Parts</button>
+            <button className="btn btn-teal btn-sm" onClick={() => run(submitJobCompletion(t.ticketId, '', []), 'Job completed.')}><FaCheck /> Complete</button>
           </div>
         );
       case 'Waiting for Parts':
         return (
-          <button className="btn btn-primary btn-sm" onClick={() => handleStatus(t.ticketId, 'In Progress')}><FaPlay /> Resume</button>
+          <button className="btn btn-primary btn-sm" onClick={() => run(partsReceived(t.ticketId), 'Job resumed.')}><FaPlay /> Resume</button>
         );
-      case 'Completed (Provider)':
-        return <span className="badge badge-completed" style={{ fontSize: 10 }}><FaCheck /> Awaiting Close</span>;
+      case 'Completed':
+        return <span className="badge badge-completed" style={{ fontSize: 10 }}><FaCheck /> Awaiting Confirmation</span>;
       default:
         return null;
     }
@@ -103,7 +89,6 @@ const MyJobs = ({ onViewDetails }) => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Priority</th>
@@ -118,7 +103,6 @@ const MyJobs = ({ onViewDetails }) => {
                 {filtered.map(t => (
                   <React.Fragment key={t.ticketId}>
                     <tr style={{ background: expandedId === t.ticketId ? 'var(--surface2)' : 'transparent' }}>
-                      <td className="cell-mono">{t.ticketId}</td>
                       <td><strong>{t.title}</strong></td>
                       <td><StatusBadge status={t.status} /></td>
                       <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{t.priority}</span></td>
@@ -133,7 +117,7 @@ const MyJobs = ({ onViewDetails }) => {
                     </tr>
                     {expandedId === t.ticketId && (
                       <tr>
-                        <td colSpan={9} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
+                        <td colSpan={8} style={{ padding: '12px 16px', background: 'var(--surface2)' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
                             <div><strong>Description:</strong><br />{t.description}</div>
                             <div>

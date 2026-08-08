@@ -22,6 +22,24 @@ async function verifyTicketAccess(ticket, user) {
       throw AppError.forbidden('Access denied');
     }
   }
+  if (user.role === 'PROPERTY_MANAGER') {
+    const result = await query(
+      `SELECT 1 FROM tickets t
+       LEFT JOIN units u ON u.id = t.unit_id
+       LEFT JOIN properties p ON p.id = u.property_id
+       WHERE t.id = $1 AND p.manager_id = $2`,
+      [ticket.id, user.id]
+    );
+    if (result.rows.length === 0) {
+      throw AppError.forbidden('Access denied');
+    }
+  }
+}
+
+async function ensureTicketAccess(ticket, user) {
+  if (user.role !== 'SYSTEM_ADMIN') {
+    await verifyTicketAccess(ticket, user);
+  }
 }
 
 async function injectScopeFilters(filters, user) {
@@ -30,6 +48,8 @@ async function injectScopeFilters(filters, user) {
   } else if (user.role === 'SERVICE_PROVIDER') {
     const providerId = await resolveProviderId(user.email);
     if (providerId) filters.assigned_to = providerId;
+  } else if (user.role === 'PROPERTY_MANAGER') {
+    filters.manager_id = user.id;
   }
   return filters;
 }
@@ -45,9 +65,7 @@ const list = async (req, res, next) => {
 const getById = async (req, res, next) => {
   try {
     const result = await service.getById(req.params.id);
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(result.data.ticket, req.user);
-    }
+    await ensureTicketAccess(result.data.ticket, req.user);
     res.json(result);
   } catch (err) { next(err); }
 };
@@ -55,6 +73,9 @@ const getById = async (req, res, next) => {
 const create = async (req, res, next) => {
   try {
     const result = await service.create(req.validatedBody, req.user.id);
+    if (result.duplicates) {
+      return res.status(409).json(result);
+    }
     if (result.success && result.data?.ticket?.id) {
       classifyTicket(result.data.ticket.id).catch(() => {});
     }
@@ -66,9 +87,7 @@ const update = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const result = await service.update(req.params.id, req.validatedBody, req.user.id, req.user.name, req.user.role);
     res.json(result);
   } catch (err) { next(err); }
@@ -78,9 +97,7 @@ const changeStatus = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const { status, reason } = req.validatedBody;
     const name = req.user ? `${req.user.name} ${req.user.surname}` : null;
     const result = await service.changeStatus(req.params.id, status, reason, req.user?.id, name, req.user.role);
@@ -90,6 +107,9 @@ const changeStatus = async (req, res, next) => {
 
 const assign = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.assign(req.params.id, req.validatedBody.technician_id, req.validatedBody.note, req.user.id, name, req.user.role);
     res.json(result);
@@ -110,6 +130,9 @@ const classify = async (req, res, next) => {
 
 const confirm = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const result = await service.confirmLowConfidence(req.params.id, req.user.id);
     res.json(result);
   } catch (err) { next(err); }
@@ -117,6 +140,9 @@ const confirm = async (req, res, next) => {
 
 const overrideAi = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const { correctedLabel } = req.body;
     if (!correctedLabel) throw AppError.badRequest('correctedLabel is required');
     const name = `${req.user.name} ${req.user.surname}`;
@@ -138,6 +164,9 @@ const downgradeEmergency = async (req, res, next) => {
 
 const accept = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.acceptTicket(req.params.id, req.user.id, name, req.body.note);
     res.json(result);
@@ -146,6 +175,9 @@ const accept = async (req, res, next) => {
 
 const startWork = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.startWork(req.params.id, req.user.id, name, req.body.note);
     res.json(result);
@@ -154,6 +186,9 @@ const startWork = async (req, res, next) => {
 
 const waitingParts = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.markWaitingParts(req.params.id, req.user.id, name, req.body.note);
     res.json(result);
@@ -162,6 +197,9 @@ const waitingParts = async (req, res, next) => {
 
 const partsReceived = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.markPartsReceived(req.params.id, req.user.id, name, req.body.note);
     res.json(result);
@@ -172,9 +210,7 @@ const complete = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const result = await service.complete(req.params.id, req.user.id);
     res.json(result);
   } catch (err) { next(err); }
@@ -182,6 +218,9 @@ const complete = async (req, res, next) => {
 
 const tenantConfirm = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.tenantConfirm(req.params.id, req.user.id, name, req.body.satisfied, req.body.note);
     res.json(result);
@@ -190,6 +229,9 @@ const tenantConfirm = async (req, res, next) => {
 
 const close = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const name = `${req.user.name} ${req.user.surname}`;
     const result = await service.closeTicket(req.params.id, req.user.id, name, req.body.note);
     res.json(result);
@@ -200,9 +242,7 @@ const reopen = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const result = await service.reopen(req.params.id, req.validatedBody.reason, req.user.id);
     res.json(result);
   } catch (err) { next(err); }
@@ -210,6 +250,9 @@ const reopen = async (req, res, next) => {
 
 const rate = async (req, res, next) => {
   try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
     const result = await service.rate(req.params.id, req.user.id, req.body.rating, req.body.comment);
     res.json(result);
   } catch (err) { next(err); }
@@ -218,9 +261,7 @@ const rate = async (req, res, next) => {
 const getHistory = async (req, res, next) => {
   try {
     const result = await service.getById(req.params.id);
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(result.data.ticket, req.user);
-    }
+    await ensureTicketAccess(result.data.ticket, req.user);
     const history = await repo.getHistory(req.params.id);
     res.json({ success: true, data: { history } });
   } catch (err) { next(err); }
@@ -229,9 +270,7 @@ const getHistory = async (req, res, next) => {
 const getComments = async (req, res, next) => {
   try {
     const result = await service.getById(req.params.id);
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(result.data.ticket, req.user);
-    }
+    await ensureTicketAccess(result.data.ticket, req.user);
     const comments = await repo.getComments(req.params.id);
     res.json({ success: true, data: { comments } });
   } catch (err) { next(err); }
@@ -241,9 +280,7 @@ const addComment = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const comment = await repo.addComment(req.params.id, req.user.id, req.body.comment);
     res.status(201).json({ success: true, data: { comment }, message: 'Comment added' });
   } catch (err) { next(err); }
@@ -253,9 +290,7 @@ const getAttachments = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const attachments = await repo.getAttachments(req.params.id);
     res.json({ success: true, data: { attachments } });
   } catch (err) { next(err); }
@@ -265,9 +300,7 @@ const addAttachment = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     if (!req.file) throw AppError.badRequest('No file uploaded');
     const attachment = await repo.addAttachment(req.params.id, req.file, req.user.id);
     if (req.moderated) {
@@ -281,9 +314,7 @@ const removeAttachment = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     await repo.removeAttachment(req.params.id, req.params.attachmentId);
     res.json({ success: true, message: 'Attachment removed' });
   } catch (err) { next(err); }
@@ -293,9 +324,7 @@ const getAttachmentUrl = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
     if (!ticket) throw AppError.notFound('Ticket not found');
-    if (req.user.role !== 'SYSTEM_ADMIN' && req.user.role !== 'PROPERTY_MANAGER') {
-      await verifyTicketAccess(ticket, req.user);
-    }
+    await ensureTicketAccess(ticket, req.user);
     const attachment = await repo.getAttachmentById(req.params.attachmentId);
     if (!attachment || attachment.ticket_id !== req.params.id) {
       throw AppError.notFound('Attachment not found');

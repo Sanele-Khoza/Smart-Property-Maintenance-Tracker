@@ -2,15 +2,21 @@ import { api } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
 
 export const TICKET_TRANSITIONS = {
-  'Open': ['Manual Review', 'Assigned', 'Escalated'],
-  'Manual Review': ['Open', 'Assigned', 'Escalated'],
-  'Assigned': ['In Progress', 'Escalated'],
-  'In Progress': ['Waiting for Parts', 'Completed (Provider)', 'Escalated'],
-  'Waiting for Parts': ['In Progress', 'Escalated'],
-  'Completed (Provider)': ['Closed', 'Reopened'],
-  'Closed': ['Reopened'],
-  'Reopened': ['Assigned', 'In Progress', 'Escalated'],
-  'Escalated': ['Assigned', 'In Progress'],
+  'New': ['AI Classified', 'Manual Review', 'Cancelled'],
+  'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
+  'Manual Review': ['AI Classified', 'Cancelled'],
+  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+  'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
+  'Waiting for Parts': ['In Progress', 'On Hold'],
+  'Completed': ['Tenant Confirmed', 'Reopened'],
+  'Tenant Confirmed': ['Closed'],
+  'Closed': [],
+  'Cancelled': ['Archived'],
+  'Archived': ['Reopened'],
+  'On Hold': ['In Progress', 'Cancelled'],
+  'Reopened': ['Assigned', 'In Progress', 'Cancelled'],
+  'Escalated': ['Manual Review', 'Assigned'],
 };
 
 export const PRIORITY_ORDER = { EMERGENCY: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
@@ -53,6 +59,10 @@ function mapTicket(t) {
   };
 }
 
+export const notifyTicketsUpdated = () => {
+  window.dispatchEvent(new CustomEvent('spmt:tickets-updated'));
+};
+
 export const createTicket = async (unitId, title, description, priority, images, createdById, createdByName, forceSubmit = false) => {
   try {
     const result = await api('/tickets', {
@@ -87,6 +97,7 @@ export const createTicket = async (unitId, title, description, priority, images,
       timestamp: new Date().toISOString(),
     });
     saveToLocalStorage();
+    notifyTicketsUpdated();
 
     return { success: true, data: localTicket };
   } catch (err) {
@@ -137,6 +148,7 @@ export const updateTicketStatus = async (ticketId, newStatus, comment) => {
         });
         saveToLocalStorage();
       }
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] || updated };
     }
     return { success: false, error: result.error || 'Status change failed' };
@@ -161,33 +173,10 @@ export const assignTicket = async (ticketId, providerName, providerId) => {
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] };
     }
     return { success: false, error: result.error || 'Assignment failed' };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-};
-
-export const declineTicketAssignment = async (ticketId, providerName, reason) => {
-  try {
-    const result = await api(`/tickets/${ticketId}/status`, {
-      method: 'PUT',
-      body: { status: 'Open', reason: reason || 'Provider declined' },
-    });
-    if (result.success) {
-      const store = getStore();
-      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
-      if (idx !== -1) {
-        store.tickets[idx].assignedTo = null;
-        store.tickets[idx].assignedToId = null;
-        store.tickets[idx].status = 'Open';
-        store.tickets[idx].updatedAt = new Date().toLocaleString();
-      }
-      saveToLocalStorage();
-      return { success: true, data: store.tickets[idx] };
-    }
-    return { success: false, error: result.error || 'Decline failed' };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -208,6 +197,7 @@ export const reopenTicket = async (ticketId, justification) => {
         store.tickets[idx].reopenJustification = justification;
       }
       saveToLocalStorage();
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] };
     }
     return { success: false, error: result.error || 'Reopen failed' };
@@ -230,6 +220,7 @@ export const updateTicketCategory = async (ticketId, newCategory) => {
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] };
     }
     return { success: false, error: result.error || 'Category update failed' };
@@ -239,7 +230,7 @@ export const updateTicketCategory = async (ticketId, newCategory) => {
 };
 
 export const getTicketsByStatus = (status) => getStore().tickets.filter(t => t.status === status);
-export const getOpenTickets = () => getStore().tickets.filter(t => t.status === 'Open');
+export const getOpenTickets = () => getStore().tickets.filter(t => t.status === 'New');
 export const getTicketsByProvider = (providerName) => getStore().tickets.filter(t => t.assignedTo === providerName);
 
 export const updateTicketRating = async (ticketId, rating, comment) => {
@@ -258,6 +249,7 @@ export const updateTicketRating = async (ticketId, rating, comment) => {
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] };
     }
     return { success: false, error: result.error || 'Rating failed' };
@@ -276,13 +268,14 @@ export const submitJobCompletion = async (ticketId, invoiceText, photoMetadata, 
       const store = getStore();
       const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
       if (idx !== -1) {
-        store.tickets[idx].status = 'Completed (Provider)';
+        store.tickets[idx].status = 'Completed';
         store.tickets[idx].completionInvoice = invoiceText?.trim() || '';
         store.tickets[idx].completionPhotos = photoMetadata || [];
         store.tickets[idx].completedAt = new Date().toISOString();
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
+      notifyTicketsUpdated();
       return { success: true, data: store.tickets[idx] };
     }
     return { success: false, error: result.error || 'Job completion failed' };
@@ -291,13 +284,89 @@ export const submitJobCompletion = async (ticketId, invoiceText, photoMetadata, 
   }
 };
 
+async function runWorkflowStep(ticketId, endpoint, nextStatus, note) {
+  try {
+    const result = await api(`/tickets/${ticketId}${endpoint}`, {
+      method: 'PUT',
+      body: note ? { note } : {},
+    });
+    if (result.success) {
+      const store = getStore();
+      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+      if (idx !== -1) {
+        store.tickets[idx].status = nextStatus;
+        store.tickets[idx].updatedAt = new Date().toLocaleString();
+      }
+      saveToLocalStorage();
+      notifyTicketsUpdated();
+      return { success: true, data: store.tickets[idx] };
+    }
+    return { success: false, error: result.error || 'Action failed' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+export const acceptJob = (ticketId, note) => runWorkflowStep(ticketId, '/accept', 'Accepted', note);
+export const startJob = (ticketId, note) => runWorkflowStep(ticketId, '/start', 'In Progress', note);
+export const waitForParts = (ticketId, note) => runWorkflowStep(ticketId, '/waiting-parts', 'Waiting for Parts', note);
+export const partsReceived = (ticketId, note) => runWorkflowStep(ticketId, '/parts-received', 'In Progress', note);
+
+export const confirmTicketCompletion = async (ticketId, satisfied, note) => {
+  try {
+    const result = await api(`/tickets/${ticketId}/tenant-confirm`, {
+      method: 'PUT',
+      body: { satisfied, note },
+    });
+    if (result.success) {
+      const store = getStore();
+      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+      const nextStatus = satisfied === false ? 'Reopened' : 'Tenant Confirmed';
+      if (idx !== -1) {
+        store.tickets[idx].status = nextStatus;
+        store.tickets[idx].updatedAt = new Date().toLocaleString();
+      }
+      saveToLocalStorage();
+      notifyTicketsUpdated();
+      return { success: true, data: store.tickets[idx] };
+    }
+    return { success: false, error: result.error || 'Confirmation failed' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const closeTicket = async (ticketId, note) => {
+  try {
+    const result = await api(`/tickets/${ticketId}/close`, {
+      method: 'PUT',
+      body: note ? { note } : {},
+    });
+    if (result.success) {
+      const store = getStore();
+      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+      if (idx !== -1) {
+        store.tickets[idx].status = 'Closed';
+        store.tickets[idx].updatedAt = new Date().toLocaleString();
+      }
+      saveToLocalStorage();
+      notifyTicketsUpdated();
+      return { success: true, data: store.tickets[idx] };
+    }
+    return { success: false, error: result.error || 'Close failed' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const refreshTickets = async () => {
   try {
-    const result = await api('/tickets');
-    if (result.success && Array.isArray(result.data)) {
+    const result = await api('/tickets?limit=1000');
+    if (result.success && Array.isArray(result.data?.tickets)) {
       const store = getStore();
-      store.tickets = result.data.map(mapTicket);
+      store.tickets = result.data.tickets.map(mapTicket);
       saveToLocalStorage();
+      notifyTicketsUpdated();
     }
   } catch (err) {
     console.warn('refreshTickets failed:', err.message);
@@ -314,11 +383,12 @@ export const getStats = () => {
     totalUnits: (store.units || []).length,
     occupiedUnits: (store.units || []).filter(u => u.status === 'OCCUPIED').length,
     totalTickets: t.length,
-    openTickets: t.filter(tk => tk.status === 'Open').length,
+    openTickets: t.filter(tk => tk.status === 'New').length,
     manualReviewTickets: t.filter(tk => tk.status === 'Manual Review').length,
     assignedTickets: t.filter(tk => tk.status === 'Assigned').length,
+    acceptedTickets: t.filter(tk => tk.status === 'Accepted').length,
     inProgressTickets: t.filter(tk => tk.status === 'In Progress').length,
-    completedTickets: t.filter(tk => tk.status === 'Completed (Provider)').length,
+    completedTickets: t.filter(tk => tk.status === 'Completed' || tk.status === 'Tenant Confirmed').length,
     closedTickets: t.filter(tk => tk.status === 'Closed').length,
     conflictDetected: t.filter(tk => tk.conflictDetected).length,
     slaBreachedTickets: t.filter(tk => tk.slaResolutionBefore && Date.now() > tk.slaResolutionBefore).length,

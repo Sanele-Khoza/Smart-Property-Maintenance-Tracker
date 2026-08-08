@@ -1,7 +1,14 @@
 import { query } from '../../db/connection.js';
 
 const findById = async (id) => {
-  const result = await query('SELECT * FROM properties WHERE id = $1', [id]);
+  const result = await query(
+    `SELECT p.*, TRIM(CONCAT(m.name, ' ', m.surname)) AS manager_name,
+            m.email AS manager_email, m.phone AS manager_phone
+     FROM properties p
+     LEFT JOIN users m ON m.id = p.manager_id
+     WHERE p.id = $1`,
+    [id]
+  );
   return result.rows[0] || null;
 };
 
@@ -38,8 +45,11 @@ const findAll = async (filters = {}) => {
   );
   const total = parseInt(countResult.rows[0].count, 10);
 
-  let sql = `SELECT p.*, (SELECT COUNT(*) FROM units u WHERE u.property_id = p.id)::int AS unit_count
-     FROM properties p ${whereClause} ORDER BY p.name ASC`;
+  let sql = `SELECT p.*, (SELECT COUNT(*) FROM units u WHERE u.property_id = p.id)::int AS unit_count,
+            TRIM(CONCAT(m.name, ' ', m.surname)) AS manager_name,
+            m.email AS manager_email, m.phone AS manager_phone
+     FROM properties p
+     LEFT JOIN users m ON m.id = p.manager_id ${whereClause} ORDER BY p.name ASC`;
   if (limit !== null) { sql += ` LIMIT $${idx++}`; params.push(limit); }
   if (offset !== null) { sql += ` OFFSET $${idx++}`; params.push(offset); }
 
@@ -50,23 +60,46 @@ const findAll = async (filters = {}) => {
   };
 };
 
-const create = async (data) => {
+const resolveManagerId = async (managerName, managerId) => {
+  if (managerId) return managerId;
+  if (!managerName) return null;
+  const parts = String(managerName).trim().split(/\s+/);
+  const name = parts[0] || '';
+  const surname = parts.slice(1).join(' ') || '';
   const result = await query(
-    `INSERT INTO properties (name, type, status, address) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [data.name, data.type || 'Residential', data.status || 'Active', data.address]
+    `SELECT id FROM users WHERE name = $1 AND COALESCE(surname, '') = $2 AND role = 'PROPERTY_MANAGER' LIMIT 1`,
+    [name, surname]
+  );
+  return result.rows[0]?.id || null;
+};
+
+const create = async (data) => {
+  const managerId = await resolveManagerId(data.managerName, data.manager_id || data.managerId);
+  const result = await query(
+    `INSERT INTO properties (name, type, status, address, manager_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [data.name, data.type || 'Residential', data.status || 'Active', data.address, managerId]
   );
   return result.rows[0];
 };
 
 const update = async (id, data) => {
-  const entries = Object.entries(data).filter(([_, v]) => v !== undefined);
+  const payload = { ...data };
+  if (payload.managerName !== undefined) {
+    if (payload.managerId === undefined) {
+      payload.manager_id = await resolveManagerId(payload.managerName, null);
+    }
+    delete payload.managerName;
+  }
+
+  const entries = Object.entries(payload).filter(([_, v]) => v !== undefined);
   if (entries.length === 0) return findById(id);
 
+  const columnMap = { managerId: 'manager_id', propertyId: 'property_id' };
   const setClauses = [];
   const params = [];
   let idx = 1;
   for (const [key, value] of entries) {
-    setClauses.push(`${key} = $${idx++}`);
+    setClauses.push(`${columnMap[key] || key} = $${idx++}`);
     params.push(value);
   }
   params.push(id);

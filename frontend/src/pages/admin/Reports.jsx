@@ -1,10 +1,32 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { FaFileExport, FaChartBar, FaClock, FaCheckDouble, FaStar, FaBrain, FaFilter, FaCalendarAlt, FaDownload } from 'react-icons/fa';
-import { getTickets, getProviders, getProperties, getTechnicians, getSlaConfig, getCategories, getInferenceLogs } from '../../data/store';
+import { FaFileExport, FaChartBar, FaClock, FaCheckDouble, FaStar, FaBrain, FaFilter, FaCalendarAlt, FaDownload, FaSync } from 'react-icons/fa';
+import { getProviders, getProperties, getTechnicians, getSlaConfig, getCategories, getInferenceLogs, refreshTickets } from '../../data/store';
+import { getSlaStatus } from '../../data/slaEngine';
+import useTickets from '../../hooks/useTickets';
+import {
+  ResponsiveContainer, BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
+} from 'recharts';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 const PRIORITY_ORDER = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+const COLORS = {
+  teal: '#2db791',
+  blue: '#3278dc',
+  amber: '#f0b432',
+  red: '#dc3c3c',
+  gray: '#8a9bb5',
+  purple: '#8250c8',
+};
+
+const CHART_TIP_STYLE = {
+  background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6,
+  fontSize: 11, padding: '6px 10px', color: 'var(--text)',
+};
+
+const shortName = (name) => (name || '').split(' ')[0];
 
 const TABS = [
   { key: 'ticket-volume', label: 'Ticket Volume', icon: FaChartBar },
@@ -42,7 +64,9 @@ const Reports = () => {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
 
-  const tickets = useMemo(() => getTickets(), []);
+  const [tickets, refresh] = useTickets();
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(() => new Date());
   const providers = useMemo(() => getProviders(), []);
   const properties = useMemo(() => getProperties(), []);
   const technicians = useMemo(() => getTechnicians(), []);
@@ -61,6 +85,18 @@ const Reports = () => {
     });
   }, [tickets, propertyFilter, startDate, endDate, categoryFilter, providerFilter]);
 
+  useEffect(() => {
+    setLastSync(new Date());
+  }, [filteredTickets.length]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await refreshTickets();
+    refresh();
+    setLastSync(new Date());
+    setSyncing(false);
+  };
+
   const statusCounts = useMemo(() => {
     const counts = {};
     filteredTickets.forEach(t => {
@@ -70,13 +106,16 @@ const Reports = () => {
   }, [filteredTickets]);
 
   const statusLabels = {
-    'Open': 'Open',
+    'New': 'New',
+    'AI Classified': 'AI Classified',
     'Assigned': 'Assigned',
+    'Accepted': 'Accepted',
     'In Progress': 'In Progress',
-    'Completed (Provider)': 'Completed',
+    'Waiting for Parts': 'Waiting',
+    'Completed': 'Completed',
+    'Tenant Confirmed': 'Tenant Confirmed',
     'Closed': 'Closed',
     'Manual Review': 'Manual Review',
-    'Waiting for Parts': 'Waiting',
     'Reopened': 'Reopened',
     'Escalated': 'Escalated',
   };
@@ -145,7 +184,7 @@ const Reports = () => {
   const providerStats = useMemo(() => {
     return technicians.map(tech => {
       const techTickets = filteredTickets.filter(t => t.assignedTo === tech.name);
-      const resolved = techTickets.filter(t => t.status === 'Completed (Provider)' || t.status === 'Closed');
+      const resolved = techTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed');
       const onTime = resolved.filter(t => {
         const sla = slaConfig.find(s => s.priority === t.priority);
         if (!sla) return true;
@@ -425,8 +464,50 @@ const Reports = () => {
     }
   };
 
-  const renderTicketVolume = () => (
+  const renderTicketVolume = () => {
+    const statusBarData = Object.entries(statusCounts).map(([status, count]) => ({ name: statusLabels[status] || status, count }));
+    const last30Volume = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toLocaleDateString();
+      last30Volume.push({
+        name: `${d.getDate()}/${d.getMonth() + 1}`,
+        Created: filteredTickets.filter(t => new Date(t.createdAt).toLocaleDateString() === key).length,
+      });
+    }
+    return (
     <div>
+      <div className="chart-block">
+        <div className="chart-block-title">Tickets by Status</div>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={statusBarData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#5a8aaa' }} interval={0} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+            <Tooltip contentStyle={CHART_TIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Bar dataKey="count" name="Tickets" fill={COLORS.teal} radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="chart-block">
+        <div className="chart-block-title">Tickets Opened — Last 30 Days</div>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={last30Volume} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+            <defs>
+              <linearGradient id="adminVolGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLORS.teal} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={COLORS.teal} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#5a8aaa' }} interval={4} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+            <Tooltip contentStyle={CHART_TIP_STYLE} />
+            <Area type="monotone" dataKey="Created" stroke={COLORS.teal} fill="url(#adminVolGrad)" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
       <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-dim)' }}>Ticket Volume — Counts per Status</h4>
       <div style={{ display: 'flex', gap: 16, alignItems: 'end', minHeight: 160, padding: '12px 0', flexWrap: 'wrap' }}>
         {Object.entries(statusLabels).map(([status, label]) => {
@@ -452,11 +533,30 @@ const Reports = () => {
         <span style={{ marginLeft: 8, color: 'var(--teal)' }}>+12% vs previous period (mock data)</span>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderResolutionTime = () => (
+  const renderResolutionTime = () => {
+    const resChartData = resolutionData.map(r => ({
+      name: r.priority,
+      hours: r.avg != null ? +(r.avg / 60).toFixed(1) : 0,
+      Resolved: r.count,
+    }));
+    return (
     <div>
       <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-dim)' }}>Average Resolution Time per Priority</h4>
+      <div className="chart-block">
+        <div className="chart-block-title">Avg Hours to Resolve by Priority</div>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={resChartData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5a8aaa' }} interval={0} />
+            <YAxis tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+            <Tooltip contentStyle={CHART_TIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Bar dataKey="hours" name="Avg hours" fill={COLORS.teal} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         {resolutionData.map(r => (
           <div key={r.priority} className="stat-card" style={{ flex: '1 0 auto', minWidth: 120 }}>
@@ -500,10 +600,57 @@ const Reports = () => {
         </table>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderSlaCompliance = () => (
+  const renderSlaCompliance = () => {
+    const slaChartData = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].map(p => {
+      const pt = filteredTickets.filter(t => t.priority === p);
+      const breached = pt.filter(t => getSlaStatus(t)?.state === 'breached').length;
+      const warning = pt.filter(t => getSlaStatus(t)?.state === 'warning').length;
+      return { name: p, Compliant: Math.max(pt.length - breached - warning, 0), Warning: warning, Breached: breached };
+    });
+    const slaTotals = slaChartData.reduce((acc, d) => ({
+      compliant: acc.compliant + d.Compliant,
+      warning: acc.warning + d.Warning,
+      breached: acc.breached + d.Breached,
+    }), { compliant: 0, warning: 0, breached: 0 });
+    const slaPie = [
+      { name: 'Compliant', value: slaTotals.compliant, color: COLORS.teal },
+      { name: 'Warning', value: slaTotals.warning, color: COLORS.amber },
+      { name: 'Breached', value: slaTotals.breached, color: COLORS.red },
+    ].filter(d => d.value > 0);
+    return (
     <div>
+      <div className="chart-block">
+        <div className="chart-block-title">Compliance Status by Priority</div>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={slaChartData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5a8aaa' }} interval={0} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+            <Tooltip contentStyle={CHART_TIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Compliant" stackId="s" fill={COLORS.teal} />
+            <Bar dataKey="Warning" stackId="s" fill={COLORS.amber} />
+            <Bar dataKey="Breached" stackId="s" fill={COLORS.red} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      {slaPie.length > 0 && (
+        <div className="chart-block">
+          <div className="chart-block-title">Overall SLA Compliance</div>
+          <ResponsiveContainer width="100%" height={230}>
+            <PieChart>
+              <Pie data={slaPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} label={({ name, value }) => `${name}: ${value}`}>
+                {slaPie.map(entry => <Cell key={entry.name} fill={entry.color} />)}
+              </Pie>
+              <Tooltip contentStyle={CHART_TIP_STYLE} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         <div className="stat-card">
           <div className="stat-value" style={{ fontSize: 28, color: parseFloat(overallCompliance) >= 80 ? 'var(--teal)' : 'var(--amber)' }}>
@@ -564,11 +711,32 @@ const Reports = () => {
         </table>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderProviderPerformance = () => (
+  const renderProviderPerformance = () => {
+    const provChartData = providerStats.map(p => ({
+      name: shortName(p.name),
+      Assigned: p.totalJobs,
+      Completed: p.resolvedJobs,
+    }));
+    return (
     <div>
       <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-dim)' }}>Provider Performance Metrics <span className="req-ref">MOD-010 / REQ-051-056</span></h4>
+      <div className="chart-block">
+        <div className="chart-block-title">Assigned vs Completed by Provider</div>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={provChartData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5a8aaa' }} interval={0} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+            <Tooltip contentStyle={CHART_TIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Assigned" fill={COLORS.blue} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="Completed" fill={COLORS.teal} radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
       <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
@@ -619,11 +787,61 @@ const Reports = () => {
         </table>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderAiPerformance = () => (
+  const renderAiPerformance = () => {
+    const aiPie = [
+      { name: 'AI Correct', value: Math.max(filteredTickets.length - overrideCount - conflictCount - manualReviewCount, 0), color: COLORS.teal },
+      { name: 'Override', value: overrideCount, color: COLORS.amber },
+      { name: 'Conflict', value: conflictCount, color: COLORS.red },
+      { name: 'Manual Review', value: manualReviewCount, color: COLORS.purple },
+    ].filter(d => d.value > 0);
+    const aiCats = [...new Set(filteredTickets.filter(t => t.category).map(t => t.category))];
+    const aiByCat = aiCats.map(c => {
+      const ct = filteredTickets.filter(t => t.category === c);
+      const ov = ct.filter(t => t.aiOriginalCategory && t.aiOriginalCategory !== t.category).length;
+      const cf = ct.filter(t => t.conflictDetected).length;
+      const mv = ct.filter(t => t.manualReviewRequired).length;
+      return { name: c, 'AI Correct': Math.max(ct.length - ov - cf - mv, 0), Override: ov, Conflict: cf, Review: mv };
+    });
+    return (
     <div>
       <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-dim)' }}>AI Performance Metrics <span className="req-ref">MOD-010 / REQ-051-056</span></h4>
+      <div className="chart-block">
+        <div className="chart-block-title">AI Classification Outcomes</div>
+        {aiPie.length > 0 ? (
+          <ResponsiveContainer width="100%" height={230}>
+            <PieChart>
+              <Pie data={aiPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} paddingAngle={3} label={({ name, value }) => `${name}: ${value}`}>
+                {aiPie.map(entry => <Cell key={entry.name} fill={entry.color} />)}
+              </Pie>
+              <Tooltip contentStyle={CHART_TIP_STYLE} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="empty-text" style={{ padding: 16 }}>No classification data for current filters.</div>
+        )}
+      </div>
+      {aiByCat.length > 0 && (
+        <div className="chart-block">
+          <div className="chart-block-title">Outcomes by Category</div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={aiByCat} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#5a8aaa' }} interval={0} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#5a8aaa' }} />
+              <Tooltip contentStyle={CHART_TIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="AI Correct" stackId="a" fill={COLORS.teal} />
+              <Bar dataKey="Override" stackId="a" fill={COLORS.amber} />
+              <Bar dataKey="Conflict" stackId="a" fill={COLORS.red} />
+              <Bar dataKey="Review" stackId="a" fill={COLORS.purple} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         <div className="stat-card">
           <div className="stat-value">{overrideCount}</div>
@@ -722,16 +940,23 @@ const Reports = () => {
         </table>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div>
       <div className="card">
         <div className="card-title">
           <span><FaFileExport /> Reports <span className="req-ref">MOD-010 / REQ-051-056</span></span>
-          <button className="btn btn-teal btn-sm" onClick={handleGenerateReport}>
-            <FaDownload /> Generate PDF
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-dim)' }}>
+            <span>Synced {lastSync.toLocaleTimeString()}</span>
+            <button className="btn btn-secondary btn-sm" onClick={handleSync} disabled={syncing}>
+              <FaSync style={{ marginRight: 4 }} />{syncing ? 'Syncing...' : 'Refresh'}
+            </button>
+            <button className="btn btn-teal btn-sm" onClick={handleGenerateReport}>
+              <FaDownload /> Generate PDF
+            </button>
+          </div>
         </div>
         {renderFilters()}
         {renderTabNav()}

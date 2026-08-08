@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { FaArrowLeft, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaClock, FaWrench, FaMapMarkerAlt, FaEnvelope, FaPhone, FaCheck, FaPause, FaPlay, FaIdCard, FaCamera, FaTimes } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
 import { getUsers } from '../../data/authStore';
-import { getTickets, getProperties, getUnits, updateTicketStatus, submitJobCompletion } from '../../data/store';
+import { getTickets, getProperties, getUnits, acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
 
@@ -55,8 +55,8 @@ const JobDetail = ({ ticketId, onBack }) => {
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 3000); };
   const refresh = () => setTickets(getTickets());
 
-  const handleStatus = async (newStatus) => {
-    const r = await updateTicketStatus(ticketId, newStatus, comment.trim() || undefined);
+  const runWorkflow = async (promise, newStatus) => {
+    const r = await promise;
     if (r.success) { refresh(); showMsg(`Status updated to ${newStatus}`, 'success'); setComment(''); }
     else { showMsg(r.error, 'error'); }
   };
@@ -73,14 +73,16 @@ const JobDetail = ({ ticketId, onBack }) => {
 
   const ACTIONS = [];
   if (ticket.status === 'Assigned') {
-    ACTIONS.push({ label: 'Accept & Start', status: 'In Progress', icon: FaPlay, cls: 'btn-teal' });
+    ACTIONS.push({ label: 'Accept Job', nextStatus: 'Accepted', icon: FaPlay, cls: 'btn-teal', run: () => acceptJob(ticketId, comment.trim() || undefined) });
+  }
+  if (ticket.status === 'Accepted') {
+    ACTIONS.push({ label: 'Start Work', nextStatus: 'In Progress', icon: FaPlay, cls: 'btn-teal', run: () => startJob(ticketId, comment.trim() || undefined) });
   }
   if (ticket.status === 'In Progress') {
-    ACTIONS.push({ label: 'Waiting for Parts', status: 'Waiting for Parts', icon: FaPause, cls: 'btn-secondary' });
-    ACTIONS.push({ label: 'Complete Job', status: 'Completed (Provider)', icon: FaCheck, cls: 'btn-teal' });
+    ACTIONS.push({ label: 'Waiting for Parts', nextStatus: 'Waiting for Parts', icon: FaPause, cls: 'btn-secondary', run: () => waitForParts(ticketId, comment.trim() || undefined) });
   }
   if (ticket.status === 'Waiting for Parts') {
-    ACTIONS.push({ label: 'Resume Work', status: 'In Progress', icon: FaPlay, cls: 'btn-primary' });
+    ACTIONS.push({ label: 'Resume Work', nextStatus: 'In Progress', icon: FaPlay, cls: 'btn-primary', run: () => partsReceived(ticketId, comment.trim() || undefined) });
   }
 
   return (
@@ -91,7 +93,7 @@ const JobDetail = ({ ticketId, onBack }) => {
       <div className="welcome-banner" style={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ margin: 0 }}><FaWrench /> {ticket.ticketId} — {ticket.title}</h2>
+            <h2 style={{ margin: 0 }}><FaWrench /> {ticket.title}</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12 }}><StatusBadge status={ticket.status} /> <span className={`badge ${ticket.priority === 'URGENT' || ticket.priority === 'EMERGENCY' ? 'badge-danger' : ticket.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{ticket.priority}</span></p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -134,7 +136,7 @@ const JobDetail = ({ ticketId, onBack }) => {
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {ACTIONS.map(a => (
-                  <button key={a.status} className={`btn ${a.cls}`} onClick={() => handleStatus(a.status)}>
+                  <button key={a.nextStatus} className={`btn ${a.cls}`} onClick={() => runWorkflow(a.run(), a.nextStatus)}>
                     <a.icon /> {a.label}
                   </button>
                 ))}
@@ -209,10 +211,10 @@ const JobDetail = ({ ticketId, onBack }) => {
             </div>
           )}
 
-          {ticket.status === 'Completed (Provider)' && (
+          {ticket.status === 'Completed' && (
             <div className="card" style={{ marginTop: 12 }}>
               <div className="card-title">Status</div>
-              <span className="badge badge-completed"><FaCheck /> Awaiting admin/property manager to close this ticket.</span>
+              <span className="badge badge-completed"><FaCheck /> Awaiting tenant confirmation / manager close.</span>
               {ticket.completionInvoice && <div style={{ marginTop: 8, padding: 8, background: 'var(--surface2)', borderRadius: 4, fontSize: 12 }}><strong>Invoice:</strong> {ticket.completionInvoice}</div>}
               {ticket.completionPhotos && ticket.completionPhotos.length > 0 && (
                 <div style={{ marginTop: 8 }}>

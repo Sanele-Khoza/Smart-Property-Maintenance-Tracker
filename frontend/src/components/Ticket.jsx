@@ -77,7 +77,7 @@ const Ticket = ({ currentUser, refreshData }) => {
     if (result.error) {
       setMsg({ text: result.error, type: 'error' });
     } else {
-      setMsg({ text: `Ticket ${result.data.ticketId} submitted successfully.`, type: 'success' });
+      setMsg({ text: `Ticket submitted successfully.`, type: 'success' });
       setForm({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
       setImages([]);
       setImagePreviews([]);
@@ -135,7 +135,7 @@ const Ticket = ({ currentUser, refreshData }) => {
               )}
               <table className="table" style={{ marginBottom: 12 }}>
                 <tbody>
-                  <tr><td style={{ fontWeight: 600, width: 100 }}>Unit</td><td>{selectedUnitLabel ? `${selectedUnitLabel.propertyName} - Unit ${selectedUnitLabel.unitNumber}` : form.unitId}</td></tr>
+                  <tr><td style={{ fontWeight: 600, width: 100 }}>Unit</td><td>{selectedUnitLabel ? `${selectedUnitLabel.propertyName} - Unit ${selectedUnitLabel.unitNumber}` : '—'}</td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Title</td><td>{form.title}</td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${form.priority === 'URGENT' || form.priority === 'EMERGENCY' ? 'badge-danger' : form.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{form.priority}</span></td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Description</td><td><pre style={{ background: 'var(--surface2)', padding: 8, borderRadius: 4, fontSize: 12, whiteSpace: 'pre-wrap', margin: 0 }}>{form.description}</pre></td></tr>
@@ -228,7 +228,6 @@ const Ticket = ({ currentUser, refreshData }) => {
               {tickets.filter(t => t.createdBy === currentUser || (currentUser === 'Tenant' && t.createdBy === 'John Tenant')).map(t => (
                 <div className="ticket-card" key={t.ticketId}>
                   <div className="ticket-header">
-                    <span className="ticket-id">{t.ticketId}</span>
                     <StatusBadge status={t.status} />
                   </div>
                   <div className="ticket-desc">
@@ -239,7 +238,7 @@ const Ticket = ({ currentUser, refreshData }) => {
                     <div className="ticket-images">
                       {t.images.map((img, idx) => (
                         <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img)}>
-                          <img src={img.data || img} alt={`Ticket ${t.ticketId}`} />
+                          <img src={img.data || img} alt={t.title} />
                         </div>
                       ))}
                     </div>

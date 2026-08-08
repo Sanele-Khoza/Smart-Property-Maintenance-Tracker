@@ -224,7 +224,6 @@ const Properties = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Name</th>
                 <th>Address</th>
                 <th>Type</th>
@@ -237,7 +236,7 @@ const Properties = () => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="9" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No properties match the current filter.</td></tr>
+                <tr><td colSpan="8" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No properties match the current filter.</td></tr>
               ) : (
                 filtered.map(p => {
                   const uc = unitCount(p.propertyId);
@@ -254,7 +253,6 @@ const Properties = () => {
                   return (
                   <React.Fragment key={p.propertyId}>
                   <tr>
-                    <td className="cell-mono">{p.propertyId}</td>
                     <td>{p.name}</td>
                     <td className="cell-mono" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.address}>{p.address}</td>
                     <td>{typeIcon(p.propertyType)} {TYPE_CONFIG[p.propertyType]?.label || p.propertyType}</td>
@@ -306,9 +304,8 @@ const Properties = () => {
                   </tr>
                   {isExpanded && (
                     <tr className="expanded-row">
-                      <td colSpan="9" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                      <td colSpan="8" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 32, fontSize: 12, flexWrap: 'wrap' }}>
-                          <div><strong>ID:</strong> {p.propertyId}</div>
                           <div><strong>Name:</strong> {p.name}</div>
                           <div><strong>Address:</strong> {p.address}</div>
                           <div><strong>Type:</strong> {TYPE_CONFIG[p.propertyType]?.label || p.propertyType}</div>

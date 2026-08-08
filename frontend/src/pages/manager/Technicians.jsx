@@ -51,7 +51,7 @@ const Technicians = () => {
     const tech = technicians.find(t => t.id === assignTarget);
     if (!ticket || !tech) return;
     const r = await assignTicket(assignTicketId, tech.name, tech.id);
-    if (r.success) { refresh(); showAlert(`${ticket.ticketId} assigned to ${tech.name}.`, 'success'); setAssignTarget(null); }
+    if (r.success) { refresh(); showAlert(`Ticket assigned to ${tech.name}.`, 'success'); setAssignTarget(null); }
     else showAlert(r.error, 'error');
   };
 
@@ -160,8 +160,8 @@ const Technicians = () => {
                 <label>Select Ticket</label>
                 <select className="form-select" value={assignTicketId} onChange={e => setAssignTicketId(e.target.value)} required>
                   <option value="">— Choose a ticket —</option>
-                  {tickets.filter(t => !t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.ticketId}: {t.title.substring(0, 40)}</option>)}
-                  {tickets.filter(t => t.assignedTo).length > 0 && <optgroup label="Reassign from current provider">{tickets.filter(t => t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.ticketId}: {t.title.substring(0, 30)} ({t.assignedTo})</option>)}</optgroup>}
+                  {tickets.filter(t => !t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.title.substring(0, 40)}</option>)}
+                  {tickets.filter(t => t.assignedTo).length > 0 && <optgroup label="Reassign from current provider">{tickets.filter(t => t.assignedTo).map(t => <option key={t.ticketId} value={t.ticketId}>{t.title.substring(0, 30)} ({t.assignedTo})</option>)}</optgroup>}
                 </select>
               </div>
               <div className="form-actions">

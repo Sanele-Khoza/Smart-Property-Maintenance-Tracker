@@ -94,7 +94,7 @@ function App() {
       const { ticketId, priority } = e.detail;
       if (Notification.permission === 'granted') {
         new Notification('SLA Breach', {
-          body: `${ticketId} (${priority}) — resolution deadline exceeded.`,
+          body: `A ${priority} ticket — resolution deadline exceeded.`,
         });
       } else {
         console.warn(`SLA BREACH: ${ticketId} (${priority}) — resolution deadline exceeded.`);

@@ -62,20 +62,28 @@ async function register({ name, surname, email, password, role, phone }, ipAddre
   await repo.updateUser(user.id, { email_verification_token: verificationToken });
 
   const verifyUrl = `${config.cors.origin}/verify-email?token=${verificationToken}`;
-  const emailResult = await sendEmail({
+  sendEmail({
     to: email,
     subject: 'Verify your SPMT account',
     html: `<p>Hi ${name},</p><p>Please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 1 hour.</p>`,
-  });
-  if (!emailResult.success) {
+  }).then((emailResult) => {
+    if (!emailResult.success) {
+      console.log(`\n══════════════════════════════════════════════`);
+      console.log(`  VERIFICATION EMAIL FAILED (${emailResult.error || 'SES unavailable'})`);
+      console.log(`  To: ${email}`);
+      console.log(`  Token: ${verificationToken}`);
+      console.log(`  Verify URL: ${verifyUrl}`);
+      console.log(`  Tip: Verify "${config.aws.ses.fromAddress}" in AWS SES console first`);
+      console.log(`══════════════════════════════════════════════\n`);
+    }
+  }).catch((err) => {
     console.log(`\n══════════════════════════════════════════════`);
-    console.log(`  VERIFICATION EMAIL FAILED (${emailResult.error || 'SES unavailable'})`);
+    console.log(`  VERIFICATION EMAIL ERROR (${err.message})`);
     console.log(`  To: ${email}`);
     console.log(`  Token: ${verificationToken}`);
     console.log(`  Verify URL: ${verifyUrl}`);
-    console.log(`  Tip: Verify "${config.aws.ses.fromAddress}" in AWS SES console first`);
     console.log(`══════════════════════════════════════════════\n`);
-  }
+  });
 
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 

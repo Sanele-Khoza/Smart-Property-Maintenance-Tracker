@@ -16,6 +16,7 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [verificationToken, setVerificationToken] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
 
@@ -47,27 +48,32 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
-    const result = await registerUser({
-      name: form.name,
-      surname: form.surname,
-      age: form.age,
-      email: form.email,
-      phone: form.phone,
-      idNumber: form.idNumber,
-      password: form.password,
-      role: form.role,
-    });
-
-    if (result.success) {
-      setVerificationToken(result.verificationToken);
-      setRegisteredEmail(form.email);
-      setSuccess('Account created! Please verify your email.');
-      setForm({
-        name: '', surname: '', age: '', email: '', phone: '',
-        idNumber: '', password: '', confirmPassword: '', role: '',
+    setSubmitting(true);
+    try {
+      const result = await registerUser({
+        name: form.name,
+        surname: form.surname,
+        age: form.age,
+        email: form.email,
+        phone: form.phone,
+        idNumber: form.idNumber,
+        password: form.password,
+        role: form.role,
       });
-    } else {
-      setError(result.error);
+
+      if (result.success) {
+        setVerificationToken(result.verificationToken);
+        setRegisteredEmail(form.email);
+        setSuccess('Account created! Please verify your email.');
+        setForm({
+          name: '', surname: '', age: '', email: '', phone: '',
+          idNumber: '', password: '', confirmPassword: '', role: '',
+        });
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -133,8 +139,8 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
             System Administrator accounts are provisioned by an existing admin only.
           </p>
-          <button type="submit" className="btn btn-teal btn-full">
-            Register
+          <button type="submit" className="btn btn-teal btn-full" disabled={submitting}>
+            {submitting ? 'Creating account…' : 'Register'}
           </button>
         </form>
 
@@ -147,6 +153,13 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
               A verification email has been sent to <strong>{registeredEmail}</strong>. 
               Please check your inbox (and spam folder) and click the link to activate your account.
             </div>
+            <button
+              className="btn btn-teal btn-full"
+              style={{ marginTop: 12 }}
+              onClick={() => onVerifyNavigate(verificationToken)}
+            >
+              Verify my email now
+            </button>
           </div>
         )}
 

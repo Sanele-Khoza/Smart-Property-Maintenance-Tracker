@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaUserCheck,
   FaUnlockAlt,
@@ -32,6 +32,7 @@ import {
   reactivateUser,
   unlockUserAccount,
   updateUser,
+  refreshUsers,
 } from "../../data/authStore";
 import Alert from "../../components/common/Alert";
 
@@ -85,6 +86,14 @@ const Users = () => {
     setUsers(getUsers());
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    refreshUsers().then(() => { if (!cancelled) refresh(); });
+    const onUsersUpdated = () => { if (!cancelled) refresh(); };
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
+  }, []);
+
   const showAlert = (msg, type) => {
     setAlert({ msg, type });
     setTimeout(() => setAlert({ msg: "", type: "" }), 4000);
@@ -93,7 +102,12 @@ const Users = () => {
   const handleApprove = async (userId) => {
     const r = await approveManager(userId);
     if (r.success) {
-      showAlert("Property Manager approved.", "success");
+      showAlert(
+        r.data?.name
+          ? `${r.data.name} ${r.data.surname || ""} approved.`
+          : "Account approved.",
+        "success",
+      );
       refresh();
     } else {
       showAlert(r.error, "error");
@@ -227,20 +241,29 @@ const Users = () => {
     return "*".repeat(s.length - 4) + s.slice(-4);
   };
 
-  const statusBadge = (status, failedCount) => {
-    const isLocked = status === "Suspended" && failedCount >= 5;
-    const label = isLocked ? "Locked" : status;
+  const statusBadge = (u) => {
+    const isLocked = u.status === "Suspended" && u.failedLoginCount >= 5;
+    const label = isLocked ? "Locked" : u.status;
     const cls =
-      status === "Active"
+      u.status === "Active"
         ? "badge badge-completed"
-        : status === "Pending"
+        : u.status === "Pending"
           ? "badge badge-open"
-          : status === "Suspended"
+          : u.status === "Suspended"
             ? "badge badge-suspended"
-            : status === "Deactivated"
+            : u.status === "Deactivated"
               ? "badge badge-danger"
               : "badge";
-    return <span className={cls}>{label}</span>;
+    return (
+      <span className={cls}>
+        {label}
+        {u.status === "Active" && !u.approved && (
+          <span style={{ display: "block", fontSize: 10, fontWeight: 600 }}>
+            Pending approval
+          </span>
+        )}
+      </span>
+    );
   };
 
   const RoleIcon = ({ role }) => {
@@ -322,7 +345,7 @@ const Users = () => {
                 <div
                   style={{ display: "flex", gap: "8px", alignItems: "center" }}
                 >
-                  {statusBadge(u.status)}
+                  {statusBadge(u)}
                   <button
                     className="btn btn-teal btn-sm"
                     onClick={() => handleApprove(u.id)}
@@ -424,7 +447,7 @@ const Users = () => {
                       <td>
                         <RoleIcon role={u.role} />
                       </td>
-                      <td>{statusBadge(u.status, u.failedLoginCount)}</td>
+                      <td>{statusBadge(u)}</td>
                       <td className="cell-mono">{maskIdNumber(u.idNumber)}</td>
                       <td>{u.preferredNotificationChannel}</td>
                       <td className="cell-mono">
@@ -451,17 +474,16 @@ const Users = () => {
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="action-cell">
-                          {u.role === "PROPERTY_MANAGER" &&
-                            u.status === "Pending" && (
-                              <button
-                                className="btn btn-teal btn-sm"
-                                onClick={() => handleApprove(u.id)}
-                                title="Approve"
-                                aria-label="Approve"
-                              >
-                                <FaCheck />
-                              </button>
-                            )}
+                          {!u.approved && (
+                            <button
+                              className="btn btn-teal btn-sm"
+                              onClick={() => handleApprove(u.id)}
+                              title="Approve"
+                              aria-label="Approve"
+                            >
+                              <FaCheck />
+                            </button>
+                          )}
                           {u.status !== "Deactivated" ? (
                             <button
                               className="btn btn-danger btn-sm"

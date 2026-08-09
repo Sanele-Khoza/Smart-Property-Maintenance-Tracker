@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getSession, logoutUser, refreshUsers } from './data/authStore';
+import { getSession, logoutUser, refreshUsers, connectRealtime } from './data/authStore';
 import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
 import { setLogoutHandler, api, getToken } from './api/client';
@@ -47,10 +47,42 @@ function App() {
   const [verificationToken, setVerificationToken] = useState('');
   const pageRef = useRef(page);
   useEffect(() => { pageRef.current = page; }, [page]);
+  const userRef = useRef(null);
+  userRef.current = user;
+  const esRef = useRef(null);
+
+  const stopRealtime = () => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+    }
+  };
+
+  const forceLogout = async () => {
+    stopRealtime();
+    stopSlaPolling();
+    await logoutUser();
+    setUser(null);
+    setPage('login');
+  };
+
+  const startRealtime = () => {
+    stopRealtime();
+    esRef.current = connectRealtime({
+      onUserStatusChanged: (payload) => {
+        const me = userRef.current;
+        if (!me || !payload?.userId || String(payload.userId) !== String(me.id)) return;
+        if (payload.action === 'ACCOUNT_DEACTIVATED' || payload.action === 'ACCOUNT_SUSPENDED') {
+          forceLogout();
+        }
+      },
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
     setLogoutHandler(() => {
+      stopRealtime();
       stopSlaPolling();
       setUser(null);
       if (pageRef.current === 'app') setPage('login');
@@ -84,6 +116,7 @@ function App() {
           setPage('app');
           startSlaPolling();
           refreshUsers();
+          startRealtime();
         })
         .catch(() => {
           if (cancelled || !getToken()) return;
@@ -114,9 +147,11 @@ function App() {
     await refreshTickets();
     refreshUsers();
     setPage('app');
+    startRealtime();
   };
 
   const handleLogout = async () => {
+    stopRealtime();
     stopSlaPolling();
     await logoutUser();
     setUser(null);

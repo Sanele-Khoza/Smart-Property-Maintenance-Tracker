@@ -20,8 +20,11 @@ const Tenants = () => {
 
   useEffect(() => {
     let cancelled = false;
-    refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
-    return () => { cancelled = true; };
+    const syncUsers = () => refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    syncUsers();
+    const onUsersUpdated = () => { if (!cancelled) setAllUsers(getUsers()); };
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
   }, []);
 
   const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };

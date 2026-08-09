@@ -467,7 +467,9 @@ async function overrideAiLabel(id, correctedLabel, userId, userName) {
   if (!ticket) throw AppError.notFound('Ticket not found');
 
   await repo.update(id, {
-    ai_original_label: ticket.ai_visual_label || ticket.ai_text_label,
+    category: correctedLabel,
+    ai_category: correctedLabel,
+    ai_original_label: ticket.ai_visual_label || ticket.ai_text_label || ticket.category,
     ai_corrected_label: correctedLabel,
     ai_overridden_by: userId,
     ai_overridden_at: new Date(),

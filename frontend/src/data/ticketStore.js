@@ -1,5 +1,6 @@
 import { api } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
+import { addAuditLogEntry } from './auditStore';
 
 export const TICKET_TRANSITIONS = {
   'New': ['AI Classified', 'Manual Review', 'Cancelled'],
@@ -210,20 +211,33 @@ export const updateTicketCategory = async (ticketId, newCategory) => {
   try {
     const result = await api(`/tickets/${ticketId}/override-ai`, {
       method: 'PUT',
-      body: { category: newCategory },
+      body: { correctedLabel: newCategory },
     });
-    if (result.success) {
-      const store = getStore();
-      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
-      if (idx !== -1) {
-        store.tickets[idx].category = newCategory;
-        store.tickets[idx].updatedAt = new Date().toLocaleString();
+    if (!result.success) return { success: false, error: result.error || 'Category update failed' };
+
+    const store = getStore();
+    const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+    const prevCategory = idx !== -1 ? store.tickets[idx].category : null;
+    if (idx !== -1) {
+      const t = store.tickets[idx];
+      if (prevCategory && prevCategory !== newCategory && !t.aiOriginalCategory) {
+        t.aiOriginalCategory = prevCategory;
       }
-      saveToLocalStorage();
-      notifyTicketsUpdated();
-      return { success: true, data: store.tickets[idx] };
+      t.category = newCategory;
+      t.updatedAt = new Date().toLocaleString();
     }
-    return { success: false, error: result.error || 'Category update failed' };
+    addAuditLogEntry({
+      ticketId,
+      actor: 'User',
+      action: 'ai_overridden',
+      previousStatus: prevCategory || null,
+      newStatus: newCategory,
+      comment: `Category override: ${prevCategory || '—'} → ${newCategory}`,
+      timestamp: new Date().toISOString(),
+    });
+    saveToLocalStorage();
+    notifyTicketsUpdated();
+    return { success: true, data: store.tickets[idx] };
   } catch (err) {
     return { success: false, error: err.message };
   }

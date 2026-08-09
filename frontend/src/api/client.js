@@ -23,6 +23,18 @@ function getRefreshToken() {
   return localStorage.getItem(REFRESH_KEY);
 }
 
+const DEFAULT_TIMEOUT_MS = 20000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let onLogout = null;
 export function setLogoutHandler(fn) {
   onLogout = fn;
@@ -32,7 +44,7 @@ async function tryRefresh() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   try {
-    const res = await fetch(`${getBaseUrl()}/auth/refresh-token`, {
+    const res = await fetchWithTimeout(`${getBaseUrl()}/auth/refresh-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -58,7 +70,7 @@ export async function api(endpoint, options = {}) {
 
   let response;
   try {
-    response = await fetch(`${getBaseUrl()}${endpoint}`, {
+    response = await fetchWithTimeout(`${getBaseUrl()}${endpoint}`, {
       method: method || (body || formData ? 'POST' : 'GET'),
       headers,
       body: formData || (body ? JSON.stringify(body) : undefined),
@@ -66,6 +78,9 @@ export async function api(endpoint, options = {}) {
       ...rest,
     });
   } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out — the server is taking too long to respond.');
+    }
     throw new Error('Network error — is the server running?');
   }
 
@@ -74,7 +89,7 @@ export async function api(endpoint, options = {}) {
     if (refreshed) {
       const newToken = getToken();
       headers['Authorization'] = `Bearer ${newToken}`;
-      response = await fetch(`${getBaseUrl()}${endpoint}`, {
+      response = await fetchWithTimeout(`${getBaseUrl()}${endpoint}`, {
         method: method || (body || formData ? 'POST' : 'GET'),
         headers,
         body: formData || (body ? JSON.stringify(body) : undefined),

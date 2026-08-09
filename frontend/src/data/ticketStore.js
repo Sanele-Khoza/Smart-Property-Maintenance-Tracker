@@ -235,9 +235,9 @@ export const getTicketsByProvider = (providerName) => getStore().tickets.filter(
 
 export const updateTicketRating = async (ticketId, rating, comment) => {
   try {
-    const result = await api(`/tickets/${ticketId}/rate`, {
+    const result = await api('/ratings', {
       method: 'POST',
-      body: { rating, comment },
+      body: { ticketId, rating, comment },
     });
     if (result.success) {
       const store = getStore();

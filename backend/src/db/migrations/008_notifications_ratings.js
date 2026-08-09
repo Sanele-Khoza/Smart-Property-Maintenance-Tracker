@@ -15,8 +15,8 @@ async function up(query) {
   await query(`
     CREATE TABLE IF NOT EXISTS ratings (
       id SERIAL PRIMARY KEY,
-      ticket_id INTEGER REFERENCES tickets(id) ON DELETE CASCADE,
-      rated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+      rated_by UUID REFERENCES users(id) ON DELETE SET NULL,
       rating_value INTEGER NOT NULL,
       comment TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

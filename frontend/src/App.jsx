@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getSession, logoutUser, refreshUsers } from './data/authStore';
 import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
@@ -45,12 +45,15 @@ function App() {
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
   const [activeProviderPage, setActiveProviderPage] = useState('Overview');
   const [verificationToken, setVerificationToken] = useState('');
+  const pageRef = useRef(page);
+  useEffect(() => { pageRef.current = page; }, [page]);
 
   useEffect(() => {
+    let cancelled = false;
     setLogoutHandler(() => {
       stopSlaPolling();
       setUser(null);
-      setPage('login');
+      if (pageRef.current === 'app') setPage('login');
     });
 
     const params = new URLSearchParams(window.location.search);
@@ -68,23 +71,23 @@ function App() {
       // tokens get cleared so the user lands on the login page.
       api('/auth/me', { skipAuthRetry: true })
         .then(async (result) => {
-          if (!getToken()) return;
+          if (cancelled || !getToken()) return;
           if (!result.success) {
-            logoutUser().then(() => { setUser(null); setPage('login'); });
+            logoutUser().then(() => { if (!cancelled) { setUser(null); setPage('login'); } });
             return;
           }
           setUser(session);
           await syncPropertiesAndUnits();
           await syncTechnicians();
           await refreshTickets();
+          if (cancelled || !getToken()) return;
           setPage('app');
           startSlaPolling();
           refreshUsers();
         })
         .catch(() => {
-          if (getToken()) {
-            logoutUser().then(() => { setUser(null); setPage('login'); });
-          }
+          if (cancelled || !getToken()) return;
+          logoutUser().then(() => { if (!cancelled) { setUser(null); setPage('login'); } });
         });
     } else {
       setPage('login');
@@ -101,7 +104,7 @@ function App() {
       }
     };
     window.addEventListener('spmt:sla-breach', handleSlaBreach);
-    return () => window.removeEventListener('spmt:sla-breach', handleSlaBreach);
+    return () => { cancelled = true; window.removeEventListener('spmt:sla-breach', handleSlaBreach); };
   }, []);
 
   const handleLogin = async (userData) => {

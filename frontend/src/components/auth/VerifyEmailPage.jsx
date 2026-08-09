@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { verifyEmail } from '../../data/authStore';
 
 const spinnerKeyframes = `
@@ -11,8 +11,11 @@ const spinnerKeyframes = `
 const VerifyEmailPage = ({ token, onVerified }) => {
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     (async () => {
       const result = await verifyEmail(token);
       if (result.success) {

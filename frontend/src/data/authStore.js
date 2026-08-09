@@ -50,6 +50,7 @@ function normalizeUser(u) {
 export const registerUser = async (userData) => {
   try {
     const result = await api('/auth/register', {
+      skipAuthRetry: true,
       body: {
         name: userData.name,
         surname: userData.surname,
@@ -60,10 +61,7 @@ export const registerUser = async (userData) => {
       },
     });
     if (result.success && result.data) {
-      setToken(result.data.accessToken, result.data.refreshToken);
-      const user = normalizeUser(result.data.user);
-      saveSession(user);
-      return { success: true, data: user, verificationToken: result.data.verificationToken };
+      return { success: true, data: result.data.user, verificationToken: result.data.verificationToken };
     }
     return { success: false, error: result.error || 'Registration failed' };
   } catch (err) {

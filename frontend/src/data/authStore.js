@@ -1,4 +1,4 @@
-import { api, getToken, setToken, clearTokens } from '../api/client.js';
+import { api, getToken, setToken, clearTokens, getBaseUrl } from '../api/client.js';
 
 const SESSION_KEY = 'spmt_session';
 const USERS_CACHE_KEY = 'spmt_users_cache';
@@ -12,6 +12,10 @@ try {
 
 function saveUsersCache() {
   try { localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(usersCache)); } catch {}
+}
+
+function notifyUsersChanged() {
+  try { window.dispatchEvent(new Event('spmt:users-updated')); } catch {}
 }
 
 function decodeToken(token) {
@@ -30,7 +34,21 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
+const STATUS_TITLES = {
+  ACTIVE: 'Active',
+  PENDING: 'Pending',
+  SUSPENDED: 'Suspended',
+  LOCKED: 'Locked',
+  DEACTIVATED: 'Deactivated',
+};
+
+function titleCaseStatus(raw) {
+  const key = String(raw || '').toUpperCase();
+  return STATUS_TITLES[key] || raw || 'Active';
+}
+
 function normalizeUser(u) {
+  const status = titleCaseStatus(u.account_status || u.status);
   return {
     ...u,
     id: u.id,
@@ -39,8 +57,8 @@ function normalizeUser(u) {
     email: u.email,
     role: u.role,
     phone: u.phone || '',
-    status: u.account_status || u.status || 'Active',
-    account_status: u.account_status || u.status || 'Active',
+    status,
+    account_status: status,
     approved: u.approved !== undefined ? u.approved : true,
     preferredNotificationChannel: u.preferredNotificationChannel || 'EMAIL',
     failedLoginCount: u.failed_login_count ?? u.failedLoginCount ?? 0,
@@ -125,12 +143,34 @@ export const refreshUsers = async () => {
   try {
     const token = getToken();
     if (!token) return;
-    const result = await api('/users');
+    const result = await api('/users?limit=500');
     if (result.success && result.data?.users) {
       usersCache = result.data.users.map(normalizeUser);
       saveUsersCache();
+      notifyUsersChanged();
     }
   } catch {}
+};
+
+export const connectRealtime = (handlers = {}) => {
+  const token = getToken();
+  if (!token || typeof window === 'undefined') return null;
+
+  const base = getBaseUrl().replace(/\/$/, '');
+  const es = new EventSource(`${base}/realtime/subscribe?token=${encodeURIComponent(token)}`);
+
+  es.addEventListener('users:changed', () => {
+    refreshUsers();
+  });
+
+  es.addEventListener('user:status-changed', (event) => {
+    try {
+      const payload = JSON.parse(event.data || '{}');
+      if (handlers.onUserStatusChanged) handlers.onUserStatusChanged(payload);
+    } catch {}
+  });
+
+  return es;
 };
 
 export const approveManager = async (userId) => {
@@ -141,9 +181,10 @@ export const approveManager = async (userId) => {
       if (updated.id) {
         usersCache = usersCache.map(u => u.id === userId ? updated : u);
       } else {
-        usersCache = usersCache.map(u => u.id === userId ? { ...u, status: 'ACTIVE', approved: true } : u);
+        usersCache = usersCache.map(u => u.id === userId ? { ...u, status: 'Active', approved: true } : u);
       }
       saveUsersCache();
+      notifyUsersChanged();
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to approve' };
@@ -159,6 +200,7 @@ export const deactivateUser = async (userId) => {
       const updated = normalizeUser(result.data?.user || result.data);
       usersCache = usersCache.map(u => u.id === userId ? updated : u);
       saveUsersCache();
+      notifyUsersChanged();
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to deactivate' };
@@ -174,6 +216,7 @@ export const reactivateUser = async (userId) => {
       const updated = normalizeUser(result.data?.user || result.data);
       usersCache = usersCache.map(u => u.id === userId ? updated : u);
       saveUsersCache();
+      notifyUsersChanged();
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to reactivate' };
@@ -192,6 +235,7 @@ export const updateUser = async (userId, updates) => {
       const updated = normalizeUser(result.data?.user || result.data);
       usersCache = usersCache.map(u => u.id === userId ? updated : u);
       saveUsersCache();
+      notifyUsersChanged();
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to update' };
@@ -207,6 +251,7 @@ export const unlockUserAccount = async (userId) => {
       const updated = normalizeUser(result.data?.user || result.data);
       usersCache = usersCache.map(u => u.id === userId ? updated : u);
       saveUsersCache();
+      notifyUsersChanged();
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to unlock' };

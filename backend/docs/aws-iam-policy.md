@@ -83,6 +83,7 @@
 ## Notes
 
 - Replace `REGION`, `ACCOUNT`, `SPMT_ENDPOINT`, `SPMT_DOMAIN` with actual values at provisioning time.
+- Rekognition calls originate from **eu-west-1** (`AWS_REKOGNITION_REGION`, read as `config.aws.rekognition.region`) rather than `af-south-1`, because Rekognition is not available in `af-south-1` as of this project's build date. All other AWS services in this project use `AWS_REGION=af-south-1`. This is a known deviation worth carrying into the SDD's "Known Deviations" section.
 - Rekognition `Resource: "*"` is required because Rekognition actions operate on the service, not on specific resources.
 - SES `Resource: "*"` is similarly required; the condition key `ses:FromAddress` restricts which sending address is allowed.
 - Secrets Manager ARNs append a random 6-character dash suffix (e.g. `spmt/db-abc123`); use a trailing `-*` wildcard to match.

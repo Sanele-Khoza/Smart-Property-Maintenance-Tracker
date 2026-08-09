@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FaBrain, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaEye, FaTag, FaUserCheck, FaUndo, FaSearch } from 'react-icons/fa';
-import { getTickets, getTicketById, updateTicketCategory, getCategories, getInferenceLogs, getAuditLogs, getProperties } from '../../data/store';
+import { getTicketById, updateTicketCategory, getCategories, getInferenceLogs, getAuditLogs, getProperties } from '../../data/store';
+import useTickets from '../../hooks/useTickets';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
 
@@ -14,9 +15,9 @@ const AIReview = () => {
   const session = getSession();
   const pmName = session ? `${session.name} ${session.surname}` : '';
   const [allProperties] = useState(getProperties);
-  const [allTickets] = useState(() => getTickets().filter(t => t.conflictDetected || t.manualReviewRequired));
+  const [allTickets] = useTickets();
   const propNames = useMemo(() => new Set(allProperties.filter(p => p.managerName === pmName).map(p => p.name)), [allProperties, pmName]);
-  const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)), [allTickets, propNames]);
+  const tickets = useMemo(() => allTickets.filter(t => t.conflictDetected || t.manualReviewRequired).filter(t => propNames.has(t.propertyName)), [allTickets, propNames]);
   const [categories] = useState(getCategories());
   const [inferenceLogs] = useState(getInferenceLogs());
   const [auditLogs] = useState(getAuditLogs());

@@ -19,8 +19,8 @@ const createRating = async (userId, data) => {
     throw AppError.forbidden('You can only rate your own tickets.');
   }
 
-  if (ticket.status !== 'Completed') {
-    throw AppError.badRequest('Only completed tickets can be rated.');
+  if (ticket.status !== 'Tenant Confirmed') {
+    throw AppError.badRequest('You must confirm the work is resolved before rating it.');
   }
 
   // Prevent duplicate ratings

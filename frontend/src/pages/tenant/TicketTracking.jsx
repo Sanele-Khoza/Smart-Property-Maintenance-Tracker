@@ -9,7 +9,7 @@ const TicketTracking = () => {
   const session = getSession();
   const currentUser = session ? `${session.name} ${session.surname}` : '';
   const currentUserId = session?.id;
-  const tickets = useTickets();
+  const [tickets] = useTickets();
   const [auditLogs] = useState(getAuditLogs());
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
@@ -120,7 +120,7 @@ const TicketTracking = () => {
                     <td>{t.assignedTo || '—'}</td>
                     <td style={{ fontSize: 11 }}>{t.createdAt}</td>
                     <td>
-                      {t.status === 'Closed' ? (
+                      {t.status === 'Tenant Confirmed' ? (
                         t.rating ? <span style={{ color: 'var(--amber)' }}>{'★'.repeat(t.rating)} {'☆'.repeat(5 - t.rating)} {t.ratingComment && <span style={{ color: 'var(--text-dim)', fontSize: 10, marginLeft: 4 }}>"{t.ratingComment}"</span>}</span>
                           : <StarInput ticketId={t.ticketId} />
                       ) : <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>—</span>}
@@ -174,7 +174,7 @@ const TicketTracking = () => {
               </div>
             </div>
           )}
-          {selected.status === 'Closed' && !selected.rating && (
+          {selected.status === 'Tenant Confirmed' && !selected.rating && (
             <div className="card" style={{ marginTop: 12, background: 'var(--surface2)' }}>
               <div className="card-title"><FaStar /> Rate This Service</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>

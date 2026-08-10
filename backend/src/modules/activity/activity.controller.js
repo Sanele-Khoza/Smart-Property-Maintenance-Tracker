@@ -12,7 +12,7 @@ const list = async (req, res, next) => {
 
     if (role === 'TENANT') {
       sql = `(SELECT 'ticket' AS type, t.id, t.title, t.status, t.created_at
-              FROM tickets t WHERE t.tenant_id = $1)
+              FROM tickets t WHERE t.tenant_id = $1 AND t.deleted_at IS NULL)
              UNION ALL
              (SELECT 'invoice' AS type, i.id, i.description AS title, i.status, i.created_at
               FROM invoices i WHERE i.tenant_id = $1)
@@ -21,7 +21,7 @@ const list = async (req, res, next) => {
               FROM notifications n WHERE n.user_id = $1)`;
       params.push(req.user.id);
     } else {
-      sql = `(SELECT 'ticket' AS type, t.id, t.title, t.status, t.created_at FROM tickets t)
+      sql = `(SELECT 'ticket' AS type, t.id, t.title, t.status, t.created_at FROM tickets t WHERE t.deleted_at IS NULL)
              UNION ALL
              (SELECT 'user' AS type, u.id, u.name || ' ' || u.surname AS title, u.role, u.created_at FROM users u)
              UNION ALL

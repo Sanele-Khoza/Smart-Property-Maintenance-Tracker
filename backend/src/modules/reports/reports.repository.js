@@ -35,9 +35,9 @@ const getTicketStats = async ({ startDate, endDate } = {}) => {
   const whereClause = df.sql || '';
   const baseValues = df.values;
   const [totalResult, statusResult, priorityResult] = await Promise.all([
-    query(`SELECT COUNT(*)::int AS total FROM tickets t WHERE 1=1${whereClause}`, baseValues.length ? baseValues : undefined),
-    query(`SELECT status, COUNT(*)::int AS count FROM tickets t WHERE 1=1${whereClause} GROUP BY status ORDER BY count DESC`, baseValues.length ? baseValues : undefined),
-    query(`SELECT priority, COUNT(*)::int AS count FROM tickets t WHERE 1=1${whereClause} GROUP BY priority ORDER BY CASE priority WHEN 'EMERGENCY' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END`, baseValues.length ? baseValues : undefined),
+    query(`SELECT COUNT(*)::int AS total FROM tickets t WHERE 1=1 AND t.deleted_at IS NULL${whereClause}`, baseValues.length ? baseValues : undefined),
+    query(`SELECT status, COUNT(*)::int AS count FROM tickets t WHERE 1=1 AND t.deleted_at IS NULL${whereClause} GROUP BY status ORDER BY count DESC`, baseValues.length ? baseValues : undefined),
+    query(`SELECT priority, COUNT(*)::int AS count FROM tickets t WHERE 1=1 AND t.deleted_at IS NULL${whereClause} GROUP BY priority ORDER BY CASE priority WHEN 'EMERGENCY' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END`, baseValues.length ? baseValues : undefined),
   ]);
   return {
     total: totalResult.rows[0].total,
@@ -48,7 +48,7 @@ const getTicketStats = async ({ startDate, endDate } = {}) => {
 
 const getTechnicianPerformance = async ({ startDate, endDate } = {}) => {
   const df = buildDateFilter([], startDate, endDate);
-  const joinClause = df.sql ? ` AND (1=1${df.sql})` : '';
+  const joinClause = ` AND (t.deleted_at IS NULL${df.sql})`;
   const result = await query(
     `SELECT sp.id, sp.name, sp.company_name, sp.status,
             COUNT(t.id)::int as total_jobs,
@@ -73,8 +73,8 @@ const getPropertyHealth = async ({ startDate, endDate } = {}) => {
     `SELECT p.id, p.name, p.type, p.status, p.address,
             (SELECT COUNT(*)::int FROM units WHERE property_id = p.id) as total_units,
             (SELECT COUNT(*)::int FROM units WHERE property_id = p.id AND status = 'Vacant') as vacant_units,
-            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.status NOT IN ('Completed','Cancelled','Archived')${filterClause}) as open_tickets,
-            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.sla_breached = TRUE${filterClause}) as sla_breaches
+            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.deleted_at IS NULL AND t.status NOT IN ('Completed','Cancelled','Archived')${filterClause}) as open_tickets,
+            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.deleted_at IS NULL AND t.sla_breached = TRUE${filterClause}) as sla_breaches
      FROM properties p
      ORDER BY p.name`,
     vals.length ? vals : undefined
@@ -84,7 +84,7 @@ const getPropertyHealth = async ({ startDate, endDate } = {}) => {
 
 const getProvidersSummary = async ({ startDate, endDate } = {}) => {
   const df = buildDateFilter([], startDate, endDate);
-  const joinClause = df.sql ? ` AND (1=1${df.sql})` : '';
+  const joinClause = ` AND (t.deleted_at IS NULL${df.sql})`;
   const result = await query(
     `SELECT sp.id, sp.name, sp.company_name, sp.status,
             COUNT(t.id)::int as total_jobs,
@@ -111,7 +111,7 @@ const getCategoriesSummary = async ({ startDate, endDate } = {}) => {
             SUM(CASE WHEN t.status = 'Completed' THEN 1 ELSE 0 END)::int as completed_tickets,
             ROUND(AVG(CASE WHEN t.status IN ('Completed','Cancelled') THEN EXTRACT(EPOCH FROM (t.updated_at - t.created_at))/86400 END), 1) as avg_resolution_days
      FROM tickets t
-     WHERE 1=1${whereClause}
+     WHERE 1=1 AND t.deleted_at IS NULL${whereClause}
      GROUP BY t.category
      ORDER BY total_tickets DESC`,
     vals.length ? vals : undefined
@@ -127,8 +127,8 @@ const getFullReport = async ({ startDate, endDate } = {}) => {
     `SELECT p.id, p.name, p.type, p.status, p.address, p.created_at,
             (SELECT COUNT(*)::int FROM units WHERE property_id = p.id) as total_units,
             (SELECT COUNT(*)::int FROM units WHERE property_id = p.id AND status = 'Vacant') as vacant_units,
-            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id${filterClause}) as total_tickets,
-            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.status != 'Completed'${filterClause}) as open_tickets
+            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.deleted_at IS NULL${filterClause}) as total_tickets,
+            (SELECT COUNT(*)::int FROM tickets t JOIN units u ON t.unit_id = u.id WHERE u.property_id = p.id AND t.deleted_at IS NULL AND t.status != 'Completed'${filterClause}) as open_tickets
      FROM properties p
      ORDER BY p.name`,
     vals.length ? vals : undefined

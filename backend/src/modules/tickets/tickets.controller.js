@@ -4,7 +4,8 @@ import * as service from './tickets.service.js';
 import * as repo from './tickets.repository.js';
 import { classifyTicket } from '../ai/ai.service.js';
 import { runAiPipeline } from './tickets.service.js';
-import { getPresignedUrl } from '../../shared/adapters/s3Adapter.js';
+import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
+import { isAwsEnabled } from '../../shared/adapters/retry.js';
 import config from '../../config/index.js';
 
 async function resolveProviderId(email) {
@@ -331,7 +332,9 @@ const getAttachmentUrl = async (req, res, next) => {
     }
     const isImage = attachment.file_type?.startsWith('image/');
     const ttl = isImage ? config.aws.s3.presignedUrlTtlImages : config.aws.s3.presignedUrlTtlReports;
-    const url = await getPresignedUrl(attachment.file_key, undefined, ttl);
+    const url = !isAwsEnabled() || !(await isS3Healthy())
+      ? `/uploads/${attachment.file_key}`
+      : await getPresignedUrl(attachment.file_key, undefined, ttl);
     res.json({ success: true, data: { url, ttl, key: attachment.file_key } });
   } catch (err) { next(err); }
 };
@@ -350,9 +353,31 @@ const sla = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
+    const name = req.user ? `${req.user.name} ${req.user.surname}` : null;
+    const result = await service.softDelete(req.params.id, req.user.id, name);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+const restoreTicket = async (req, res, next) => {
+  try {
+    const ticket = await repo.findByIdIncludingDeleted(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
+    const name = req.user ? `${req.user.name} ${req.user.surname}` : null;
+    const result = await service.restore(req.params.id, req.user.id, name);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
 export {
   list, getById, create, update, changeStatus, assign, complete, reopen, rate,
   getHistory, getComments, addComment, getAttachments, addAttachment, removeAttachment,
   classify, confirm, overrideAi, downgradeEmergency, getAttachmentUrl, routing, sla,
-  accept, startWork, waitingParts, partsReceived, tenantConfirm, close,
+  accept, startWork, waitingParts, partsReceived, tenantConfirm, close, remove, restoreTicket,
 };

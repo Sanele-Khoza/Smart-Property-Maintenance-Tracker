@@ -1,4 +1,4 @@
-import { api } from '../api/client.js';
+import { api, getBaseUrl } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
 import { addAuditLogEntry } from './auditStore';
 
@@ -51,11 +51,19 @@ function mapTicket(t) {
     manualReviewRequired: false,
     assignedTo: t.assigned_to_name || t.assignedTo || null,
     assignedToId: t.assigned_to || t.assignedToId || null,
+    providerRating: t.provider_rating ?? t.providerRating ?? null,
+    providerRatingCount: t.provider_rating_count ?? t.providerRatingCount ?? null,
     createdBy: t.created_by_name || t.createdBy || '',
     createdById: t.tenant_id || t.createdById || t.created_by || null,
     createdAt: t.created_at || t.createdAt || new Date().toLocaleString(),
     updatedAt: t.updated_at || t.updatedAt || new Date().toLocaleString(),
-    images: [],
+    deletedAt: t.deleted_at || t.deletedAt || null,
+    deletedBy: t.deleted_by || t.deletedBy || null,
+    images: Array.isArray(t.photoUrls)
+      ? t.photoUrls
+          .filter(Boolean)
+          .map(u => u.startsWith('/') ? `${getBaseUrl().replace(/\/api\/?$/, '')}${u}` : u)
+      : [],
     ...(t.slaResponseBefore || t.slaResolutionBefore ? {} : getSlaDeadlines(t.priority)),
   };
 }
@@ -64,7 +72,24 @@ export const notifyTicketsUpdated = () => {
   window.dispatchEvent(new CustomEvent('spmt:tickets-updated'));
 };
 
-export const createTicket = async (unitId, title, description, priority, images, createdById, createdByName, forceSubmit = false) => {
+export const uploadTicketImages = async (ticketId, images) => {
+  for (const img of images || []) {
+    if (!img?.data) continue;
+    try {
+      const blob = await (await fetch(img.data)).blob();
+      const file = new File([blob], img.name || `photo-${Date.now()}.jpg`, {
+        type: img.type || blob.type || 'image/jpeg',
+      });
+      const formData = new FormData();
+      formData.append('file', file);
+      await api(`/tickets/${ticketId}/attachments`, { method: 'POST', formData });
+    } catch (err) {
+      console.warn('Photo upload failed:', err.message);
+    }
+  }
+};
+
+export const createTicket = async (unitId, title, description, priority, category, images, createdById, createdByName, forceSubmit = false) => {
   try {
     const result = await api('/tickets', {
       method: 'POST',
@@ -72,6 +97,7 @@ export const createTicket = async (unitId, title, description, priority, images,
         unit_id: unitId,
         title: title || 'Maintenance Request',
         description,
+        category: category || 'General',
         priority: priority || 'MEDIUM',
         source: 'tenant_portal',
       },
@@ -85,6 +111,8 @@ export const createTicket = async (unitId, title, description, priority, images,
     const store = getStore();
     const localTicket = mapTicket(ticketData);
     localTicket.images = images || [];
+
+    uploadTicketImages(localTicket.ticketId, images);
 
     store.tickets.unshift(localTicket);
     store.auditLog.push({
@@ -260,11 +288,17 @@ export const updateTicketRating = async (ticketId, rating, comment) => {
         store.tickets[idx].rating = rating;
         store.tickets[idx].ratingComment = (comment || '').trim();
         store.tickets[idx].ratingSubmittedAt = new Date().toISOString();
+        store.tickets[idx].providerRating = result.data?.finalRating ?? store.tickets[idx].providerRating ?? null;
+        store.tickets[idx].providerRatingCount = result.data?.ratingCount ?? store.tickets[idx].providerRatingCount ?? null;
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
       notifyTicketsUpdated();
-      return { success: true, data: store.tickets[idx] };
+      return {
+        success: true,
+        data: result.data || null,
+        ticket: store.tickets[idx],
+      };
     }
     return { success: false, error: result.error || 'Rating failed' };
   } catch (err) {
@@ -386,6 +420,63 @@ export const refreshTickets = async () => {
     console.warn('refreshTickets failed:', err.message);
   }
   return getStore().tickets;
+};
+
+export const trashTicket = async (ticketId) => {
+  try {
+    const result = await api(`/tickets/${ticketId}`, { method: 'DELETE' });
+    if (!result.success) {
+      return { success: false, error: result.error || 'Failed to move ticket to trash' };
+    }
+    const store = getStore();
+    const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+    if (idx !== -1) {
+      const removed = store.tickets[idx];
+      store.tickets.splice(idx, 1);
+      store.trash = store.trash || [];
+      store.trash.unshift({ ...removed, deletedAt: removed.deletedAt || new Date().toISOString() });
+      saveToLocalStorage();
+    }
+    notifyTicketsUpdated();
+    return { success: true, data: result.data?.ticket };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const restoreTicket = async (ticketId) => {
+  try {
+    const result = await api(`/tickets/${ticketId}/restore`, { method: 'POST' });
+    if (!result.success) {
+      return { success: false, error: result.error || 'Failed to restore ticket' };
+    }
+    const store = getStore();
+    const idx = (store.trash || []).findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+    if (idx !== -1) {
+      const restored = store.trash[idx];
+      store.trash.splice(idx, 1);
+      store.tickets.unshift({ ...restored, deletedAt: null, deletedBy: null });
+      saveToLocalStorage();
+    }
+    notifyTicketsUpdated();
+    return { success: true, data: result.data?.ticket };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const getTrashTickets = async () => {
+  try {
+    const result = await api('/tickets?deleted=true&limit=1000');
+    if (result.success && Array.isArray(result.data?.tickets)) {
+      const store = getStore();
+      store.trash = result.data.tickets.map(mapTicket);
+      saveToLocalStorage();
+    }
+  } catch (err) {
+    console.warn('getTrashTickets failed:', err.message);
+  }
+  return [...(getStore().trash || [])];
 };
 
 export const getStats = () => {

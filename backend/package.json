@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seeds/run.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "swagger": "node src/swagger.js"

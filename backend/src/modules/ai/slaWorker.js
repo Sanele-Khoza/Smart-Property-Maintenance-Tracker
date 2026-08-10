@@ -20,7 +20,7 @@ async function checkSla() {
     const breachedTickets = await query(
       `SELECT t.*, u.name, u.surname FROM tickets t
        JOIN users u ON u.id = t.tenant_id
-       WHERE t.sla_breached = TRUE AND t.sla_breached_at > NOW() - INTERVAL '2 minutes'`
+       WHERE t.sla_breached = TRUE AND t.deleted_at IS NULL AND t.sla_breached_at > NOW() - INTERVAL '2 minutes'`
     );
 
     for (const ticket of breachedTickets.rows) {

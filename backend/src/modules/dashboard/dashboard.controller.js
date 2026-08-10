@@ -7,8 +7,8 @@ const getDashboard = async (req, res, next) => {
 
     if (role === 'TENANT') {
       const [openTickets, completedTickets, invoices, lease] = await Promise.all([
-        query("SELECT COUNT(*)::int AS count FROM tickets WHERE tenant_id = $1 AND status NOT IN ('Completed', 'Cancelled', 'Archived')", [req.user.id]).then(r => r.rows[0].count),
-        query("SELECT COUNT(*)::int AS count FROM tickets WHERE tenant_id = $1 AND status = 'Completed'", [req.user.id]).then(r => r.rows[0].count),
+        query("SELECT COUNT(*)::int AS count FROM tickets WHERE tenant_id = $1 AND deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived')", [req.user.id]).then(r => r.rows[0].count),
+        query("SELECT COUNT(*)::int AS count FROM tickets WHERE tenant_id = $1 AND deleted_at IS NULL AND status = 'Completed'", [req.user.id]).then(r => r.rows[0].count),
         query("SELECT COUNT(*)::int AS count FROM invoices WHERE tenant_id = $1 AND status = 'UNPAID'", [req.user.id]).then(r => r.rows[0].count),
         query("SELECT COUNT(*)::int AS count FROM leases WHERE tenant_id = $1 AND status = 'ACTIVE'", [req.user.id]).then(r => r.rows[0].count),
       ]);
@@ -18,8 +18,8 @@ const getDashboard = async (req, res, next) => {
       const providerId = provider.rows[0]?.id;
       if (providerId) {
         const [assigned, completed] = await Promise.all([
-          query("SELECT COUNT(*)::int AS count FROM tickets WHERE assigned_to = $1 AND status NOT IN ('Completed', 'Cancelled', 'Archived')", [providerId]).then(r => r.rows[0].count),
-          query("SELECT COUNT(*)::int AS count FROM tickets WHERE assigned_to = $1 AND status = 'Completed'", [providerId]).then(r => r.rows[0].count),
+          query("SELECT COUNT(*)::int AS count FROM tickets WHERE assigned_to = $1 AND deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived')", [providerId]).then(r => r.rows[0].count),
+          query("SELECT COUNT(*)::int AS count FROM tickets WHERE assigned_to = $1 AND deleted_at IS NULL AND status = 'Completed'", [providerId]).then(r => r.rows[0].count),
         ]);
         result = { assignedJobs: assigned, completedJobs: completed };
       } else {
@@ -27,9 +27,9 @@ const getDashboard = async (req, res, next) => {
       }
     } else {
       const [openTickets, completedTickets, overdueTickets, totalProperties, totalUnits, availableProviders] = await Promise.all([
-        query("SELECT COUNT(*)::int AS count FROM tickets WHERE status NOT IN ('Completed', 'Cancelled', 'Archived')").then(r => r.rows[0].count),
-        query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Completed'").then(r => r.rows[0].count),
-        query("SELECT COUNT(*)::int AS count FROM tickets WHERE status NOT IN ('Completed', 'Cancelled', 'Archived') AND due_date < NOW()").then(r => r.rows[0].count),
+        query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived')").then(r => r.rows[0].count),
+        query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Completed'").then(r => r.rows[0].count),
+        query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived') AND due_date < NOW()").then(r => r.rows[0].count),
         query('SELECT COUNT(*)::int AS count FROM properties').then(r => r.rows[0].count),
         query('SELECT COUNT(*)::int AS count FROM units').then(r => r.rows[0].count),
         query("SELECT COUNT(*)::int AS count FROM service_providers WHERE status IN ('AVAILABLE', 'ON_CALL')").then(r => r.rows[0].count),
@@ -47,13 +47,13 @@ const getStats = async (req, res, next) => {
       query('SELECT COUNT(*)::int AS count FROM properties').then(r => r.rows[0].count),
       query('SELECT COUNT(*)::int AS count FROM units').then(r => r.rows[0].count),
       query("SELECT COUNT(*)::int AS count FROM units WHERE status = 'Occupied'").then(r => r.rows[0].count),
-      query('SELECT COUNT(*)::int AS count FROM tickets').then(r => r.rows[0].count),
-      query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Open'").then(r => r.rows[0].count),
-      query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Assigned'").then(r => r.rows[0].count),
-      query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'In Progress'").then(r => r.rows[0].count),
-      query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Completed'").then(r => r.rows[0].count),
-      query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Closed'").then(r => r.rows[0].count),
-      query('SELECT COUNT(*)::int AS count FROM tickets WHERE conflict_detected = TRUE').then(r => r.rows[0].count),
+      query('SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL').then(r => r.rows[0].count),
+      query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Open'").then(r => r.rows[0].count),
+      query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Assigned'").then(r => r.rows[0].count),
+      query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'In Progress'").then(r => r.rows[0].count),
+      query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Completed'").then(r => r.rows[0].count),
+      query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Closed'").then(r => r.rows[0].count),
+      query('SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND conflict_detected = TRUE').then(r => r.rows[0].count),
       query('SELECT COUNT(*)::int AS count FROM notifications').then(r => r.rows[0].count),
       query("SELECT COUNT(*)::int AS count FROM notifications WHERE delivery_status = 'Failed'").then(r => r.rows[0].count),
     ]);
@@ -69,7 +69,7 @@ const getPendingTickets = async (req, res, next) => {
     if (role === 'TENANT') {
       result = await query(
         `SELECT id, title, priority, status, category, created_at, due_date
-         FROM tickets WHERE tenant_id = $1 AND status NOT IN ('Completed','Cancelled','Archived')
+         FROM tickets WHERE tenant_id = $1 AND deleted_at IS NULL AND status NOT IN ('Completed','Cancelled','Archived')
          ORDER BY created_at DESC LIMIT $2`,
         [req.user.id, limit]
       );
@@ -79,14 +79,14 @@ const getPendingTickets = async (req, res, next) => {
       if (!providerId) return res.json({ success: true, data: [] });
       result = await query(
         `SELECT id, title, priority, status, category, created_at, due_date
-         FROM tickets WHERE assigned_to = $1 AND status NOT IN ('Completed','Cancelled','Archived')
+         FROM tickets WHERE assigned_to = $1 AND deleted_at IS NULL AND status NOT IN ('Completed','Cancelled','Archived')
          ORDER BY created_at DESC LIMIT $2`,
         [providerId, limit]
       );
     } else {
       result = await query(
         `SELECT id, title, priority, status, category, created_at, due_date
-         FROM tickets WHERE status NOT IN ('Completed','Cancelled','Archived')
+         FROM tickets WHERE deleted_at IS NULL AND status NOT IN ('Completed','Cancelled','Archived')
          ORDER BY created_at DESC LIMIT $1`,
         [limit]
       );
@@ -103,7 +103,7 @@ const getCompletedTickets = async (req, res, next) => {
     if (role === 'TENANT') {
       result = await query(
         `SELECT id, title, priority, status, category, created_at, updated_at
-         FROM tickets WHERE tenant_id = $1 AND status = 'Completed'
+         FROM tickets WHERE tenant_id = $1 AND deleted_at IS NULL AND status = 'Completed'
          ORDER BY updated_at DESC LIMIT $2`,
         [req.user.id, limit]
       );
@@ -113,14 +113,14 @@ const getCompletedTickets = async (req, res, next) => {
       if (!providerId) return res.json({ success: true, data: [] });
       result = await query(
         `SELECT id, title, priority, status, category, created_at, updated_at
-         FROM tickets WHERE assigned_to = $1 AND status = 'Completed'
+         FROM tickets WHERE assigned_to = $1 AND deleted_at IS NULL AND status = 'Completed'
          ORDER BY updated_at DESC LIMIT $2`,
         [providerId, limit]
       );
     } else {
       result = await query(
         `SELECT id, title, priority, status, category, created_at, updated_at
-         FROM tickets WHERE status = 'Completed'
+         FROM tickets WHERE deleted_at IS NULL AND status = 'Completed'
          ORDER BY updated_at DESC LIMIT $1`,
         [limit]
       );
@@ -137,7 +137,7 @@ const getTicketTrends = async (req, res, next) => {
               COUNT(*)::int as created,
               SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END)::int as completed
        FROM tickets
-       WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+       WHERE deleted_at IS NULL AND created_at >= NOW() - INTERVAL '1 day' * $1
        GROUP BY DATE(created_at)
        ORDER BY date ASC`,
       [days]

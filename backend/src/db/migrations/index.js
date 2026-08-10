@@ -26,6 +26,8 @@ async function run(query) {
     { name: '020_ai_entity_queue', file: '020_ai_entity_queue.js' },
     { name: '021_routing_assignments', file: '021_routing_assignments.js' },
     { name: '022_properties_manager', file: '022_properties_manager.js' },
+    { name: '023_ticket_trash', file: '023_ticket_trash.js' },
+    { name: '024_provider_rating_sync', file: '024_provider_rating_sync.js' },
   ];
 
   await query(`

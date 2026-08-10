@@ -1,6 +1,50 @@
-import { api } from '../api/client.js';
+import { api, getStaticOrigin } from '../api/client.js';
 import { getStore, saveToLocalStorage } from './storeCore';
 import { addAuditLogEntry } from './auditStore';
+
+function resolveAttachmentUrl(url) {
+  if (!url) return url;
+  return /^https?:\/\//i.test(url) ? url : `${getStaticOrigin()}${url}`;
+}
+
+function attachmentsToImages(attachments) {
+  return (attachments || [])
+    .filter(a => a.file_type?.startsWith('image/'))
+    .map(a => ({
+      id: a.id,
+      name: a.file_key,
+      type: a.file_type,
+      data: resolveAttachmentUrl(a.url),
+      uploadedAt: a.uploaded_at,
+      uploadedBy: [a.uploaded_by_name, a.uploaded_by_surname].filter(Boolean).join(' ') || null,
+    }));
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [meta, base64] = dataUrl.split(',');
+  const mimeMatch = meta.match(/data:(.*?);base64/);
+  const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function uploadTicketPhotos(ticketId, images) {
+  const uploaded = [];
+  for (const img of images || []) {
+    if (!img?.data) continue;
+    try {
+      const form = new FormData();
+      form.append('file', dataUrlToBlob(img.data), img.name || 'photo.jpg');
+      const result = await api(`/tickets/${ticketId}/attachments`, { method: 'POST', formData: form });
+      if (result.success && result.data?.attachment) uploaded.push(result.data.attachment);
+    } catch (err) {
+      console.warn('Photo upload failed:', err.message);
+    }
+  }
+  return uploaded;
+}
 
 export const TICKET_TRANSITIONS = {
   'New': ['AI Classified', 'Manual Review', 'Cancelled'],
@@ -55,7 +99,7 @@ function mapTicket(t) {
     createdById: t.tenant_id || t.createdById || t.created_by || null,
     createdAt: t.created_at || t.createdAt || new Date().toLocaleString(),
     updatedAt: t.updated_at || t.updatedAt || new Date().toLocaleString(),
-    images: [],
+    images: t.attachments ? attachmentsToImages(t.attachments) : [],
     ...(t.slaResponseBefore || t.slaResolutionBefore ? {} : getSlaDeadlines(t.priority)),
   };
 }
@@ -64,12 +108,13 @@ export const notifyTicketsUpdated = () => {
   window.dispatchEvent(new CustomEvent('spmt:tickets-updated'));
 };
 
-export const createTicket = async (unitId, title, description, priority, images, createdById, createdByName, forceSubmit = false) => {
+export const createTicket = async (unitId, category, title, description, priority, images, createdById, createdByName, forceSubmit = false) => {
   try {
     const result = await api('/tickets', {
       method: 'POST',
       body: {
         unit_id: unitId,
+        category: category || undefined,
         title: title || 'Maintenance Request',
         description,
         priority: priority || 'MEDIUM',
@@ -85,6 +130,23 @@ export const createTicket = async (unitId, title, description, priority, images,
     const store = getStore();
     const localTicket = mapTicket(ticketData);
     localTicket.images = images || [];
+
+    if (images && images.length > 0) {
+      uploadTicketPhotos(ticketData.id, images).then(async (uploaded) => {
+        if (uploaded.length === 0) return;
+        try {
+          const fresh = await api(`/tickets/${ticketData.id}`);
+          const idx = store.tickets.findIndex(t => t.ticketId === ticketData.id);
+          if (idx !== -1 && fresh.success && fresh.data?.ticket) {
+            store.tickets[idx].images = attachmentsToImages(fresh.data.ticket.attachments);
+            saveToLocalStorage();
+            notifyTicketsUpdated();
+          }
+        } catch (err) {
+          console.warn('Failed to refresh ticket photos:', err.message);
+        }
+      });
+    }
 
     store.tickets.unshift(localTicket);
     store.auditLog.push({

@@ -7,7 +7,7 @@ import {
 import {
   getTicketById, updateTicketStatus, assignTicket, reopenTicket,
   updateTicketCategory, getProviders, getProperties, getCategories,
-  getAuditLogs, getInferenceLogs
+  getAuditLogs, getInferenceLogs, trashTicket, restoreTicket, getTrashTickets
 } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
 import Alert from '../../components/common/Alert';
@@ -86,10 +86,44 @@ const Tickets = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(null);
   const [categoryValue, setCategoryValue] = useState('');
   const [confirmTransition, setConfirmTransition] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashTickets, setTrashTickets] = useState([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
 
   const showAlert = (msg, type) => {
     setAlert({ msg, type });
     setTimeout(() => setAlert({ msg: '', type: '' }), 5000);
+  };
+
+  const openTrash = async () => {
+    setShowTrash(true);
+    setLoadingTrash(true);
+    setTrashTickets(await getTrashTickets());
+    setLoadingTrash(false);
+  };
+
+  const handleDelete = async (ticket) => {
+    const r = await trashTicket(ticket.ticketId);
+    if (r.success) {
+      showAlert(`Ticket moved to trash.`, 'success');
+      setConfirmDelete(null);
+      refresh();
+    } else {
+      showAlert(r.error, 'error');
+      setConfirmDelete(null);
+    }
+  };
+
+  const handleRestore = async (ticket) => {
+    const r = await restoreTicket(ticket.ticketId);
+    if (r.success) {
+      showAlert('Ticket restored from trash.', 'success');
+      setTrashTickets(await getTrashTickets());
+      refresh();
+    } else {
+      showAlert(r.error, 'error');
+    }
   };
 
   const filtered = tickets.filter(t => {
@@ -212,6 +246,7 @@ const Tickets = () => {
               <option value="">All Categories</option>
               {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            <button className="btn btn-secondary btn-sm" onClick={openTrash} title="Trash" style={{ fontSize: 11 }}><FaTrash /> Trash</button>
           </div>
         </div>
         <div className="admin-table-wrapper">
@@ -321,6 +356,9 @@ const Tickets = () => {
                         )}
                         <button className="btn btn-secondary btn-sm" onClick={() => { setShowCategoryModal(t); setCategoryValue(t.category || ''); }} title="Override category" style={{ fontSize: 9, padding: '2px 5px' }}>
                           <FaTag />
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(t)} title="Move to trash" style={{ fontSize: 9, padding: '2px 5px' }}>
+                          <FaTrash />
                         </button>
                       </div>
                     </td>
@@ -440,6 +478,70 @@ const Tickets = () => {
                 <button type="submit" className="btn btn-primary"><FaCheck /> Save Override</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal" onClick={() => setConfirmDelete(null)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-modal-header">
+              <span><FaTrash /> Move to Trash</span>
+              <button className="modal-close-btn" onClick={() => setConfirmDelete(null)} aria-label="Close delete modal"><FaTimes /></button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text)' }}>
+              Move ticket <strong>{confirmDelete.title}</strong> ({confirmDelete.ticketId}) to trash?
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-dim)' }}>It can be restored later from the Trash view.</p>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => handleDelete(confirmDelete)}><FaTrash /> Move to Trash</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTrash && (
+        <div className="modal" onClick={() => setShowTrash(false)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '92vw' }}>
+            <div className="edit-modal-header">
+              <span><FaTrash /> Ticket Trash</span>
+              <button className="modal-close-btn" onClick={() => setShowTrash(false)} aria-label="Close trash modal"><FaTimes /></button>
+            </div>
+            <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+              {loadingTrash ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Loading...</p>
+              ) : trashTickets.length === 0 ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Trash is empty.</p>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Title</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Priority</th>
+                      <th scope="col">Deleted</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trashTickets.map(t => (
+                      <tr key={t.ticketId}>
+                        <td style={{ fontSize: 12 }}>{t.title}</td>
+                        <td style={{ fontSize: 12 }}>{t.status}</td>
+                        <td style={{ fontSize: 12 }}>{t.priority}</td>
+                        <td style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.deletedAt || '—'}</td>
+                        <td>
+                          <button className="btn btn-teal btn-sm" onClick={() => handleRestore(t)} title="Restore" style={{ fontSize: 9, padding: '2px 6px' }}>
+                            <FaUndo /> Restore
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaTicketAlt, FaSearch, FaEye, FaStar, FaHistory, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle } from 'react-icons/fa';
+import { FaTicketAlt, FaSearch, FaEye, FaStar, FaHistory, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle, FaTrash, FaUndo, FaTimes } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { getAuditLogs, updateTicketRating, confirmTicketCompletion, refreshTickets as fetchTickets } from '../../data/store';
+import { getAuditLogs, updateTicketRating, confirmTicketCompletion, refreshTickets as fetchTickets, trashTicket, restoreTicket, getTrashTickets } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import useTickets from '../../hooks/useTickets';
 
@@ -15,6 +15,10 @@ const TicketTracking = () => {
   const [selected, setSelected] = useState(null);
   const [rating, setRating] = useState({ ticketId: null, stars: 0, comment: '', hover: 0 });
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashTickets, setTrashTickets] = useState([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
 
   const myTickets = useMemo(() => {
     if (!currentUserId) return [];
@@ -36,9 +40,19 @@ const TicketTracking = () => {
     if (rating.stars < 1) { setMsg({ text: 'Please select a rating.', type: 'error' }); return; }
     const r = await updateTicketRating(ticketId, rating.stars, rating.comment);
     if (r.success) {
-      setMsg({ text: `Rating submitted: ${rating.stars}/5`, type: 'success' });
+      const finalRating = r.data?.finalRating;
+      setMsg({
+        text: `Rating submitted: ${rating.stars}/5${finalRating ? ` — New service rating ${finalRating.toFixed(1)} (${r.data?.ratingCount || 1} rating${(r.data?.ratingCount || 1) === 1 ? '' : 's'})` : ''}`,
+        type: 'success',
+      });
       setRating({ ticketId: null, stars: 0, comment: '', hover: 0 });
-      setSelected(prev => prev ? { ...prev, rating: rating.stars, ratingComment: rating.comment.trim() } : prev);
+      setSelected(prev => prev ? {
+        ...prev,
+        rating: rating.stars,
+        ratingComment: rating.comment.trim(),
+        providerRating: r.data?.finalRating ?? prev.providerRating,
+        providerRatingCount: r.data?.ratingCount ?? prev.providerRatingCount,
+      } : prev);
     } else {
       setMsg({ text: r.error, type: 'error' });
     }
@@ -50,6 +64,39 @@ const TicketTracking = () => {
     if (r.success) {
       setMsg({ text: satisfied ? 'Completion confirmed.' : 'Ticket reopened — you can add more details.', type: 'success' });
       setSelected(prev => prev ? { ...prev, status: satisfied ? 'Tenant Confirmed' : 'Reopened' } : prev);
+    } else {
+      setMsg({ text: r.error, type: 'error' });
+    }
+    setTimeout(() => setMsg({ text: '', type: '' }), 3000);
+  };
+
+  const openTrash = async () => {
+    setShowTrash(true);
+    setLoadingTrash(true);
+    setTrashTickets(await getTrashTickets());
+    setLoadingTrash(false);
+  };
+
+  const handleDelete = async (ticket) => {
+    const r = await trashTicket(ticket.ticketId);
+    if (r.success) {
+      setMsg({ text: 'Ticket moved to trash.', type: 'success' });
+      setConfirmDelete(null);
+      if (selected?.ticketId === ticket.ticketId) setSelected(null);
+      fetchTickets();
+    } else {
+      setMsg({ text: r.error, type: 'error' });
+      setConfirmDelete(null);
+    }
+    setTimeout(() => setMsg({ text: '', type: '' }), 3000);
+  };
+
+  const handleRestore = async (ticket) => {
+    const r = await restoreTicket(ticket.ticketId);
+    if (r.success) {
+      setMsg({ text: 'Ticket restored from trash.', type: 'success' });
+      setTrashTickets(await getTrashTickets());
+      fetchTickets();
     } else {
       setMsg({ text: r.error, type: 'error' });
     }
@@ -89,6 +136,7 @@ const TicketTracking = () => {
           <span><FaTicketAlt /> My Tickets ({filtered.length})</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FaSearch /><input className="form-input" style={{ width: 200, padding: '4px 8px' }} placeholder="Search by ID or title..." value={search} onChange={e => setSearch(e.target.value)} />
+            <button className="btn btn-secondary btn-sm" onClick={openTrash} title="Trash"><FaTrash /> Trash</button>
           </div>
         </div>
         {filtered.length === 0 ? (
@@ -125,7 +173,8 @@ const TicketTracking = () => {
                           : <StarInput ticketId={t.ticketId} />
                       ) : <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>—</span>}
                     </td>
-                    <td><button className="btn btn-secondary btn-sm" aria-label="View ticket details" title="View details" onClick={() => setSelected(selected?.ticketId === t.ticketId ? null : t)}><FaEye /></button></td>
+                    <td><button className="btn btn-secondary btn-sm" aria-label="View ticket details" title="View details" onClick={() => setSelected(selected?.ticketId === t.ticketId ? null : t)}><FaEye /></button>
+                        <button className="btn btn-danger btn-sm" aria-label="Move to trash" title="Move to trash" onClick={() => setConfirmDelete(t)} style={{ marginLeft: 4 }}><FaTrash /></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -205,7 +254,17 @@ const TicketTracking = () => {
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)' }}>Assigned Provider</div>
                 <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3 }}>
-                  {selected.assignedTo ? <span style={{ color: 'var(--teal)' }}>{selected.assignedTo}</span> : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Not yet assigned</span>}
+                  {selected.assignedTo ? (
+                    <div>
+                      <span style={{ color: 'var(--teal)' }}>{selected.assignedTo}</span>
+                      {selected.providerRating ? (
+                        <div style={{ color: 'var(--amber)', fontSize: 12, marginTop: 3 }}>
+                          {'★'.repeat(Math.round(selected.providerRating))} {selected.providerRating.toFixed(1)}
+                          <span style={{ color: 'var(--text-dim)', fontSize: 10 }}> ({selected.providerRatingCount || 1} rating{(selected.providerRatingCount || 1) === 1 ? '' : 's'})</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Not yet assigned</span>}
                 </div>
               </div>
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px' }}>
@@ -246,6 +305,60 @@ const TicketTracking = () => {
                     <span style={{ color: 'var(--text-dim)', display: 'block', marginLeft: 16, fontSize: 10 }}>{a.timestamp}</span>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal" onClick={() => setConfirmDelete(null)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-modal-header">
+              <span><FaTrash /> Move to Trash</span>
+              <button className="modal-close-btn" onClick={() => setConfirmDelete(null)} aria-label="Close delete modal"><FaTimes /></button>
+            </div>
+            <p style={{ fontSize: 13 }}>Move ticket <strong>{confirmDelete.title}</strong> ({confirmDelete.ticketId}) to trash?</p>
+            <p style={{ fontSize: 11, color: 'var(--text-dim)' }}>It can be restored later from the Trash view.</p>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => handleDelete(confirmDelete)}><FaTrash /> Move to Trash</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTrash && (
+        <div className="modal" onClick={() => setShowTrash(false)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '92vw' }}>
+            <div className="edit-modal-header">
+              <span><FaTrash /> My Trash</span>
+              <button className="modal-close-btn" onClick={() => setShowTrash(false)} aria-label="Close trash modal"><FaTimes /></button>
+            </div>
+            <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+              {loadingTrash ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Loading...</p>
+              ) : trashTickets.length === 0 ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Trash is empty.</p>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr><th>Title</th><th>Status</th><th>Priority</th><th>Deleted</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody>
+                    {trashTickets.map(t => (
+                      <tr key={t.ticketId}>
+                        <td style={{ fontSize: 12 }}>{t.title}</td>
+                        <td><StatusBadge status={t.status} /></td>
+                        <td style={{ fontSize: 12 }}>{t.priority}</td>
+                        <td style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.deletedAt || '—'}</td>
+                        <td>
+                          <button className="btn btn-teal btn-sm" onClick={() => handleRestore(t)} title="Restore" style={{ fontSize: 9, padding: '2px 6px' }}><FaUndo /> Restore</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

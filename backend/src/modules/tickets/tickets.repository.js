@@ -29,12 +29,16 @@ function toSnakeTicket(row) {
     emergency_assigned_at: row.emergency_assigned_at,
     sla_breached: row.sla_breached,
     due_date: row.due_date,
+    deleted_at: row.deleted_at ?? null,
+    deleted_by: row.deleted_by ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     property_name: row.property_name ?? null,
     unit_number: row.unit_number ?? null,
     created_by_name: row.created_by_name ?? null,
     assigned_to_name: row.assigned_to_name ?? null,
+    provider_rating: row.provider_rating ?? null,
+    provider_rating_count: row.provider_rating_count ?? null,
   };
 }
 
@@ -49,7 +53,22 @@ const findById = async (id) => {
   const result = await query(
     `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
             TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
-            sp.name AS assigned_to_name
+            sp.name AS assigned_to_name,
+            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
+     FROM tickets t
+     ${TICKET_JOINS}
+     WHERE t.id = $1 AND t.deleted_at IS NULL`,
+    [id]
+  );
+  return toSnakeTicket(result.rows[0]);
+};
+
+const findByIdIncludingDeleted = async (id) => {
+  const result = await query(
+    `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
+            TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
+            sp.name AS assigned_to_name,
+            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
      FROM tickets t
      ${TICKET_JOINS}
      WHERE t.id = $1`,
@@ -62,6 +81,12 @@ const findAll = async (filters = {}) => {
   const conditions = [];
   const params = [];
   let idx = 1;
+
+  if (filters.deleted === 'true') {
+    conditions.push('t.deleted_at IS NOT NULL');
+  } else {
+    conditions.push('t.deleted_at IS NULL');
+  }
 
   if (filters.status) {
     conditions.push(`t.status = $${idx++}`);
@@ -126,7 +151,8 @@ const findAll = async (filters = {}) => {
 
   let sql = `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
                     TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
-                    sp.name AS assigned_to_name
+                    sp.name AS assigned_to_name,
+                    sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
              FROM tickets t
              ${TICKET_JOINS}
              ${whereClause}
@@ -177,6 +203,22 @@ const update = async (id, data) => {
     params
   );
   return findById(id);
+};
+
+const softDelete = async (id, userId) => {
+  await query(
+    'UPDATE tickets SET deleted_at = NOW(), deleted_by = $2, updated_at = NOW() WHERE id = $1',
+    [id, userId]
+  );
+  return findByIdIncludingDeleted(id);
+};
+
+const restore = async (id) => {
+  await query(
+    'UPDATE tickets SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = $1',
+    [id]
+  );
+  return findByIdIncludingDeleted(id);
 };
 
 const addHistory = async (ticketId, status, changedBy, changedByName, reason) => {
@@ -251,6 +293,7 @@ const getOverdueTickets = async () => {
      LEFT JOIN units u ON u.id = t.unit_id
      LEFT JOIN properties p ON p.id = u.property_id
      WHERE t.status NOT IN ('Completed', 'Cancelled', 'Archived')
+       AND t.deleted_at IS NULL
        AND t.due_date < NOW()`
   );
   return result.rows.map(toSnakeTicket);
@@ -286,4 +329,17 @@ const getAttachmentById = async (attachmentId) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, addHistory, getHistory, getComments, addComment, addRating, getOverdueTickets, getAttachments, addAttachment, removeAttachment, getAttachmentById };
+const getAttachmentsForTickets = async (ticketIds) => {
+  if (!ticketIds || ticketIds.length === 0) return [];
+  const result = await query(
+    `SELECT ta.*, u.name AS uploaded_by_name, u.surname AS uploaded_by_surname
+     FROM ticket_attachments ta
+     LEFT JOIN users u ON u.id = ta.uploaded_by
+     WHERE ta.ticket_id = ANY($1)
+     ORDER BY ta.uploaded_at DESC`,
+    [ticketIds]
+  );
+  return result.rows;
+};
+
+export { findById, findByIdIncludingDeleted, findAll, create, update, softDelete, restore, addHistory, getHistory, getComments, addComment, addRating, getOverdueTickets, getAttachments, addAttachment, removeAttachment, getAttachmentById, getAttachmentsForTickets };

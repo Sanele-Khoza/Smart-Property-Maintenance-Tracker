@@ -18,7 +18,7 @@ const myJobs = async (req, res, next) => {
        FROM tickets t
        LEFT JOIN units u ON t.unit_id = u.id
        LEFT JOIN properties p ON u.property_id = p.id
-       WHERE t.assigned_to = $1
+       WHERE t.assigned_to = $1 AND t.deleted_at IS NULL
        ORDER BY t.due_date ASC, t.priority DESC`,
       [tech.id]
     );

@@ -20,6 +20,7 @@ async function autoAssignEmergencyTickets() {
     `SELECT t.* FROM tickets t
      WHERE t.priority = 'EMERGENCY'
        AND t.status IN ('Open', 'Manual Review')
+       AND t.deleted_at IS NULL
        AND t.created_at < $1
        AND t.emergency_assigned_at IS NULL
      ORDER BY t.created_at ASC`,
@@ -67,6 +68,7 @@ async function markSlaBreaches() {
   const result = await query(
     `UPDATE tickets SET sla_breached = TRUE, sla_breached_at = NOW()
      WHERE priority = 'EMERGENCY'
+       AND deleted_at IS NULL
        AND status NOT IN ('Completed', 'Cancelled', 'Archived')
        AND created_at < $1
        AND sla_breached = FALSE`,

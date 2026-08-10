@@ -2,6 +2,7 @@ const getDefaultData = () => ({
   properties: [],
   units: [],
   tickets: [],
+  trash: [],
   categories: [
     { id: 'CAT-001', name: 'Plumbing', description: 'Water, pipe, faucet, and drainage issues', defaultPriority: 'HIGH', aiKeywords: ['leak', 'pipe', 'faucet', 'drain', 'water'], rekognitionLabel: 'Plumbing' },
     { id: 'CAT-002', name: 'Electrical', description: 'Power, wiring, socket, and lighting issues', defaultPriority: 'HIGH', aiKeywords: ['socket', 'power', 'light', 'wire', 'electric'], rekognitionLabel: 'Electrical' },

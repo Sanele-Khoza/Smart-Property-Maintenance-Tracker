@@ -2,6 +2,23 @@ import * as repository from './ratings.repository.js';
 import { validateCreateRating } from './ratings.validation.js';
 import AppError from '../../shared/errors/AppError.js';
 
+/*
+ * Moving-average formula: combine the provider's existing rating with the new
+ * score. The old rating counts `oldCount` times, the new score counts once.
+ *
+ *   finalRating = (oldRating * oldCount + newScore) / (oldCount + 1)
+ *
+ * Returns the new aggregate rounded to two decimal places and the updated
+ * rating count, keeping service_providers.rating in sync with the ratings.
+ */
+const computeFinalRating = (oldRating, oldCount, newScore) => {
+  const prev = Number(oldRating) || 0;
+  const count = Math.max(Number(oldCount) || 0, 0);
+  const score = Number(newScore);
+  const final = (prev * count + score) / (count + 1);
+  return { rating: Math.round(final * 100) / 100, ratingCount: count + 1 };
+};
+
 const createRating = async (userId, data) => {
   const { ticketId, rating, comment } = data;
 
@@ -30,19 +47,29 @@ const createRating = async (userId, data) => {
     throw AppError.badRequest('This ticket has already been rated.');
   }
 
-  // Save rating
-  const created = await repository.createRating(
+  // Save the rating and roll the provider's aggregate rating forward atomically
+  const { created, provider } = await repository.createRatingWithSync({
     ticketId,
     userId,
     rating,
-    comment
-  );
+    comment,
+    providerId: ticket.assigned_to || null,
+  });
 
-  return created;
+  const finalRating = provider ? Number(provider.rating) : rating;
+  const ratingCount = provider ? provider.rating_count : 1;
+
+  return {
+    ticketId,
+    rating: created.rating,
+    comment: created.comment ?? null,
+    finalRating,
+    ratingCount,
+  };
 };
 
 const getTicketRatings = async (ticketId) => {
   return repository.getTicketRatings(ticketId);
 };
 
-export { createRating, getTicketRatings };
+export { createRating, getTicketRatings, computeFinalRating };

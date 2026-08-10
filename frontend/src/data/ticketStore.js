@@ -32,6 +32,7 @@ function dataUrlToBlob(dataUrl) {
 
 async function uploadTicketPhotos(ticketId, images) {
   const uploaded = [];
+  let failed = 0;
   for (const img of images || []) {
     if (!img?.data) continue;
     try {
@@ -39,11 +40,13 @@ async function uploadTicketPhotos(ticketId, images) {
       form.append('file', dataUrlToBlob(img.data), img.name || 'photo.jpg');
       const result = await api(`/tickets/${ticketId}/attachments`, { method: 'POST', formData: form });
       if (result.success && result.data?.attachment) uploaded.push(result.data.attachment);
+      else failed++;
     } catch (err) {
       console.warn('Photo upload failed:', err.message);
+      failed++;
     }
   }
-  return uploaded;
+  return { uploaded, failed };
 }
 
 export const TICKET_TRANSITIONS = {
@@ -132,18 +135,24 @@ export const createTicket = async (unitId, category, title, description, priorit
     localTicket.images = images || [];
 
     if (images && images.length > 0) {
-      uploadTicketPhotos(ticketData.id, images).then(async (uploaded) => {
-        if (uploaded.length === 0) return;
-        try {
-          const fresh = await api(`/tickets/${ticketData.id}`);
-          const idx = store.tickets.findIndex(t => t.ticketId === ticketData.id);
-          if (idx !== -1 && fresh.success && fresh.data?.ticket) {
-            store.tickets[idx].images = attachmentsToImages(fresh.data.ticket.attachments);
-            saveToLocalStorage();
-            notifyTicketsUpdated();
+      uploadTicketPhotos(ticketData.id, images).then(async ({ uploaded, failed }) => {
+        if (uploaded.length > 0) {
+          try {
+            const fresh = await api(`/tickets/${ticketData.id}`);
+            const idx = store.tickets.findIndex(t => t.ticketId === ticketData.id);
+            if (idx !== -1 && fresh.success && fresh.data?.ticket) {
+              store.tickets[idx].images = attachmentsToImages(fresh.data.ticket.attachments);
+              saveToLocalStorage();
+              notifyTicketsUpdated();
+            }
+          } catch (err) {
+            console.warn('Failed to refresh ticket photos:', err.message);
           }
-        } catch (err) {
-          console.warn('Failed to refresh ticket photos:', err.message);
+        }
+        if (failed > 0) {
+          window.dispatchEvent(new CustomEvent('spmt:photo-upload-failed', {
+            detail: { ticketId: ticketData.id, failed, total: images.length },
+          }));
         }
       });
     }

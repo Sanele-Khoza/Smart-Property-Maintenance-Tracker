@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import upload from '../../middleware/upload.js';
+import upload, { moderateUpload } from '../../middleware/upload.js';
 import * as ctrl from './tickets.controller.js';
 import authenticate from '../../middleware/authenticate.js';
 import { authorize, hasPermission } from '../../middleware/authorize.js';
@@ -42,7 +42,7 @@ router.get('/:id/history', authenticate, authorize(Roles.TENANT, Roles.PROPERTY_
 router.get('/:id/comments', authenticate, authorize(Roles.TENANT, Roles.PROPERTY_MANAGER, Roles.SERVICE_PROVIDER, Roles.SYSTEM_ADMIN), ctrl.getComments);
 router.post('/:id/comments', authenticate, authorize(Roles.TENANT, Roles.PROPERTY_MANAGER, Roles.SERVICE_PROVIDER, Roles.SYSTEM_ADMIN), ctrl.addComment);
 router.get('/:id/attachments', authenticate, hasPermission('tickets.view.own'), ctrl.getAttachments);
-router.post('/:id/attachments', authenticate, hasPermission('tickets.create'), upload.single('file'), ctrl.addAttachment);
+router.post('/:id/attachments', authenticate, hasPermission('tickets.create'), upload.single('file'), moderateUpload, ctrl.addAttachment);
 router.delete('/:id/attachments/:attachmentId', authenticate, hasPermission('tickets.delete'), ctrl.removeAttachment);
 router.get('/:id/attachments/:attachmentId/url', authenticate, hasPermission('tickets.view.own'), ctrl.getAttachmentUrl);
 

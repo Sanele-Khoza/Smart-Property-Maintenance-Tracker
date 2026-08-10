@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaBuilding, FaBox, FaBolt, FaCalendarAlt, FaUser, FaTicketAlt, FaCamera, FaExclamationTriangle } from 'react-icons/fa';
 import Alert from './common/Alert';
 import EmptyState from './common/EmptyState';
@@ -24,6 +24,18 @@ const Ticket = ({ currentUser, refreshData }) => {
     setTickets(getTickets());
     if (refreshData) refreshData();
   };
+
+  useEffect(() => {
+    const onPhotoUploadFailed = (e) => {
+      const { failed, total } = e.detail || {};
+      setMsg({
+        text: `Ticket submitted, but ${failed} of ${total} photo(s) failed to upload. Please try re-attaching ${failed === 1 ? 'it' : 'them'} from the ticket details.`,
+        type: 'error',
+      });
+    };
+    window.addEventListener('spmt:photo-upload-failed', onPhotoUploadFailed);
+    return () => window.removeEventListener('spmt:photo-upload-failed', onPhotoUploadFailed);
+  }, []);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);

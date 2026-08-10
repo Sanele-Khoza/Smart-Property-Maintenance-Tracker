@@ -6,11 +6,13 @@ import {
 } from 'react-icons/fa';
 import {
   getTicketById, updateTicketStatus, assignTicket, reopenTicket,
-  updateTicketCategory, getProviders, getProperties, getCategories,
+  updateTicketCategory, getProviders, getProperties,
   getAuditLogs, getInferenceLogs
 } from '../../data/store';
+import { TICKET_CATEGORIES } from '../../data/categories';
 import { getSlaStatus } from '../../data/slaEngine';
 import Alert from '../../components/common/Alert';
+import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
 const STATUS_STYLES = {
@@ -68,7 +70,6 @@ const Tickets = () => {
   const [tickets, refresh] = useTickets();
   const [providers] = useState(getProviders);
   const [properties] = useState(getProperties);
-  const [categories] = useState(getCategories());
   const [auditLogs] = useState(getAuditLogs());
   const [inferenceLogs] = useState(getInferenceLogs());
   const [alert, setAlert] = useState({ msg: '', type: '' });
@@ -86,6 +87,7 @@ const Tickets = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(null);
   const [categoryValue, setCategoryValue] = useState('');
   const [confirmTransition, setConfirmTransition] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   const showAlert = (msg, type) => {
     setAlert({ msg, type });
@@ -332,6 +334,18 @@ const Tickets = () => {
                           <div style={{ flex: 2, minWidth: 240 }}>
                             <strong>Description:</strong>
                             <p style={{ margin: '4px 0', color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{t.description}</p>
+                            {t.images && t.images.length > 0 && (
+                              <div style={{ marginBottom: 8 }}>
+                                <strong>Attachments ({t.images.length}):</strong>
+                                <div className="image-preview-grid" style={{ marginTop: 4 }}>
+                                  {t.images.map((img, idx) => (
+                                    <div key={idx} className="image-preview" style={{ width: 60, height: 60, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                                      <img src={img.data || img} alt="" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             <strong style={{ marginTop: 8, display: 'block' }}>Audit Trail:</strong>
                             {auditLogs.filter(l => l.ticketId === t.ticketId).map(l => (
                               <div key={l.id} style={{ padding: '2px 0', fontSize: 10, color: 'var(--text-dim)', borderBottom: '1px solid var(--border)' }}>
@@ -432,7 +446,7 @@ const Tickets = () => {
               <div className="form-group">
                 <label className="form-label">New Category</label>
                 <select className="form-select" value={categoryValue} onChange={e => setCategoryValue(e.target.value)} required>
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {TICKET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-actions">
@@ -443,6 +457,7 @@ const Tickets = () => {
           </div>
         </div>
       )}
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </div>
   );
 };

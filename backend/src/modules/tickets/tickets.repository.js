@@ -286,4 +286,22 @@ const getAttachmentById = async (attachmentId) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, addHistory, getHistory, getComments, addComment, addRating, getOverdueTickets, getAttachments, addAttachment, removeAttachment, getAttachmentById };
+const getAttachmentsByTicketIds = async (ticketIds) => {
+  if (!ticketIds || ticketIds.length === 0) return {};
+  const result = await query(
+    `SELECT ta.*, u.name AS uploaded_by_name, u.surname AS uploaded_by_surname
+     FROM ticket_attachments ta
+     LEFT JOIN users u ON u.id = ta.uploaded_by
+     WHERE ta.ticket_id = ANY($1::uuid[])
+     ORDER BY ta.uploaded_at DESC`,
+    [ticketIds]
+  );
+  const grouped = {};
+  for (const row of result.rows) {
+    if (!grouped[row.ticket_id]) grouped[row.ticket_id] = [];
+    grouped[row.ticket_id].push(row);
+  }
+  return grouped;
+};
+
+export { findById, findAll, create, update, addHistory, getHistory, getComments, addComment, addRating, getOverdueTickets, getAttachments, addAttachment, removeAttachment, getAttachmentById, getAttachmentsByTicketIds };

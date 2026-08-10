@@ -10,8 +10,11 @@ const mockGetComments = jest.fn();
 const mockAddComment = jest.fn();
 const mockAddRating = jest.fn();
 const mockGetOverdueTickets = jest.fn();
+const mockGetAttachments = jest.fn();
+const mockGetAttachmentsByTicketIds = jest.fn();
 const mockFindTechnician = jest.fn();
 const mockQuery = jest.fn();
+const mockGetPresignedUrl = jest.fn();
 
 jest.unstable_mockModule('../modules/tickets/tickets.repository.js', () => ({
   findById: mockFindById,
@@ -24,6 +27,8 @@ jest.unstable_mockModule('../modules/tickets/tickets.repository.js', () => ({
   addComment: mockAddComment,
   addRating: mockAddRating,
   getOverdueTickets: mockGetOverdueTickets,
+  getAttachments: mockGetAttachments,
+  getAttachmentsByTicketIds: mockGetAttachmentsByTicketIds,
 }));
 
 jest.unstable_mockModule('../modules/technicians/technicians.repository.js', () => ({
@@ -32,6 +37,10 @@ jest.unstable_mockModule('../modules/technicians/technicians.repository.js', () 
 
 jest.unstable_mockModule('../db/connection.js', () => ({
   query: mockQuery,
+}));
+
+jest.unstable_mockModule('../shared/adapters/s3Adapter.js', () => ({
+  getPresignedUrl: mockGetPresignedUrl,
 }));
 
 const {
@@ -44,6 +53,9 @@ describe('Ticket Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockQuery.mockResolvedValue({ rows: [] });
+    mockGetAttachments.mockResolvedValue([]);
+    mockGetAttachmentsByTicketIds.mockResolvedValue({});
+    mockGetPresignedUrl.mockResolvedValue(null);
   });
 
   describe('list', () => {

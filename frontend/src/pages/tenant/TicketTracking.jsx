@@ -3,6 +3,7 @@ import { FaTicketAlt, FaSearch, FaEye, FaStar, FaHistory, FaBuilding, FaBox, FaU
 import { getSession } from '../../data/authStore';
 import { getAuditLogs, updateTicketRating, confirmTicketCompletion, refreshTickets as fetchTickets } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
 const TicketTracking = () => {
@@ -15,6 +16,7 @@ const TicketTracking = () => {
   const [selected, setSelected] = useState(null);
   const [rating, setRating] = useState({ ticketId: null, stars: 0, comment: '', hover: 0 });
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   const myTickets = useMemo(() => {
     if (!currentUserId) return [];
@@ -157,8 +159,8 @@ const TicketTracking = () => {
               <div className="section-title">Attachments</div>
               <div className="image-preview-grid">
                 {selected.images.map((img, idx) => (
-                  <div key={idx} className="image-preview" style={{ width: 80, height: 80 }}>
-                    <img src={img} alt="" />
+                  <div key={idx} className="image-preview" style={{ width: 80, height: 80, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                    <img src={img.data || img} alt="" />
                   </div>
                 ))}
               </div>
@@ -251,6 +253,7 @@ const TicketTracking = () => {
           </div>
         </div>
       )}
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

@@ -202,8 +202,8 @@ const Assignment = ({ refreshData, pmName }) => {
                   {t.images && t.images.length > 0 && (
                     <div className="ticket-images">
                       {t.images.slice(0, 3).map((img, idx) => (
-                        <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img)}>
-                          <img src={img} alt={t.title} />
+                        <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img.data || img)}>
+                          <img src={img.data || img} alt={t.title} />
                         </div>
                       ))}
                       {t.images.length > 3 && <span className="ticket-meta">+{t.images.length - 3} more</span>}

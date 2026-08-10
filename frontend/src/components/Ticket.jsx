@@ -5,11 +5,12 @@ import EmptyState from './common/EmptyState';
 import StatusBadge from './common/StatusBadge';
 import { createTicket, getUnits, getTickets, getEmergencyHint } from '../data/store';
 import { getSession } from '../data/authStore';
+import { TICKET_CATEGORIES } from '../data/categories';
 
 const Ticket = ({ currentUser, refreshData }) => {
   const [units, setUnits] = useState(getUnits());
   const [tickets, setTickets] = useState(getTickets());
-  const [form, setForm] = useState({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
+  const [form, setForm] = useState({ unitId: '', category: '', title: '', description: '', priority: 'MEDIUM' });
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [msg, setMsg] = useState({ text: '', type: '' });
@@ -59,6 +60,7 @@ const Ticket = ({ currentUser, refreshData }) => {
 
     const result = await createTicket(
       form.unitId,
+      form.category,
       form.title,
       form.description,
       form.priority,
@@ -78,7 +80,7 @@ const Ticket = ({ currentUser, refreshData }) => {
       setMsg({ text: result.error, type: 'error' });
     } else {
       setMsg({ text: `Ticket submitted successfully.`, type: 'success' });
-      setForm({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
+      setForm({ unitId: '', category: '', title: '', description: '', priority: 'MEDIUM' });
       setImages([]);
       setImagePreviews([]);
       setConfirmStep(false);
@@ -95,13 +97,14 @@ const Ticket = ({ currentUser, refreshData }) => {
   const validate = () => {
     const errs = {};
     if (!form.unitId) errs.unitId = 'Please select your unit.';
+    if (!form.category) errs.category = 'Please select a category.';
     if (!form.title || form.title.trim().length < 5) errs.title = 'Title must be at least 5 characters.';
     if (!form.description || form.description.trim().length < 20) errs.description = `${form.description.length}/20 characters minimum.`;
     return errs;
   };
 
   const validationErrors = validate();
-  const canProceed = !validationErrors.unitId && !validationErrors.title && !validationErrors.description;
+  const canProceed = !validationErrors.unitId && !validationErrors.category && !validationErrors.title && !validationErrors.description;
 
   const tenantUnits = useMemo(() => units.filter(u => u.status === 'OCCUPIED' && u.tenantName === currentUser), [units, currentUser]);
 
@@ -136,6 +139,7 @@ const Ticket = ({ currentUser, refreshData }) => {
               <table className="table" style={{ marginBottom: 12 }}>
                 <tbody>
                   <tr><td style={{ fontWeight: 600, width: 100 }}>Unit</td><td>{selectedUnitLabel ? `${selectedUnitLabel.propertyName} - Unit ${selectedUnitLabel.unitNumber}` : '—'}</td></tr>
+                  <tr><td style={{ fontWeight: 600 }}>Category</td><td>{form.category}</td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Title</td><td>{form.title}</td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${form.priority === 'URGENT' || form.priority === 'EMERGENCY' ? 'badge-danger' : form.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{form.priority}</span></td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Description</td><td><pre style={{ background: 'var(--surface2)', padding: 8, borderRadius: 4, fontSize: 12, whiteSpace: 'pre-wrap', margin: 0 }}>{form.description}</pre></td></tr>
@@ -168,6 +172,19 @@ const Ticket = ({ currentUser, refreshData }) => {
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   onBlur={() => setTouched(t => ({ ...t, title: true }))} />
                 {touched.title && validationErrors.title && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--danger)', marginTop: 3 }}>{validationErrors.title}</div>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Category</label>
+                <select className="form-select" value={form.category}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  onBlur={() => setTouched(t => ({ ...t, category: true }))}>
+                  <option value="">— Select a category —</option>
+                  {TICKET_CATEGORIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {touched.category && validationErrors.category && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--danger)', marginTop: 3 }}>{validationErrors.category}</div>}
               </div>
 
               <div className="form-group">

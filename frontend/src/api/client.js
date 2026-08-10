@@ -5,6 +5,10 @@ function getBaseUrl() {
   return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 }
 
+function getStaticOrigin() {
+  return getBaseUrl().replace(/\/api\/?$/, '');
+}
+
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -123,4 +127,4 @@ export async function api(endpoint, options = {}) {
   return result;
 }
 
-export { getToken, setToken, clearTokens, getRefreshToken, getBaseUrl, TOKEN_KEY, REFRESH_KEY };
+export { getToken, setToken, clearTokens, getRefreshToken, getBaseUrl, getStaticOrigin, TOKEN_KEY, REFRESH_KEY };

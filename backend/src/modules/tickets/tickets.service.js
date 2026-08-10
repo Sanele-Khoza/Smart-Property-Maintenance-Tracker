@@ -15,6 +15,7 @@ import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
+import { getPresignedUrl } from '../../shared/adapters/s3Adapter.js';
 import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,12 +93,27 @@ async function assertRoutingAllowed(ticket) {
   }
 }
 
+async function withAttachmentUrl(attachment) {
+  const presigned = await getPresignedUrl(attachment.file_key);
+  return { ...attachment, url: presigned || `/uploads/${attachment.file_key}` };
+}
+
+async function attachPhotos(tickets) {
+  const grouped = await repo.getAttachmentsByTicketIds(tickets.map(t => t.id));
+  await Promise.all(tickets.map(async (ticket) => {
+    const attachments = await Promise.all((grouped[ticket.id] || []).map(withAttachmentUrl));
+    ticket.attachments = attachments;
+  }));
+  return tickets;
+}
+
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
   const limit = parseInt(filters.limit) || 20;
   const offset = (page - 1) * limit;
   const queryFilters = { ...filters, limit, offset };
   const { tickets, total } = await repo.findAll(queryFilters);
+  await attachPhotos(tickets);
   const totalPages = Math.ceil(total / limit);
   return {
     success: true,
@@ -111,6 +127,8 @@ async function getById(id) {
   if (!ticket) throw AppError.notFound('Ticket not found');
   const history = await repo.getHistory(id);
   const comments = await repo.getComments(id);
+  const attachments = await repo.getAttachments(id);
+  ticket.attachments = await Promise.all(attachments.map(withAttachmentUrl));
   return { success: true, data: { ticket, history, comments } };
 }
 

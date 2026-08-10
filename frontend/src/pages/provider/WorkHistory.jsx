@@ -3,6 +3,7 @@ import { FaHistory, FaStar, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaCheckCir
 import { getSession } from '../../data/authStore';
 import { getTickets } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import ImageLightbox from '../../components/common/ImageLightbox';
 
 const WorkHistory = () => {
   const session = getSession();
@@ -11,6 +12,7 @@ const WorkHistory = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   const completedTickets = tickets.filter(t =>
     (t.assignedTo === providerName || (session && t.assignedToId === session.id)) &&
@@ -137,8 +139,8 @@ const WorkHistory = () => {
                               <strong>Completion Photos:</strong>
                               <div className="image-preview-grid" style={{ marginTop: 4 }}>
                                 {t.images.map((img, idx) => (
-                                  <div key={idx} className="image-preview" style={{ width: 64, height: 64 }}>
-                                    <img src={img} alt={`Job photo ${idx + 1}`} />
+                                  <div key={idx} className="image-preview" style={{ width: 64, height: 64, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                                    <img src={img.data || img} alt={`Job photo ${idx + 1}`} />
                                   </div>
                                 ))}
                               </div>
@@ -154,6 +156,7 @@ const WorkHistory = () => {
           </div>
         )}
       </div>
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

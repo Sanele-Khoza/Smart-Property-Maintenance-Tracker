@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser } from 'react-icons/fa';
-import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
+import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
+import { TICKET_CATEGORIES } from '../../data/categories';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
+import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
 const STATUS_STYLES = {
@@ -67,7 +69,6 @@ const Tickets = () => {
   const [allTickets, refreshTickets] = useTickets();
   const tickets = useMemo(() => allTickets.filter(t => propNames.has(t.propertyName)) , [allTickets, propNames]);
   const [providers] = useState(getProviders);
-  const [categories] = useState(getCategories());
   const [auditLogs] = useState(getAuditLogs());
   const [inferenceLogs] = useState(getInferenceLogs());
   const [alert, setAlert] = useState({ msg: '', type: '' });
@@ -85,6 +86,7 @@ const Tickets = () => {
   const [reopenError, setReopenError] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(null);
   const [categoryValue, setCategoryValue] = useState('');
+  const [lightboxImg, setLightboxImg] = useState(null);
   const [confirmTransition, setConfirmTransition] = useState(null);
 
   useEffect(() => {
@@ -313,17 +315,19 @@ const Tickets = () => {
         </div>
       </div>
 
-      {showReassign && (
+      {showReassign && (() => {
+        const liveTicket = tickets.find(t => t.ticketId === showReassign.ticketId) || showReassign;
+        return (
         <div className="modal" onClick={() => setShowReassign(null)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="edit-modal-header"><span><FaUserCheck /> Reassign</span><button className="modal-close-btn" onClick={() => setShowReassign(null)}><FaTimes /></button></div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Routing Recommendations <span className="req-ref">REQ-033-035</span></div>
               {(() => {
-                const recs = getRoutingRecommendations(showReassign, technicians);
+                const recs = getRoutingRecommendations(liveTicket, technicians);
                 if (recs.length === 0) {
                   return <div className="alert alert-warning" style={{ fontSize: 11, padding: '8px 10px' }}>
-                    <FaExclamationTriangle style={{ marginRight: 4 }} />No eligible providers match the category '{showReassign.category}'. No available provider has this specialisation. Select manually from the full list below.
+                    <FaExclamationTriangle style={{ marginRight: 4 }} />No eligible providers match the category '{liveTicket.category}'. No available provider has this specialisation. Select manually from the full list below.
                   </div>;
                 }
                 return recs.map(t => (
@@ -369,7 +373,8 @@ const Tickets = () => {
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {showReopen && (
         <div className="modal" onClick={() => setShowReopen(null)}>
@@ -390,7 +395,7 @@ const Tickets = () => {
             <div className="edit-modal-header"><span><FaTag /> Override Category</span><button className="modal-close-btn" onClick={() => setShowCategoryModal(null)}><FaTimes /></button></div>
             <form onSubmit={handleCategoryOverride}>
               {showCategoryModal.aiOriginalCategory && showCategoryModal.aiOriginalCategory !== categoryValue && <p style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 8 }}><FaExclamationTriangle style={{ marginRight: 4 }} />AI originally: <strong>{showCategoryModal.aiOriginalCategory}</strong>. Override logged (BR-006).</p>}
-              <div className="form-group"><label>New Category</label><select className="form-select" value={categoryValue} onChange={e => setCategoryValue(e.target.value)} required>{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
+              <div className="form-group"><label>New Category</label><select className="form-select" value={categoryValue} onChange={e => setCategoryValue(e.target.value)} required>{TICKET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
               <div className="form-actions"><button type="button" className="btn btn-secondary" onClick={() => setShowCategoryModal(null)}>Cancel</button><button type="submit" className="btn btn-primary"><FaCheck /> Save Override</button></div>
             </form>
           </div>
@@ -442,7 +447,7 @@ const Tickets = () => {
                   <div style={{ marginBottom: 12 }}>
                     <strong style={{ fontSize: 11 }}>Attachments ({t.images.length})</strong>
                     <div className="image-preview-grid" style={{ marginTop: 4 }}>
-                      {t.images.map((img, idx) => <div key={idx} className="image-preview" style={{ width: 72, height: 72 }}><img src={img.data || img} alt={`Attachment ${idx + 1}`} /></div>)}
+                      {t.images.map((img, idx) => <div key={idx} className="image-preview" style={{ width: 72, height: 72, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}><img src={img.data || img} alt={`Attachment ${idx + 1}`} /></div>)}
                     </div>
                   </div>
                 )}
@@ -471,6 +476,7 @@ const Tickets = () => {
           </div>
         );
       })()}
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { FaTicketAlt, FaSearch, FaCheck, FaTimes, FaPlay, FaPause, FaWrench, FaB
 import { getSession } from '../../data/authStore';
 import { acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
 const STATUS_TABS = ['all', 'Assigned', 'Accepted', 'In Progress', 'Waiting for Parts', 'Completed'];
@@ -15,6 +16,7 @@ const MyJobs = ({ onViewDetails }) => {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
@@ -136,8 +138,8 @@ const MyJobs = ({ onViewDetails }) => {
                               <strong>Attachments:</strong>
                               <div className="image-preview-grid" style={{ marginTop: 4 }}>
                                 {t.images.map((img, idx) => (
-                                  <div key={idx} className="image-preview" style={{ width: 60, height: 60 }}>
-                                    <img src={img} alt="" />
+                                  <div key={idx} className="image-preview" style={{ width: 60, height: 60, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                                    <img src={img.data || img} alt="" />
                                   </div>
                                 ))}
                               </div>
@@ -153,6 +155,7 @@ const MyJobs = ({ onViewDetails }) => {
           </div>
         )}
       </div>
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

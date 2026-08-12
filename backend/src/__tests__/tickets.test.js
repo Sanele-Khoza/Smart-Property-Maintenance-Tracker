@@ -45,6 +45,7 @@ jest.unstable_mockModule('../db/connection.js', () => ({
 
 jest.unstable_mockModule('../shared/adapters/s3Adapter.js', () => ({
   getPresignedUrl: mockGetPresignedUrl,
+  isS3Healthy: jest.fn().mockResolvedValue(true),
 }));
 
 const {

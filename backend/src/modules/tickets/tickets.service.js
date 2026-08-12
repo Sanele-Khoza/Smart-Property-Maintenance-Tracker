@@ -15,9 +15,8 @@ import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
-import { getPresignedUrl } from '../../shared/adapters/s3Adapter.js';
+import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
-import { isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);

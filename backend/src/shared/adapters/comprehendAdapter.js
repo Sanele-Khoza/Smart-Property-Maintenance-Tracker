@@ -9,7 +9,7 @@ let client = null;
 function getClient() {
   if (!client) {
     client = new ComprehendClient({
-      region: config.aws.region,
+      region: config.aws.comprehendRegion,
       credentials: config.aws.accessKeyId && config.aws.secretAccessKey
         ? { accessKeyId: config.aws.accessKeyId, secretAccessKey: config.aws.secretAccessKey }
         : undefined,

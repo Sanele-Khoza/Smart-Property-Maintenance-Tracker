@@ -60,6 +60,7 @@ async function findDuplicates(ticketId, unitId) {
      WHERE unit_id = $1
        AND id != $2
        AND created_at >= $3
+       AND deleted_at IS NULL
        AND status NOT IN ('Cancelled', 'Archived')
      ORDER BY created_at DESC
      LIMIT 20`,
@@ -121,6 +122,7 @@ async function checkForDuplicate(unitId, title, description, excludeId = null) {
      WHERE unit_id = $1
        AND created_at >= $2
        ${excludeClause}
+       AND deleted_at IS NULL
        AND status NOT IN ('Cancelled', 'Archived')
      ORDER BY created_at DESC
      LIMIT 20`,

@@ -1,10 +1,11 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import config from '../../config/index.js';
 import logger from '../utils/logger.js';
 import { withRetry, isAwsEnabled } from './retry.js';
 
 let client = null;
+let s3Healthy = null;
 
 function getClient() {
   if (!client) {
@@ -65,4 +66,20 @@ async function deleteFile(key, bucket) {
   return result.success;
 }
 
-export { uploadFile, getPresignedUrl, deleteFile };
+async function isS3Healthy() {
+  if (s3Healthy !== null) return s3Healthy;
+  if (!isAwsEnabled()) {
+    s3Healthy = false;
+    return s3Healthy;
+  }
+  try {
+    await getClient().send(new ListBucketsCommand({}));
+    s3Healthy = true;
+  } catch (err) {
+    logger.warn('S3 health check failed, falling back to local uploads:', err.message);
+    s3Healthy = false;
+  }
+  return s3Healthy;
+}
+
+export { uploadFile, getPresignedUrl, deleteFile, isS3Healthy };

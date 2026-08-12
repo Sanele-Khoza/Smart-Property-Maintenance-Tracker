@@ -61,8 +61,9 @@ async function moderateUpload(req, res, next) {
 
     if (config.aws.enabled) {
       const key = req.file.originalname ? `${uuidv4()}-${req.file.originalname}` : `${uuidv4()}`;
-      await uploadS3(buffer, key, req.file.mimetype);
       req.file.filename = key;
+      await fs.writeFile(path.join(LOCAL_UPLOAD_DIR, key), buffer).catch(() => {});
+      await uploadS3(buffer, key, req.file.mimetype).catch((err) => console.warn('S3 upload failed:', err.message));
     }
 
     req.moderated = result;

@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaShieldAlt, FaUsers, FaUserClock, FaTicketAlt, FaExclamationCircle, FaHistory, FaUserCheck, FaBolt, FaCog, FaClipboardList } from 'react-icons/fa';
 import { getTickets, getNotifications, getAuditLogs } from '../../data/store';
 import { getUsers } from '../../data/authStore';
 
 const Overview = () => {
+  const [, setVersion] = useState(0);
+  useEffect(() => {
+    const onUsersUpdated = () => setVersion(v => v + 1);
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => window.removeEventListener('spmt:users-updated', onUsersUpdated);
+  }, []);
   const users = getUsers();
   const tickets = getTickets();
   const notifications = getNotifications();

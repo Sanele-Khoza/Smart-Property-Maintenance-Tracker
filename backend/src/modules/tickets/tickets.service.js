@@ -15,6 +15,9 @@ import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
+import { getPresignedUrl } from '../../shared/adapters/s3Adapter.js';
+import { isAwsEnabled } from '../../shared/adapters/retry.js';
+import { isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,12 +95,41 @@ async function assertRoutingAllowed(ticket) {
   }
 }
 
+async function attachPhotoData(tickets) {
+  if (!tickets || tickets.length === 0) return tickets;
+
+  const attachments = await repo.getAttachmentsForTickets(tickets.map((t) => t.id));
+  const byTicket = new Map();
+  for (const att of attachments) {
+    if (!att.file_type?.startsWith('image/')) continue;
+    if (!byTicket.has(att.ticket_id)) byTicket.set(att.ticket_id, []);
+    byTicket.get(att.ticket_id).push(att);
+  }
+
+  await Promise.all(tickets.map(async (t) => {
+    const atts = byTicket.get(t.id) || [];
+    t.attachments = atts;
+    t.photoUrls = (await Promise.all(atts.map(async (att) => {
+      if (!isAwsEnabled() || !(await isS3Healthy())) return `/uploads/${att.file_key}`;
+      try {
+        return await getPresignedUrl(att.file_key, undefined, config.aws.s3.presignedUrlTtlImages);
+      } catch (err) {
+        console.warn('Presign failed:', err.message);
+        return `/uploads/${att.file_key}`;
+      }
+    }))).filter(Boolean);
+  }));
+
+  return tickets;
+}
+
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
   const limit = parseInt(filters.limit) || 20;
   const offset = (page - 1) * limit;
   const queryFilters = { ...filters, limit, offset };
   const { tickets, total } = await repo.findAll(queryFilters);
+  await attachPhotoData(tickets);
   const totalPages = Math.ceil(total / limit);
   return {
     success: true,
@@ -111,7 +143,8 @@ async function getById(id) {
   if (!ticket) throw AppError.notFound('Ticket not found');
   const history = await repo.getHistory(id);
   const comments = await repo.getComments(id);
-  return { success: true, data: { ticket, history, comments } };
+  const [withPhotos] = await attachPhotoData([ticket]);
+  return { success: true, data: { ticket: withPhotos, history, comments } };
 }
 
 async function runAiPipeline(ticketId) {
@@ -511,10 +544,29 @@ async function checkSla(id) {
   return { success: true, data: { sla } };
 }
 
+async function softDelete(id, userId, userName) {
+  const ticket = await repo.findById(id);
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  const updated = await repo.softDelete(id, userId);
+  await repo.addHistory(id, ticket.status, userId, userName, 'Ticket moved to trash');
+  await auditLog(id, 'trashed', userId, userName, { title: ticket.title });
+  return { success: true, message: 'Ticket moved to trash', data: { ticket: updated } };
+}
+
+async function restore(id, userId, userName) {
+  const ticket = await repo.findByIdIncludingDeleted(id);
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  if (!ticket.deleted_at) throw AppError.badRequest('Ticket is not in trash');
+  const updated = await repo.restore(id);
+  await repo.addHistory(id, updated.status, userId, userName, 'Ticket restored from trash');
+  await auditLog(id, 'restored', userId, userName, { title: updated.title });
+  return { success: true, message: 'Ticket restored from trash', data: { ticket: updated } };
+}
+
 export {
   list, getById, create, update, changeStatus, assign, complete, reopen, rate,
   classifyTicket, confirmLowConfidence, overrideAiLabel, downgradeVisualEmergency,
-  getTopProviders, checkSla,
+  getTopProviders, checkSla, softDelete, restore,
   markAiClassified, acceptTicket, startWork, markWaitingParts, markPartsReceived,
   tenantConfirm, closeTicket, runAiPipeline,
 };

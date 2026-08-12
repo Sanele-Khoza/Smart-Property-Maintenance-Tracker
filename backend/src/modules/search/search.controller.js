@@ -18,8 +18,9 @@ const search = async (req, res, next) => {
         `SELECT id, title, status, priority, category, created_at,
                 ts_rank(to_tsvector('english', title || ' ' || description), to_tsquery('english', $2)) AS rank
          FROM tickets
-         WHERE to_tsvector('english', title || ' ' || description) @@ to_tsquery('english', $2)
-            OR title ILIKE $1 OR description ILIKE $1
+         WHERE deleted_at IS NULL
+            AND (to_tsvector('english', title || ' ' || description) @@ to_tsquery('english', $2)
+            OR title ILIKE $1 OR description ILIKE $1)
          ORDER BY rank DESC NULLS LAST
          LIMIT 10`,
         [likeTerm, tsQuery]

@@ -10,6 +10,10 @@ const mockGetComments = jest.fn();
 const mockAddComment = jest.fn();
 const mockAddRating = jest.fn();
 const mockGetOverdueTickets = jest.fn();
+const mockGetAttachmentsForTickets = jest.fn();
+const mockFindByIdIncludingDeleted = jest.fn();
+const mockSoftDelete = jest.fn();
+const mockRestore = jest.fn();
 const mockFindTechnician = jest.fn();
 const mockQuery = jest.fn();
 
@@ -24,6 +28,10 @@ jest.unstable_mockModule('../modules/tickets/tickets.repository.js', () => ({
   addComment: mockAddComment,
   addRating: mockAddRating,
   getOverdueTickets: mockGetOverdueTickets,
+  getAttachmentsForTickets: mockGetAttachmentsForTickets,
+  findByIdIncludingDeleted: mockFindByIdIncludingDeleted,
+  softDelete: mockSoftDelete,
+  restore: mockRestore,
 }));
 
 jest.unstable_mockModule('../modules/technicians/technicians.repository.js', () => ({
@@ -37,13 +45,14 @@ jest.unstable_mockModule('../db/connection.js', () => ({
 const {
   list, getById, create, assign, complete, reopen, rate,
   acceptTicket, startWork, markWaitingParts, markPartsReceived,
-  tenantConfirm, closeTicket,
+  tenantConfirm, closeTicket, softDelete, restore,
 } = await import('../modules/tickets/tickets.service.js');
 
 describe('Ticket Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockQuery.mockResolvedValue({ rows: [] });
+    mockGetAttachmentsForTickets.mockResolvedValue([]);
   });
 
   describe('list', () => {
@@ -129,6 +138,37 @@ describe('Ticket Service', () => {
       mockFindById.mockResolvedValue({ id: 1, status: 'Completed', tenant_id: 1 });
 
       await expect(rate(1, 2, 5, 'Nope')).rejects.toThrow('Only the ticket creator can rate');
+    });
+  });
+
+  describe('softDelete / restore', () => {
+    it('should move a ticket to trash', async () => {
+      mockFindById.mockResolvedValue({ id: 1, status: 'In Progress', title: 'Leak' });
+      mockSoftDelete.mockResolvedValue({ id: 1, deleted_at: new Date().toISOString() });
+
+      const result = await softDelete(1, 2, 'Jane Doe');
+      expect(mockSoftDelete).toHaveBeenCalledWith(1, 2);
+      expect(result.message).toContain('trash');
+      expect(mockAddHistory).toHaveBeenCalledWith(1, 'In Progress', 2, 'Jane Doe', 'Ticket moved to trash');
+    });
+
+    it('should throw not found when deleting a missing ticket', async () => {
+      mockFindById.mockResolvedValue(null);
+      await expect(softDelete(999, 2, 'Jane')).rejects.toThrow('Ticket not found');
+    });
+
+    it('should restore a trashed ticket', async () => {
+      mockFindByIdIncludingDeleted.mockResolvedValue({ id: 1, status: 'In Progress', deleted_at: new Date().toISOString() });
+      mockRestore.mockResolvedValue({ id: 1, status: 'In Progress', deleted_at: null });
+
+      const result = await restore(1, 2, 'Jane Doe');
+      expect(result.message).toContain('restored');
+      expect(mockRestore).toHaveBeenCalledWith(1);
+    });
+
+    it('should reject restoring a ticket not in trash', async () => {
+      mockFindByIdIncludingDeleted.mockResolvedValue({ id: 1, status: 'In Progress', deleted_at: null });
+      await expect(restore(1, 2, 'Jane')).rejects.toThrow('Ticket is not in trash');
     });
   });
 });

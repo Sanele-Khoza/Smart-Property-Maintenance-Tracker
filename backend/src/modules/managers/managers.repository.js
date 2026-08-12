@@ -12,6 +12,7 @@ const getTickets = async (filters = {}) => {
   const conditions = [];
   const params = [];
   let idx = 1;
+  conditions.push('t.deleted_at IS NULL');
   if (filters.status) {
     conditions.push(`t.status = $${idx++}`);
     params.push(filters.status);
@@ -23,13 +24,12 @@ const getTickets = async (filters = {}) => {
   const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
   const result = await query(
     `SELECT t.*, p.name AS property_name, u.unit_number,
-            c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+            t.category AS category_name
      FROM tickets t
-     LEFT JOIN properties p ON p.id = t.property_id
      LEFT JOIN units u ON u.id = t.unit_id
-     LEFT JOIN categories c ON c.id = t.category_id
+     LEFT JOIN properties p ON p.id = u.property_id
      ${whereClause}
-     ORDER BY t.created_by_date DESC`,
+     ORDER BY t.created_at DESC`,
     params
   );
   return result.rows;
@@ -37,12 +37,12 @@ const getTickets = async (filters = {}) => {
 
 const getReportsSummary = async () => {
   const [openTickets, completedTickets, overdueTickets, totalProperties, totalUnits, availableTechs] = await Promise.all([
-    query("SELECT COUNT(*)::int AS count FROM tickets WHERE status NOT IN ('Completed', 'Cancelled', 'Archived')").then(r => r.rows[0].count),
-    query("SELECT COUNT(*)::int AS count FROM tickets WHERE status = 'Completed'").then(r => r.rows[0].count),
-    query("SELECT COUNT(*)::int AS count FROM tickets WHERE status NOT IN ('Completed', 'Cancelled', 'Archived') AND due_date < NOW()").then(r => r.rows[0].count),
+    query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived')").then(r => r.rows[0].count),
+    query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status = 'Completed'").then(r => r.rows[0].count),
+    query("SELECT COUNT(*)::int AS count FROM tickets WHERE deleted_at IS NULL AND status NOT IN ('Completed', 'Cancelled', 'Archived') AND due_date < NOW()").then(r => r.rows[0].count),
     query('SELECT COUNT(*)::int AS count FROM properties').then(r => r.rows[0].count),
     query('SELECT COUNT(*)::int AS count FROM units').then(r => r.rows[0].count),
-    query("SELECT COUNT(*)::int AS count FROM technicians WHERE availability_status IN ('AVAILABLE', 'ON_CALL')").then(r => r.rows[0].count),
+    query("SELECT COUNT(*)::int AS count FROM service_providers WHERE status IN ('AVAILABLE', 'ON_CALL')").then(r => r.rows[0].count),
   ]);
   return { openTickets, completedTickets, overdueTickets, totalProperties, totalUnits, availableTechnicians: availableTechs };
 };

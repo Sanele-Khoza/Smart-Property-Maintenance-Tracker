@@ -123,4 +123,4 @@ export async function api(endpoint, options = {}) {
   return result;
 }
 
-export { getToken, setToken, clearTokens, getRefreshToken, TOKEN_KEY, REFRESH_KEY };
+export { getToken, setToken, clearTokens, getRefreshToken, getBaseUrl, TOKEN_KEY, REFRESH_KEY };

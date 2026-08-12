@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser } from 'react-icons/fa';
-import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians } from '../../data/store';
+import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser, FaTrash } from 'react-icons/fa';
+import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians, trashTicket, restoreTicket, getTrashTickets } from '../../data/store';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
 import Alert from '../../components/common/Alert';
@@ -86,6 +86,40 @@ const Tickets = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(null);
   const [categoryValue, setCategoryValue] = useState('');
   const [confirmTransition, setConfirmTransition] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashTickets, setTrashTickets] = useState([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+
+  const openTrash = async () => {
+    setShowTrash(true);
+    setLoadingTrash(true);
+    setTrashTickets(await getTrashTickets());
+    setLoadingTrash(false);
+  };
+
+  const handleDelete = async (ticket) => {
+    const r = await trashTicket(ticket.ticketId);
+    if (r.success) {
+      showAlert('Ticket moved to trash.', 'success');
+      setConfirmDelete(null);
+      refreshTickets();
+    } else {
+      showAlert(r.error, 'error');
+      setConfirmDelete(null);
+    }
+  };
+
+  const handleRestore = async (ticket) => {
+    const r = await restoreTicket(ticket.ticketId);
+    if (r.success) {
+      showAlert('Ticket restored from trash.', 'success');
+      setTrashTickets(await getTrashTickets());
+      refreshTickets();
+    } else {
+      showAlert(r.error, 'error');
+    }
+  };
 
   useEffect(() => {
     const handleSlaBreach = () => refreshTickets();
@@ -235,6 +269,7 @@ const Tickets = () => {
               <option value="">All Priority</option>
               <option value="URGENT">URGENT</option><option value="HIGH">HIGH</option><option value="MEDIUM">MEDIUM</option><option value="LOW">LOW</option>
             </select>
+            <button className="btn btn-secondary btn-sm" onClick={openTrash} title="Trash" style={{ fontSize: 11 }}><FaTrash /> Trash</button>
           </div>
         </div>
         {/* Tabs */}
@@ -302,6 +337,7 @@ const Tickets = () => {
                             {tc.includes('Reopened') && <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowReopen(t); setReopenText(''); setReopenError(''); }} style={{ fontSize: 9, padding: '2px 5px' }}><FaUndo /> Reopen</button>}
                             {canAssign && <button className="btn btn-teal btn-sm" onClick={(e) => { e.stopPropagation(); setShowReassign(t); setReassignProvider(''); }}><FaUserCheck /></button>}
                             <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowCategoryModal(t); setCategoryValue(t.category || ''); }}><FaTag /></button>
+                            <button className="btn btn-danger btn-sm" onClick={(e) => { e.stopPropagation(); setConfirmDelete(t); }} title="Move to trash"><FaTrash /></button>
                           </div>
                         </td>
                       </tr>
@@ -393,6 +429,54 @@ const Tickets = () => {
               <div className="form-group"><label>New Category</label><select className="form-select" value={categoryValue} onChange={e => setCategoryValue(e.target.value)} required>{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
               <div className="form-actions"><button type="button" className="btn btn-secondary" onClick={() => setShowCategoryModal(null)}>Cancel</button><button type="submit" className="btn btn-primary"><FaCheck /> Save Override</button></div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal" onClick={() => setConfirmDelete(null)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()}>
+            <div className="edit-modal-header"><span><FaTrash /> Move to Trash</span><button className="modal-close-btn" onClick={() => setConfirmDelete(null)}><FaTimes /></button></div>
+            <p style={{ fontSize: 13 }}>Move ticket <strong>{confirmDelete.title}</strong> ({confirmDelete.ticketId}) to trash?</p>
+            <p style={{ fontSize: 11, color: 'var(--text-dim)' }}>It can be restored later from the Trash view.</p>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => handleDelete(confirmDelete)}><FaTrash /> Move to Trash</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTrash && (
+        <div className="modal" onClick={() => setShowTrash(false)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '92vw' }}>
+            <div className="edit-modal-header"><span><FaTrash /> Ticket Trash</span><button className="modal-close-btn" onClick={() => setShowTrash(false)}><FaTimes /></button></div>
+            <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+              {loadingTrash ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Loading...</p>
+              ) : trashTickets.length === 0 ? (
+                <p className="empty-text" style={{ padding: 24, textAlign: 'center' }}>Trash is empty.</p>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr><th>Title</th><th>Status</th><th>Priority</th><th>Deleted</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody>
+                    {trashTickets.map(t => (
+                      <tr key={t.ticketId}>
+                        <td style={{ fontSize: 12 }}>{t.title}</td>
+                        <td style={{ fontSize: 12 }}>{t.status}</td>
+                        <td style={{ fontSize: 12 }}>{t.priority}</td>
+                        <td style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.deletedAt || '—'}</td>
+                        <td>
+                          <button className="btn btn-teal btn-sm" onClick={() => handleRestore(t)} title="Restore" style={{ fontSize: 9, padding: '2px 6px' }}><FaUndo /> Restore</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}

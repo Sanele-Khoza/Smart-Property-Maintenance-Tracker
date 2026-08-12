@@ -57,6 +57,10 @@ export const registerUser = async (userData) => {
         password: userData.password,
         role: userData.role,
         phone: userData.phone || '',
+        ...(userData.role === 'SERVICE_PROVIDER' ? {
+          companyName: userData.companyName,
+          specialisations: userData.specialisations,
+        } : {}),
       },
     });
     if (result.success && result.data) {

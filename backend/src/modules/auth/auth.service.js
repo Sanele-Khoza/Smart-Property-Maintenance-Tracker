@@ -6,6 +6,7 @@ import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendEmail } from '../../shared/adapters/sesAdapter.js';
+import { create as createServiceProvider } from '../technicians/technicians.repository.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
@@ -41,7 +42,7 @@ function buildUserPayload(user) {
   };
 }
 
-async function register({ name, surname, email, password, role, phone }, ipAddress) {
+async function register({ name, surname, email, password, role, phone, companyName, specialisations }, ipAddress) {
   const existing = await repo.findByEmail(email);
   if (existing) throw AppError.conflict('Email already registered');
 
@@ -52,6 +53,16 @@ async function register({ name, surname, email, password, role, phone }, ipAddre
   const user = await repo.create({
     name, surname, email, phone, passwordHash, role, status, approved,
   });
+
+  if (role === 'SERVICE_PROVIDER') {
+    await createServiceProvider({
+      name: `${name} ${surname}`,
+      companyName,
+      email,
+      phone,
+      specialisations,
+    });
+  }
 
   const accessToken = signJwt(user);
   const refreshToken = generateRefreshToken();

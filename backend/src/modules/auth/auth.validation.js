@@ -21,6 +21,25 @@ const registerSchema = z.object({
   password: passwordSchema,
   role: z.enum(['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER']),
   phone: z.string().max(PHONE_MAX).optional().nullable(),
+  companyName: z.string().trim().max(150).optional(),
+  specialisations: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  if (data.role === 'SERVICE_PROVIDER') {
+    if (!data.companyName || data.companyName.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['companyName'],
+        message: 'Company name is required for service providers',
+      });
+    }
+    if (!data.specialisations || data.specialisations.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['specialisations'],
+        message: 'At least one specialisation is required for service providers',
+      });
+    }
+  }
 });
 
 const loginSchema = z.object({

@@ -9,17 +9,17 @@ async function getUsers(filters) {
 }
 
 async function approveUser(id) {
-  await repo.approveUser(Number(id));
+  await repo.approveUser(id);
   return { success: true, message: 'User approved' };
 }
 
 async function deactivateUser(id) {
-  await repo.setAccountStatus(Number(id), 'DEACTIVATED');
+  await repo.setAccountStatus(id, 'DEACTIVATED');
   return { success: true, message: 'User deactivated' };
 }
 
 async function reactivateUser(id) {
-  await repo.setAccountStatus(Number(id), 'ACTIVE');
+  await repo.setAccountStatus(id, 'ACTIVE');
   return { success: true, message: 'User reactivated' };
 }
 
@@ -27,12 +27,12 @@ async function changeRole(id, role) {
   if (!role || !VALID_ROLES.includes(role)) {
     throw AppError.badRequest('Invalid role');
   }
-  await repo.changeRole(Number(id), role);
+  await repo.changeRole(id, role);
   return { success: true, message: 'Role updated' };
 }
 
 async function unlockUserSvc(id) {
-  await repo.unlockUser(Number(id));
+  await repo.unlockUser(id);
   return { success: true, message: 'User unlocked' };
 }
 

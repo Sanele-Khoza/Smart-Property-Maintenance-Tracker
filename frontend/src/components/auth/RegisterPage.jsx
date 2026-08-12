@@ -9,10 +9,15 @@ const ROLE_OPTIONS = [
   { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
 ];
 
+const SPECIALISATION_OPTIONS = [
+  'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry', 'Tiling', 'Solar',
+];
+
 const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   const [form, setForm] = useState({
     name: '', surname: '', age: '', email: '', phone: '',
     idNumber: '', password: '', confirmPassword: '', role: '',
+    companyName: '', specialisations: [],
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -21,6 +26,15 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSpecialisationToggle = (spec) => {
+    setForm(f => ({
+      ...f,
+      specialisations: f.specialisations.includes(spec)
+        ? f.specialisations.filter(s => s !== spec)
+        : [...f.specialisations, spec],
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -47,6 +61,17 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
+    if (form.role === 'SERVICE_PROVIDER') {
+      if (!form.companyName || form.companyName.trim().length === 0) {
+        setError('Company name is required for service providers.');
+        return;
+      }
+      if (!form.specialisations || form.specialisations.length === 0) {
+        setError('Please select at least one specialisation.');
+        return;
+      }
+    }
+
     const result = await registerUser({
       name: form.name,
       surname: form.surname,
@@ -56,6 +81,10 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       idNumber: form.idNumber,
       password: form.password,
       role: form.role,
+      ...(form.role === 'SERVICE_PROVIDER' ? {
+        companyName: form.companyName,
+        specialisations: form.specialisations,
+      } : {}),
     });
 
     if (result.success) {
@@ -65,6 +94,7 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       setForm({
         name: '', surname: '', age: '', email: '', phone: '',
         idNumber: '', password: '', confirmPassword: '', role: '',
+        companyName: '', specialisations: [],
       });
     } else {
       setError(result.error);
@@ -130,6 +160,45 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
               ))}
             </select>
           </div>
+
+          {form.role === 'SERVICE_PROVIDER' && (
+            <>
+              <div className="form-group">
+                <label className="form-label" htmlFor="reg-company">Company Name</label>
+                <input className="form-input" type="text" name="companyName" id="reg-company" value={form.companyName} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Specialisations</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {SPECIALISATION_OPTIONS.map(spec => (
+                    <label
+                      key={spec}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: 12, fontFamily: 'var(--font-body)',
+                        border: '1px solid var(--border)', borderRadius: 6,
+                        padding: '4px 10px', cursor: 'pointer',
+                        background: form.specialisations.includes(spec) ? 'rgba(0,201,167,0.12)' : 'transparent',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.specialisations.includes(spec)}
+                        onChange={() => handleSpecialisationToggle(spec)}
+                      />
+                      {spec}
+                    </label>
+                  ))}
+                </div>
+                {form.specialisations.length === 0 && (
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+                    Select at least one specialisation.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
             System Administrator accounts are provisioned by an existing admin only.
           </p>

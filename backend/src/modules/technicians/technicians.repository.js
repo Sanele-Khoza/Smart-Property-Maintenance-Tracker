@@ -33,7 +33,7 @@ const create = async (data) => {
   const result = await query(
     `INSERT INTO service_providers (name, company_name, email, phone, specialisations)
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.name, data.companyName || null, data.email || null, data.phone || null, JSON.stringify(data.specialisations || [])]
+    [data.name, data.companyName || null, data.email || null, data.phone || null, data.specialisations || []]
   );
   return result.rows[0];
 };

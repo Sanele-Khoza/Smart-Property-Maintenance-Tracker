@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaShieldAlt, FaUserTag, FaCheck, FaTimes, FaSearch, FaChevronDown, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
 import { getUsers, updateUser } from '../../data/authStore';
 
@@ -106,6 +106,12 @@ const Roles = () => {
   const [message, setMessage] = useState(null);
 
   const refreshUsers = () => setUsers([...getUsers()]);
+
+  useEffect(() => {
+    const onUsersUpdated = () => setUsers([...getUsers()]);
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => window.removeEventListener('spmt:users-updated', onUsersUpdated);
+  }, []);
 
   const handleRoleChange = (userId, newRole) => {
     setChangingRoles(p => ({ ...p, [userId]: newRole }));

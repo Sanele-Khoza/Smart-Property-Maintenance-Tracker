@@ -50,7 +50,7 @@ const getTickets = async (req, res, next) => {
       `SELECT t.*, u.unit_number
        FROM tickets t
        JOIN units u ON u.id = t.unit_id
-       WHERE u.property_id = $1
+       WHERE u.property_id = $1 AND t.deleted_at IS NULL
        ORDER BY t.created_at DESC`,
       [req.params.id]
     );

@@ -2,14 +2,12 @@ import { query } from '../../db/connection.js';
 
 const findTicketsByTenant = async (tenantId) => {
   const result = await query(
-    `SELECT t.*, u.unit_number, p.name AS property_name,
-            c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+    `SELECT t.*, u.unit_number, p.name AS property_name
      FROM tickets t
      LEFT JOIN units u ON u.id = t.unit_id
-     LEFT JOIN properties p ON p.id = t.property_id
-     LEFT JOIN categories c ON c.id = t.category_id
-     WHERE t.tenant_id = $1
-     ORDER BY t.created_by_date DESC`,
+     LEFT JOIN properties p ON p.id = u.property_id
+     WHERE t.tenant_id = $1 AND t.deleted_at IS NULL
+     ORDER BY t.created_at DESC`,
     [tenantId]
   );
   return result.rows;

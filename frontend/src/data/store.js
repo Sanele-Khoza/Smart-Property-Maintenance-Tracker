@@ -14,6 +14,7 @@ export {
   confirmTicketCompletion, closeTicket,
   getTicketsByStatus, getOpenTickets, getTicketsByProvider,
   getStats, refreshTickets, TICKET_TRANSITIONS, PRIORITY_ORDER,
+  trashTicket, restoreTicket, getTrashTickets,
 } from './ticketStore';
 
 export {

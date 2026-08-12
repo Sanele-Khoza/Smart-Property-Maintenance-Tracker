@@ -6,6 +6,7 @@ const createTicketSchema = z.object({
   property_id: z.string().min(1).optional().nullable(),
   unit_id: z.string().min(1).optional().nullable(),
   category_id: z.string().min(1).optional().nullable(),
+  category: z.string().trim().min(1).optional().nullable(),
   title: z.string().trim().min(1, 'Title is required').max(300),
   description: z.string().trim().min(1, 'Description is required'),
   priority: z.enum(PRIORITIES).optional(),

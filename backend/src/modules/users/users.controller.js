@@ -1,5 +1,10 @@
 import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
+import { notifyUserStatusChange } from '../../shared/utils/notifyUser.js';
+
+function getIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+}
 
 const getUsers = async (req, res, next) => {
   try {
@@ -20,14 +25,14 @@ const getUsers = async (req, res, next) => {
     params.push(limit);
     params.push(offset);
     const result = await query(`SELECT id, name, surname, email, phone, role, status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, params);
-    res.json({ data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString(), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } } });
+    res.json({ success: true, data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString(), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } } });
   } catch (err) { next(err); }
 };
 
 const getPendingUsers = async (req, res, next) => {
   try {
     const result = await query("SELECT id, name, surname, email, phone, role, created_at FROM users WHERE status = 'PENDING' AND approved = FALSE AND deleted_at IS NULL ORDER BY created_at ASC");
-    res.json({ data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString() } });
+    res.json({ success: true, data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
@@ -38,21 +43,58 @@ const approveUser = async (req, res, next) => {
       [req.params.id]
     );
     if (result.rows.length === 0) throw AppError.notFound('User not found');
-    res.json({ data: { user: result.rows[0] }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'ACCOUNT_APPROVED',
+      title: 'Account approved',
+      body: `Your ${user.role === 'PROPERTY_MANAGER' ? 'Property Manager' : 'account'} was approved by the System Administrator. You can now log in.`,
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+      severity: 'INFO',
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
 const deactivateUser = async (req, res, next) => {
   try {
-    await query("UPDATE users SET status = 'DEACTIVATED', deactivated_at = NOW() WHERE id = $1", [req.params.id]);
-    res.json({ data: { message: 'User deactivated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const result = await query("UPDATE users SET status = 'DEACTIVATED', deactivated_at = NOW() WHERE id = $1 RETURNING id, name, surname, email, phone, role, status, approved, approved_at", [req.params.id]);
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'ACCOUNT_DEACTIVATED',
+      title: 'Account deactivated',
+      body: 'Your account was deactivated by the System Administrator. You no longer have access to SPMT. Contact your property manager for help.',
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
 const reactivateUser = async (req, res, next) => {
   try {
-    await query("UPDATE users SET status = 'ACTIVE', deactivated_at = NULL, login_attempts = 0, locked_until = NULL WHERE id = $1", [req.params.id]);
-    res.json({ data: { message: 'User reactivated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const result = await query("UPDATE users SET status = 'ACTIVE', deactivated_at = NULL, login_attempts = 0, locked_until = NULL WHERE id = $1 RETURNING id, name, surname, email, phone, role, status, approved, approved_at", [req.params.id]);
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'ACCOUNT_REACTIVATED',
+      title: 'Account reactivated',
+      body: 'Your account was reactivated by the System Administrator. You can log in again.',
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+      severity: 'INFO',
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
@@ -60,15 +102,41 @@ const changeRole = async (req, res, next) => {
   try {
     const { role } = req.body;
     if (!role || !['SYSTEM_ADMIN','PROPERTY_MANAGER','TENANT','SERVICE_PROVIDER'].includes(role)) throw AppError.badRequest('Invalid role');
-    await query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
-    res.json({ data: { message: 'Role updated' }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const result = await query('UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, surname, email, phone, role, status', [role, req.params.id]);
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'ROLE_CHANGED',
+      title: 'Role updated',
+      body: `Your role was changed to ${user.role.replace(/_/g, ' ').toLowerCase()} by the System Administrator. Your menu and access have been updated.`,
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+      severity: 'INFO',
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
 const unlockUser = async (req, res, next) => {
   try {
-    await query('UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = $1', [req.params.id]);
-    res.json({ data: { message: 'User unlocked' }, error: null, meta: { timestamp: new Date().toISOString() } });
+    const result = await query('UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = $1 RETURNING id, name, surname, email, phone, role, status, login_attempts', [req.params.id]);
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'ACCOUNT_UNLOCKED',
+      title: 'Account unlocked',
+      body: 'Your account was unlocked by the System Administrator. You can try logging in again.',
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+      severity: 'INFO',
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 
@@ -85,7 +153,20 @@ const updateUser = async (req, res, next) => {
     params.push(req.params.id);
     await query(`UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${idx}`, params);
     const result = await query('SELECT id, name, surname, email, phone, role, status FROM users WHERE id = $1', [req.params.id]);
-    res.json({ data: { user: result.rows[0] }, error: null, meta: { timestamp: new Date().toISOString() } });
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    const user = result.rows[0];
+    await notifyUserStatusChange({
+      userId: user.id,
+      userEmail: user.email,
+      userName: `${user.name} ${user.surname}`,
+      action: 'USER_UPDATED',
+      title: 'Account updated',
+      body: 'Your account details were updated by the System Administrator.',
+      performedBy: req.user?.id,
+      ipAddress: getIp(req),
+      severity: 'INFO',
+    });
+    res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
 

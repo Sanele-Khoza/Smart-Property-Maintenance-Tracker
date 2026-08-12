@@ -5,6 +5,7 @@ import { getUsers } from '../../data/authStore';
 import { getTickets, getProperties, getUnits, acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
+import ImageLightbox from '../../components/common/ImageLightbox';
 
 const JobDetail = ({ ticketId, onBack }) => {
   const session = getSession();
@@ -20,6 +21,7 @@ const JobDetail = ({ ticketId, onBack }) => {
   const [completionPreviews, setCompletionPreviews] = useState([]);
   const [completionMsg, setCompletionMsg] = useState({ text: '', type: '' });
   const [showComplete, setShowComplete] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState(null);
   const fileInputRef = useRef(null);
 
   const ticket = tickets.find(t => t.ticketId === ticketId);
@@ -119,8 +121,8 @@ const JobDetail = ({ ticketId, onBack }) => {
               <div className="card-title">Photos ({ticket.images.length})</div>
               <div className="image-preview-grid">
                 {ticket.images.map((img, idx) => (
-                  <div key={idx} className="image-preview" style={{ width: 100, height: 100 }}>
-                    <img src={img} alt={`Photo ${idx + 1}`} />
+                  <div key={idx} className="image-preview" style={{ width: 100, height: 100, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                    <img src={img.data || img} alt={`Photo ${idx + 1}`} />
                   </div>
                 ))}
               </div>
@@ -221,7 +223,7 @@ const JobDetail = ({ ticketId, onBack }) => {
                   <strong style={{ fontSize: 12 }}>Completion Photos:</strong>
                   <div className="image-preview-grid" style={{ marginTop: 4 }}>
                     {ticket.completionPhotos.map((p, idx) => (
-                      <div key={idx} className="image-preview" style={{ width: 70, height: 70 }}>
+                      <div key={idx} className="image-preview" style={{ width: 70, height: 70, cursor: 'pointer' }} onClick={() => setLightboxImg(p.preview || p.data || p)}>
                         <img src={p.preview || p.data || p} alt="" />
                       </div>
                     ))}
@@ -269,6 +271,7 @@ const JobDetail = ({ ticketId, onBack }) => {
           </div>
         </div>
       </div>
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

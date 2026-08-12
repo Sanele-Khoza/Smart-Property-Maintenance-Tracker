@@ -45,6 +45,7 @@ async function persistClassification(id, textResult, visualResult, classificatio
     ai_visual_confidence: classification.imageConfidence,
     ai_confidence: classification.combinedConfidence,
     ai_category: classification.primaryCategory,
+    category: classification.primaryCategory,
     conflict_detected: classification.conflictDetected,
   };
 
@@ -69,6 +70,7 @@ async function persistClassification(id, textResult, visualResult, classificatio
       ai_text_label = $1, ai_visual_label = $2,
       ai_text_confidence = $3, ai_visual_confidence = $4,
       ai_confidence = $5, ai_category = $6,
+      category = COALESCE($6, category),
       conflict_detected = $7, status = COALESCE($8, status),
       priority = COALESCE($9, priority),
       visual_emergency = COALESCE($10, visual_emergency),

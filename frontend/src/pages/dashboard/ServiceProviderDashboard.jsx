@@ -89,7 +89,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
                             <div className="ticket-images">
                               {t.images.slice(0, 3).map((img, idx) => (
                                 <div key={idx} className="ticket-thumb" onClick={() => setSelectedImage(img)}>
-                                  <img src={img} alt="" />
+                                  <img src={img.data || img} alt="" />
                                 </div>
                               ))}
                             </div>
@@ -204,7 +204,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       <div className="image-preview-grid">
                         {selectedTicketDetails.images.map((img, idx) => (
                           <div key={idx} className="image-preview" style={{ width: 100, height: 100 }} onClick={() => setSelectedImage(img)}>
-                            <img src={img} alt={`Attachment ${idx}`} />
+                            <img src={img.data || img} alt={`Attachment ${idx}`} />
                           </div>
                         ))}
                       </div>
@@ -217,7 +217,7 @@ const ServiceProviderDashboard = ({ activePage }) => {
             {selectedImage && (
               <div className="modal" onClick={() => setSelectedImage(null)}>
                 <span className="modal-close">×</span>
-                <img src={selectedImage} alt="Full size" />
+                <img src={selectedImage.data || selectedImage} alt="Full size" />
               </div>
             )}
           </>

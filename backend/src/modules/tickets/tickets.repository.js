@@ -335,7 +335,7 @@ const getAttachmentsForTickets = async (ticketIds) => {
     `SELECT ta.*, u.name AS uploaded_by_name, u.surname AS uploaded_by_surname
      FROM ticket_attachments ta
      LEFT JOIN users u ON u.id = ta.uploaded_by
-     WHERE ta.ticket_id = ANY($1)
+     WHERE ta.ticket_id = ANY($1::uuid[])
      ORDER BY ta.uploaded_at DESC`,
     [ticketIds]
   );

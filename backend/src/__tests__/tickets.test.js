@@ -16,6 +16,7 @@ const mockSoftDelete = jest.fn();
 const mockRestore = jest.fn();
 const mockFindTechnician = jest.fn();
 const mockQuery = jest.fn();
+const mockGetPresignedUrl = jest.fn();
 
 jest.unstable_mockModule('../modules/tickets/tickets.repository.js', () => ({
   findById: mockFindById,
@@ -40,6 +41,10 @@ jest.unstable_mockModule('../modules/technicians/technicians.repository.js', () 
 
 jest.unstable_mockModule('../db/connection.js', () => ({
   query: mockQuery,
+}));
+
+jest.unstable_mockModule('../shared/adapters/s3Adapter.js', () => ({
+  getPresignedUrl: mockGetPresignedUrl,
 }));
 
 const {

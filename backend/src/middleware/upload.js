@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { mkdirSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -13,6 +14,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const LOCAL_UPLOAD_DIR = path.join(__dirname, '..', '..', config.upload.uploadDir);
+
+if (!config.aws.enabled) {
+  mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+}
 
 const storage = config.aws.enabled
   ? multer.memoryStorage()

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { loginUser } from '../../data/authStore';
-import Alert from '../common/Alert';
+import React, { useState } from "react";
+import { loginUser } from "../../data/authStore";
+import Alert from "../common/Alert";
 
 const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -12,7 +12,7 @@ const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     const result = await loginUser(form.email, form.password);
     if (result.success) {
@@ -33,7 +33,9 @@ const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
         <form onSubmit={handleSubmit}>
           <Alert msg={error} type="error" />
           <div className="form-group">
-            <label className="form-label" htmlFor="login-email">Email</label>
+            <label className="form-label" htmlFor="login-email">
+              Email
+            </label>
             <input
               className="form-input"
               type="email"
@@ -46,10 +48,24 @@ const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
             />
           </div>
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label className="form-label" htmlFor="login-password">Password</label>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <label className="form-label" htmlFor="login-password">
+                Password
+              </label>
               <span
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--amber)', cursor: 'pointer', textDecoration: 'none' }}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  color: "var(--amber)",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
                 onClick={onForgotPassword}
               >
                 Forgot Password?
@@ -69,16 +85,35 @@ const LoginPage = ({ onLogin, onRegisterNavigate, onForgotPassword }) => {
             Sign In
           </button>
         </form>
-        <div style={{ border: '1px dashed var(--border)', borderRadius: 4, padding: '8px 12px', marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-          ⚠ Demo mode: Role enforcement is simulated client-side. In production, all access control is enforced server-side via JWT + RBAC middleware (SDD NFR-SEC04). Passwords are sha256-hashed for demo purposes; production uses bcrypt ≥12 rounds.
+        <div
+          style={{
+            border: "1px dashed var(--border)",
+            borderRadius: 4,
+            padding: "8px 12px",
+            marginTop: 12,
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            color: "var(--text-dim)",
+            lineHeight: 1.6,
+          }}
+        >
+          ⚠ Demo mode: Role enforcement is simulated client-side. In production,
+          all access control is enforced server-side via JWT + RBAC middleware
+          (SDD NFR-SEC04). Passwords are sha256-hashed for demo purposes;
+          production uses bcrypt ≥12 rounds.
         </div>
         <div className="auth-footer">
           <span>Don't have an account?</span>
-          <a href="/register" onClick={(e) => { e.preventDefault(); onRegisterNavigate(); }}>
+          <a
+            href="/register"
+            onClick={(e) => {
+              e.preventDefault();
+              onRegisterNavigate();
+            }}
+          >
             Register here
           </a>
         </div>
-
       </div>
     </div>
   );

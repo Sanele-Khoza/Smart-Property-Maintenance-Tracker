@@ -57,6 +57,10 @@ export const registerUser = async (userData) => {
         password: userData.password,
         role: userData.role,
         phone: userData.phone || '',
+        ...(userData.role === 'SERVICE_PROVIDER' ? {
+          companyName: userData.companyName,
+          specialisations: userData.specialisations,
+        } : {}),
       },
     });
     if (result.success && result.data) {
@@ -128,7 +132,7 @@ export const refreshUsers = async () => {
     const token = getToken();
     if (!token) return;
     const result = await api('/users');
-    if (result.success && result.data?.users) {
+    if (result.data?.users) {
       usersCache = result.data.users.map(normalizeUser);
       saveUsersCache();
     }

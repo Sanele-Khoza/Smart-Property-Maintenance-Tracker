@@ -12,6 +12,7 @@ const Tenants = () => {
   const [properties] = useState(() => allProperties.filter(p => p.managerName === pmName));
   const propIds = new Set(properties.map(p => p.propertyId));
   const [units] = useState(() => getUnits().filter(u => propIds.has(u.propertyId)));
+  const [allUnits] = useState(getUnits);
   const [tickets] = useState(getTickets);
   const [allUsers, setAllUsers] = useState(() => getUsers());
   const [alert, setAlert] = useState({ msg: '', type: '' });
@@ -45,20 +46,36 @@ const Tenants = () => {
       if (!map[t.createdBy]) map[t.createdBy] = { unitCount: 0, units: [] };
     });
 
+    // Tenants already occupying a unit ANYWHERE in the system (not just this PM's
+    // properties) — used below to avoid surfacing tenants who belong to another manager.
+    const occupiedElsewhere = new Set(
+      allUnits.filter(u => u.status === 'OCCUPIED' && u.tenantName).map(u => u.tenantName)
+    );
+
     allUsers.filter(u => u.role === 'TENANT').forEach(u => {
       const name = `${u.name} ${u.surname}`;
-      if (!map[name]) return;
-      map[name].email = u.email;
-      map[name].phone = u.phone;
-      map[name].authId = u.id;
-      map[name].authStatus = u.status;
+      if (map[name]) {
+        map[name].email = u.email;
+        map[name].phone = u.phone;
+        map[name].authId = u.id;
+        map[name].authStatus = u.status;
+        return;
+      }
+      // Not linked to a unit or ticket under this PM, and not occupying a unit
+      // anywhere else in the system either — surface them so this PM can find
+      // and assign them a unit, instead of requiring their exact name upfront.
+      if (occupiedElsewhere.has(name)) return;
+      map[name] = {
+        unitCount: 0, units: [],
+        email: u.email, phone: u.phone, authId: u.id, authStatus: u.status,
+      };
     });
 
     return Object.entries(map).map(([name, d]) => {
       const tenantTickets = tickets.filter(t => t.createdBy === name);
       const hasUnit = d.unitCount > 0;
       const hasProperty = tenantTickets.some(t => properties.some(p => p.name === t.propertyName));
-      if (!hasUnit && !hasProperty) return null;
+      if (!hasUnit && !hasProperty && !d.authId) return null;
       return {
         name, email: d.email || '—', phone: d.phone || '—', authId: d.authId || null, authStatus: d.authStatus || null,
         units: d.units, unitCount: d.unitCount, hasUnit, hasAuthRecord: !!d.authId,
@@ -66,7 +83,7 @@ const Tenants = () => {
         ticketCount: tenantTickets.length, tickets: tenantTickets,
       };
     }).filter(Boolean);
-  }, [units, tickets, allUsers, properties]);
+  }, [units, allUnits, tickets, allUsers, properties]);
 
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 

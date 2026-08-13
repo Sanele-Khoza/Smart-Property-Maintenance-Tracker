@@ -8,7 +8,7 @@ import AppError from '../../shared/errors/AppError.js';
 import { isValidTransition, TicketStates, isTerminal } from '../../shared/constants/ticketStates.js';
 import { findById as findServiceProvider } from '../technicians/technicians.repository.js';
 import { classify } from '../../shared/utils/aiClassifier.js';
-import { checkTicketSla } from '../../shared/utils/slaChecker.js';
+import { checkTicketSla, loadSlaConfig } from '../../shared/utils/slaChecker.js';
 import { scoreProviders } from '../../shared/utils/routingScore.js';
 import { sendToUser } from '../../shared/utils/sse.js';
 import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
@@ -94,6 +94,21 @@ async function assertRoutingAllowed(ticket) {
   }
 }
 
+async function attachSlaDeadlines(tickets) {
+  if (!tickets || tickets.length === 0) return tickets;
+  const slaConfig = await loadSlaConfig();
+  const now = Date.now();
+  for (const t of tickets) {
+    const sla = slaConfig[t.priority || 'MEDIUM'];
+    if (!sla) continue;
+    const createdMs = new Date(t.created_at || now).getTime();
+    if (Number.isNaN(createdMs)) continue;
+    t.slaResponseBefore = createdMs + sla.responseMinutes * 60 * 1000;
+    t.slaResolutionBefore = createdMs + sla.resolutionMinutes * 60 * 1000;
+  }
+  return tickets;
+}
+
 async function attachPhotoData(tickets) {
   if (!tickets || tickets.length === 0) return tickets;
 
@@ -129,6 +144,7 @@ async function list(filters) {
   const queryFilters = { ...filters, limit, offset };
   const { tickets, total } = await repo.findAll(queryFilters);
   await attachPhotoData(tickets);
+  await attachSlaDeadlines(tickets);
   const totalPages = Math.ceil(total / limit);
   return {
     success: true,
@@ -143,6 +159,7 @@ async function getById(id) {
   const history = await repo.getHistory(id);
   const comments = await repo.getComments(id);
   const [withPhotos] = await attachPhotoData([ticket]);
+  await attachSlaDeadlines([withPhotos]);
   return { success: true, data: { ticket: withPhotos, history, comments } };
 }
 
@@ -226,6 +243,7 @@ async function create(data, userId) {
   }
 
   const ticket = await repo.create({ ...data, tenant_id: userId, status: 'New' });
+  await attachSlaDeadlines([ticket]);
   await repo.addHistory(ticket.id, ticket.status, userId, null, 'Ticket created');
   await auditLog(ticket.id, 'created', userId, null, { status: ticket.status, title: ticket.title });
   runAiPipeline(ticket.id).catch(() => {});

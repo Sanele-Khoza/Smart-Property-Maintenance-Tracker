@@ -25,17 +25,19 @@ export const PRIORITY_ORDER = { EMERGENCY: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
 let ticketCounter = getStore().tickets.length + 1;
 
-const getSlaDeadlines = (priority) => {
+const getSlaDeadlines = (priority, createdAt) => {
   const store = getStore();
   const sla = store.slaConfig.find(s => s.priority === priority);
-  const now = Date.now();
+  const base = createdAt ? new Date(createdAt).getTime() : Date.now();
+  const baseMs = Number.isNaN(base) ? Date.now() : base;
   return {
-    slaResponseBefore: now + (sla?.responseMinutes || 240) * 60 * 1000,
-    slaResolutionBefore: now + (sla?.resolutionMinutes || 2880) * 60 * 1000,
+    slaResponseBefore: baseMs + (sla?.responseMinutes || 240) * 60 * 1000,
+    slaResolutionBefore: baseMs + (sla?.resolutionMinutes || 2880) * 60 * 1000,
   };
 };
 
 function mapTicket(t) {
+  const createdAt = t.created_at || t.createdAt || new Date().toISOString();
   return {
     ticketId: t.id || t.ticketId,
     unitId: t.unit_id || t.unitId,
@@ -56,7 +58,7 @@ function mapTicket(t) {
     providerRatingCount: t.provider_rating_count ?? t.providerRatingCount ?? null,
     createdBy: t.created_by_name || t.createdBy || '',
     createdById: t.tenant_id || t.createdById || t.created_by || null,
-    createdAt: t.created_at || t.createdAt || new Date().toLocaleString(),
+    createdAt,
     updatedAt: t.updated_at || t.updatedAt || new Date().toLocaleString(),
     deletedAt: t.deleted_at || t.deletedAt || null,
     deletedBy: t.deleted_by || t.deletedBy || null,
@@ -67,7 +69,7 @@ function mapTicket(t) {
           .filter(Boolean)
           .map(u => u.startsWith('/') ? `${getBaseUrl().replace(/\/api\/?$/, '')}${u}` : u)
       : [],
-    ...(t.slaResponseBefore || t.slaResolutionBefore ? {} : getSlaDeadlines(t.priority)),
+    ...(t.slaResponseBefore || t.slaResolutionBefore ? {} : getSlaDeadlines(t.priority, createdAt)),
   };
 }
 
@@ -144,7 +146,7 @@ export const getTickets = () => {
     return {
       ...t,
       propertyId: store.units.find(u => u.unitId === t.unitId || u.id === t.unitId)?.propertyId || null,
-      ...(needsSla ? getSlaDeadlines(t.priority) : {}),
+      ...(needsSla ? getSlaDeadlines(t.priority, t.createdAt) : {}),
     };
   });
 };

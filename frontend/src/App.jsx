@@ -147,6 +147,7 @@ function App() {
     await refreshTickets();
     refreshUsers();
     setPage('app');
+    startSlaPolling();
     startRealtime();
   };
 

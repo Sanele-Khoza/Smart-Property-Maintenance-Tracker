@@ -9,7 +9,9 @@ export function getSlaStatus(ticket) {
   const deadline = ticket.slaResolutionBefore || ticket.slaResponseBefore;
   const remaining = deadline - now;
 
-  if (!ticket.createdAt) {
+  const createdMs = ticket.createdAt ? new Date(ticket.createdAt).getTime() : NaN;
+
+  if (!ticket.createdAt || Number.isNaN(createdMs)) {
     return {
       state: remaining <= 0 ? 'breached' : 'ok',
       pctElapsed: remaining <= 0 ? 100 : 0,
@@ -19,7 +21,6 @@ export function getSlaStatus(ticket) {
     };
   }
 
-  const createdMs = new Date(ticket.createdAt).getTime();
   const totalWindow = deadline - createdMs;
   const pctElapsed = totalWindow > 0
     ? Math.min(100, Math.max(0, ((now - createdMs) / totalWindow) * 100))

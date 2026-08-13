@@ -174,6 +174,19 @@ const accept = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const decline = async (req, res, next) => {
+  try {
+    const ticket = await repo.findById(req.params.id);
+    if (!ticket) throw AppError.notFound('Ticket not found');
+    await ensureTicketAccess(ticket, req.user);
+    const name = `${req.user.name} ${req.user.surname}`;
+    const result = await service.declineTicket(
+      req.params.id, req.user.id, name, req.body.note, req.body.postponeUntil
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
 const startWork = async (req, res, next) => {
   try {
     const ticket = await repo.findById(req.params.id);
@@ -379,5 +392,5 @@ export {
   list, getById, create, update, changeStatus, assign, complete, reopen, rate,
   getHistory, getComments, addComment, getAttachments, addAttachment, removeAttachment,
   classify, confirm, overrideAi, downgradeEmergency, getAttachmentUrl, routing, sla,
-  accept, startWork, waitingParts, partsReceived, tenantConfirm, close, remove, restoreTicket,
+  accept, decline, startWork, waitingParts, partsReceived, tenantConfirm, close, remove, restoreTicket,
 };

@@ -6,8 +6,9 @@ export const TICKET_TRANSITIONS = {
   'New': ['AI Classified', 'Manual Review', 'Cancelled'],
   'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
   'Manual Review': ['AI Classified', 'Cancelled'],
-  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated', 'Declined'],
   'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+  'Declined': ['Assigned', 'Cancelled'],
   'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
   'Waiting for Parts': ['In Progress', 'On Hold'],
   'Completed': ['Tenant Confirmed', 'Reopened'],
@@ -59,6 +60,8 @@ function mapTicket(t) {
     updatedAt: t.updated_at || t.updatedAt || new Date().toLocaleString(),
     deletedAt: t.deleted_at || t.deletedAt || null,
     deletedBy: t.deleted_by || t.deletedBy || null,
+    postponedUntil: t.postponed_until || t.postponedUntil || null,
+    postponedReason: t.postponed_reason || t.postponedReason || null,
     images: Array.isArray(t.photoUrls)
       ? t.photoUrls
           .filter(Boolean)
@@ -199,6 +202,8 @@ export const assignTicket = async (ticketId, providerName, providerId) => {
         store.tickets[idx].assignedTo = providerName;
         store.tickets[idx].assignedToId = providerId;
         store.tickets[idx].status = 'Assigned';
+        store.tickets[idx].postponedUntil = null;
+        store.tickets[idx].postponedReason = null;
         store.tickets[idx].updatedAt = new Date().toLocaleString();
       }
       saveToLocalStorage();
@@ -359,6 +364,33 @@ export const acceptJob = (ticketId, note) => runWorkflowStep(ticketId, '/accept'
 export const startJob = (ticketId, note) => runWorkflowStep(ticketId, '/start', 'In Progress', note);
 export const waitForParts = (ticketId, note) => runWorkflowStep(ticketId, '/waiting-parts', 'Waiting for Parts', note);
 export const partsReceived = (ticketId, note) => runWorkflowStep(ticketId, '/parts-received', 'In Progress', note);
+
+export const declineJob = async (ticketId, note, postponeUntil) => {
+  try {
+    const result = await api(`/tickets/${ticketId}/decline`, {
+      method: 'PUT',
+      body: { note: note || null, postponeUntil: postponeUntil || null },
+    });
+    if (result.success) {
+      const store = getStore();
+      const idx = store.tickets.findIndex(t => t.ticketId === ticketId || t.id === ticketId);
+      if (idx !== -1) {
+        store.tickets[idx].status = 'Declined';
+        store.tickets[idx].assignedTo = null;
+        store.tickets[idx].assignedToId = null;
+        store.tickets[idx].postponedUntil = postponeUntil || null;
+        store.tickets[idx].postponedReason = note || null;
+        store.tickets[idx].updatedAt = new Date().toLocaleString();
+      }
+      saveToLocalStorage();
+      notifyTicketsUpdated();
+      return { success: true, data: store.tickets[idx] };
+    }
+    return { success: false, error: result.error || 'Decline failed' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
 
 export const confirmTicketCompletion = async (ticketId, satisfied, note) => {
   try {

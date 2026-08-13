@@ -524,21 +524,21 @@ All four roles are enum constants enforced at Express middleware. No dynamic per
 
 ---
 
-### `PATCH /tickets/{id}/decline`
+### `PUT /tickets/{id}/decline`
 
-**Description:** Service provider declines an assignment. Ticket returns to `Open` and `assigned_to` is cleared.  
+**Description:** Service provider declines an assignment. Ticket moves to `Declined` and `assigned_to` is cleared so it can be reassigned by the property manager. An optional `postponeUntil` (RFC 3339 datetime) records when the provider can take the job; the manager sees this when rescheduling.  
 **Auth:** Bearer token  
-**Roles:** SP (must be the assigned provider)
+**Roles:** SP (must be the assigned provider), SA
 
 **Request body (optional):**
 ```json
-{ "reason": "Out of service area" }
+{ "note": "Out of service area", "postponeUntil": "2026-08-20T09:00:00.000Z" }
 ```
 
 **Response 200:**
 ```json
 {
-  "data": { "ticket": { "id": "uuid", "status": "Open", "assignedTo": null } },
+  "data": { "ticket": { "id": "uuid", "status": "Declined", "assignedTo": null, "postponedUntil": "2026-08-20T09:00:00.000Z" } },
   "error": null,
   "meta": { "timestamp": "2026-07-10T12:00:00.000Z", "requestId": "uuid" }
 }

@@ -350,6 +350,8 @@ async function assign(id, technicianId, note, userId, userName, role) {
   const updated = await repo.update(id, {
     assigned_to: technicianId,
     status: 'Assigned',
+    postponed_until: null,
+    postponed_reason: null,
   });
   await repo.addHistory(id, 'Assigned', userId, userName, note || `Assigned to ${provider.name}`);
   await auditLog(ticket.id, 'assigned', userId, userName, {
@@ -363,6 +365,46 @@ async function acceptTicket(id, userId, userName, note) {
   const updated = await performTransition(id, TicketStates.ACCEPTED, userId, userName,
     note || 'Provider accepted the assignment', 'ticket_accepted');
   return { success: true, data: { ticket: updated }, message: 'Ticket accepted' };
+}
+
+async function declineTicket(id, userId, userName, note, postponeUntil) {
+  const ticket = await repo.findById(id);
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  await assertNotReadOnly(ticket);
+
+  if (!isValidTransition(ticket.status, TicketStates.DECLINED)) {
+    throw AppError.badRequest(`Cannot decline a '${ticket.status}' ticket`);
+  }
+
+  let parsedUntil = null;
+  if (postponeUntil) {
+    parsedUntil = new Date(postponeUntil);
+    if (Number.isNaN(parsedUntil.getTime())) {
+      throw AppError.badRequest('postponeUntil must be a valid date/time');
+    }
+  }
+
+  const updates = { status: TicketStates.DECLINED, assigned_to: null };
+  if (parsedUntil) updates.postponed_until = parsedUntil;
+  if (note) updates.postponed_reason = note;
+
+  const updated = await repo.update(id, updates);
+  await repo.addHistory(id, TicketStates.DECLINED, userId, userName,
+    note || 'Provider declined the assignment');
+  await auditLog(ticket.id, 'declined', userId, userName, {
+    from: ticket.status, postponeUntil: parsedUntil ? parsedUntil.toISOString() : null, note,
+  });
+
+  if (updated.tenant_id) {
+    sendToUser(updated.tenant_id, 'ticket_declined', {
+      ticketId: id, title: ticket.title, status: TicketStates.DECLINED,
+    });
+  }
+
+  const message = parsedUntil
+    ? `Ticket declined — postponed to ${parsedUntil.toLocaleString()}`
+    : 'Ticket declined';
+  return { success: true, data: { ticket: updated }, message };
 }
 
 async function startWork(id, userId, userName, note) {
@@ -566,6 +608,6 @@ export {
   list, getById, create, update, changeStatus, assign, complete, reopen, rate,
   classifyTicket, confirmLowConfidence, overrideAiLabel, downgradeVisualEmergency,
   getTopProviders, checkSla, softDelete, restore,
-  markAiClassified, acceptTicket, startWork, markWaitingParts, markPartsReceived,
+  markAiClassified, acceptTicket, declineTicket, startWork, markWaitingParts, markPartsReceived,
   tenantConfirm, closeTicket, runAiPipeline,
 };

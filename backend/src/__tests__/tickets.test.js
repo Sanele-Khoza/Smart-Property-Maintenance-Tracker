@@ -50,7 +50,7 @@ jest.unstable_mockModule('../shared/adapters/s3Adapter.js', () => ({
 
 const {
   list, getById, create, assign, complete, reopen, rate,
-  acceptTicket, startWork, markWaitingParts, markPartsReceived,
+  acceptTicket, declineTicket, startWork, markWaitingParts, markPartsReceived,
   tenantConfirm, closeTicket, softDelete, restore,
 } = await import('../modules/tickets/tickets.service.js');
 
@@ -197,6 +197,36 @@ describe('Ticket Workflow', () => {
   it('acceptTicket rejects invalid transition', async () => {
     mockFindById.mockResolvedValue({ id: 1, status: 'New', tenant_id: 1 });
     await expect(acceptTicket(1, 1, 'Bob')).rejects.toThrow('Cannot transition');
+  });
+
+  it('declineTicket transitions from Assigned to Declined, clears assignment and stores postpone', async () => {
+    mockFindById.mockResolvedValue({ id: 1, status: 'Assigned', tenant_id: 1, title: 'Leak' });
+    mockUpdate.mockResolvedValue({ id: 1, status: 'Declined' });
+
+    const result = await declineTicket(1, 1, 'Bob', 'Waiting for parts', '2026-08-20T09:00:00.000Z');
+    expect(result.data.ticket.status).toBe('Declined');
+    expect(mockAddHistory).toHaveBeenCalledWith(1, 'Declined', 1, 'Bob', 'Waiting for parts');
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({
+      status: 'Declined', assigned_to: null, postponed_until: expect.any(Date), postponed_reason: 'Waiting for parts',
+    }));
+  });
+
+  it('declineTicket without postpone date clears assignment only', async () => {
+    mockFindById.mockResolvedValue({ id: 1, status: 'Assigned', tenant_id: 1 });
+    mockUpdate.mockResolvedValue({ id: 1, status: 'Declined' });
+
+    await declineTicket(1, 1, 'Bob', null, null);
+    expect(mockUpdate).toHaveBeenCalledWith(1, { status: 'Declined', assigned_to: null });
+  });
+
+  it('declineTicket rejects invalid transition', async () => {
+    mockFindById.mockResolvedValue({ id: 1, status: 'In Progress', tenant_id: 1 });
+    await expect(declineTicket(1, 1, 'Bob')).rejects.toThrow('Cannot decline');
+  });
+
+  it('declineTicket rejects invalid postponeUntil', async () => {
+    mockFindById.mockResolvedValue({ id: 1, status: 'Assigned', tenant_id: 1 });
+    await expect(declineTicket(1, 1, 'Bob', 'note', 'not-a-date')).rejects.toThrow('postponeUntil must be a valid date/time');
   });
 
   it('startWork transitions from Accepted to In Progress', async () => {

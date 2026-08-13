@@ -7,7 +7,7 @@ import validate from '../../middleware/validate.js';
 import {
   createTicketSchema, updateTicketSchema, changeStatusSchema, assignTicketSchema,
   reopenTicketSchema, rateTicketSchema, overrideAiSchema, classifyTicketSchema,
-  acceptSchema, startWorkSchema, waitingPartsSchema, partsReceivedSchema,
+  acceptSchema, declineSchema, startWorkSchema, waitingPartsSchema, partsReceivedSchema,
   tenantConfirmSchema, closeSchema,
 } from './tickets.validation.js';
 import { Roles } from '../../shared/constants/roles.js';
@@ -24,6 +24,7 @@ router.put('/:id/assign', authenticate, authorize(Roles.PROPERTY_MANAGER, Roles.
 /* ── Workflow: New → AI Classified → Assigned → Accepted → In Progress → Waiting Parts → Completed → Tenant Confirms → Closed ── */
 router.post('/:id/classify', authenticate, hasPermission('tickets.update.status'), validate(classifyTicketSchema), ctrl.classify);
 router.put('/:id/accept', authenticate, authorize(Roles.SERVICE_PROVIDER, Roles.SYSTEM_ADMIN), validate(acceptSchema), ctrl.accept);
+router.put('/:id/decline', authenticate, authorize(Roles.SERVICE_PROVIDER, Roles.SYSTEM_ADMIN), validate(declineSchema), ctrl.decline);
 router.put('/:id/start', authenticate, authorize(Roles.SERVICE_PROVIDER, Roles.PROPERTY_MANAGER, Roles.SYSTEM_ADMIN), validate(startWorkSchema), ctrl.startWork);
 router.put('/:id/waiting-parts', authenticate, authorize(Roles.SERVICE_PROVIDER, Roles.PROPERTY_MANAGER, Roles.SYSTEM_ADMIN), validate(waitingPartsSchema), ctrl.waitingParts);
 router.put('/:id/parts-received', authenticate, authorize(Roles.SERVICE_PROVIDER, Roles.PROPERTY_MANAGER, Roles.SYSTEM_ADMIN), validate(partsReceivedSchema), ctrl.partsReceived);

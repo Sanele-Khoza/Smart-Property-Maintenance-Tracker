@@ -5,6 +5,17 @@ const findById = async (id) => {
   return result.rows[0] || null;
 };
 
+const findByEmail = async (email) => {
+  const result = await query('SELECT * FROM service_providers WHERE email = $1', [email]);
+  return result.rows[0] || null;
+};
+
+const updateByEmail = async (email, data) => {
+  const provider = await findByEmail(email);
+  if (!provider) return null;
+  return update(provider.id, data);
+};
+
 const findAll = async (filters = {}) => {
   const conditions = [];
   const params = [];
@@ -30,12 +41,21 @@ const findAll = async (filters = {}) => {
 };
 
 const create = async (data) => {
+  const list = data.specialisations || [];
   const result = await query(
     `INSERT INTO service_providers (name, company_name, email, phone, specialisations)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.name, data.companyName || null, data.email || null, data.phone || null, JSON.stringify(data.specialisations || [])]
+     VALUES ($1, $2, $3, $4, $5::text[]) RETURNING *`,
+    [data.name, data.companyName || null, data.email || null, data.phone || null, `{${list.join(',')}}`]
   );
   return result.rows[0];
+};
+
+const findUserByEmail = async (email) => {
+  const result = await query(
+    'SELECT id, name, surname, email, phone FROM users WHERE email = $1 AND deleted_at IS NULL',
+    [email]
+  );
+  return result.rows[0] || null;
 };
 
 const COLUMN_MAP = {
@@ -84,4 +104,4 @@ const remove = async (id) => {
   await query('DELETE FROM service_providers WHERE id = $1', [id]);
 };
 
-export { findById, findAll, create, update, updateLocation, remove };
+export { findById, findByEmail, updateByEmail, findAll, create, findUserByEmail, update, updateLocation, remove };

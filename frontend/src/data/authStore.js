@@ -61,7 +61,12 @@ function normalizeUser(u) {
     account_status: status,
     approved: u.approved !== undefined ? u.approved : true,
     preferredNotificationChannel: u.preferredNotificationChannel || 'EMAIL',
-    failedLoginCount: u.failed_login_count ?? u.failedLoginCount ?? 0,
+    failedLoginCount: u.login_attempts ?? u.failed_login_count ?? u.failedLoginCount ?? 0,
+    lockedUntil: u.locked_until || u.lockedUntil || null,
+    isLocked: (() => {
+      const until = u.locked_until || u.lockedUntil;
+      return until ? new Date(until).getTime() > Date.now() : false;
+    })(),
   };
 }
 
@@ -76,6 +81,9 @@ export const registerUser = async (userData) => {
         password: userData.password,
         role: userData.role,
         phone: userData.phone || '',
+        idNumber: userData.idNumber || '',
+        companyName: userData.companyName || '',
+        specialisations: userData.specialisations || [],
       },
     });
     if (result.success && result.data) {

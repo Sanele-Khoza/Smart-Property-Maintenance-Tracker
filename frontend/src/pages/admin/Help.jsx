@@ -48,7 +48,7 @@ const SECTIONS = [
     items: [
       { q: 'How do I approve a new Property Manager?', a: 'In the Users page, find the user with status "Pending" and click the Approve button. Their status changes to Active and they can log in.' },
       { q: 'How do I change a user\'s role?', a: 'In the Roles page, select a user and assign a new role from the dropdown. The RBAC matrix shows exactly which endpoints each role can access.' },
-      { q: 'What happens when a user fails login too many times?', a: 'After 5 failed attempts, the account is Suspended. An admin can unlock it from the Users page (Unlock button), which resets the counter and sets status to Active.' },
+      { q: 'What happens when a user fails login too many times?', a: 'After 5 failed attempts, the account is locked for 3 minutes. An admin can unlock it immediately from the Users page (Unlock button), which resets the failed-attempt counter.' },
     ],
   },
   {

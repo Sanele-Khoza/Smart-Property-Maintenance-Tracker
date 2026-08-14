@@ -7,6 +7,8 @@ import { Roles } from '../../shared/constants/roles.js';
 const router = Router();
 
 router.get('/', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.list);
+router.get('/me', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER, Roles.SERVICE_PROVIDER), ctrl.getMe);
+router.put('/me', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER, Roles.SERVICE_PROVIDER), ctrl.updateMe);
 router.get('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.getById);
 router.post('/', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.create);
 router.put('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.update);

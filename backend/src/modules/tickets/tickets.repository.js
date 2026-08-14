@@ -39,6 +39,7 @@ function toSnakeTicket(row) {
     assigned_to_name: row.assigned_to_name ?? null,
     provider_rating: row.provider_rating ?? null,
     provider_rating_count: row.provider_rating_count ?? null,
+    acceptance_note: row.acceptance_note ?? null,
   };
 }
 
@@ -54,7 +55,10 @@ const findById = async (id) => {
     `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
             TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
             sp.name AS assigned_to_name,
-            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
+            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count,
+            (SELECT h.reason FROM ticket_status_history h
+              WHERE h.ticket_id = t.id AND h.status = 'Accepted'
+              ORDER BY h.created_at DESC LIMIT 1) AS acceptance_note
      FROM tickets t
      ${TICKET_JOINS}
      WHERE t.id = $1 AND t.deleted_at IS NULL`,
@@ -68,7 +72,10 @@ const findByIdIncludingDeleted = async (id) => {
     `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
             TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
             sp.name AS assigned_to_name,
-            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
+            sp.rating AS provider_rating, sp.rating_count AS provider_rating_count,
+            (SELECT h.reason FROM ticket_status_history h
+              WHERE h.ticket_id = t.id AND h.status = 'Accepted'
+              ORDER BY h.created_at DESC LIMIT 1) AS acceptance_note
      FROM tickets t
      ${TICKET_JOINS}
      WHERE t.id = $1`,
@@ -152,7 +159,10 @@ const findAll = async (filters = {}) => {
   let sql = `SELECT t.*, p.name AS property_name, u.unit_number, u.property_id,
                     TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS created_by_name,
                     sp.name AS assigned_to_name,
-                    sp.rating AS provider_rating, sp.rating_count AS provider_rating_count
+                    sp.rating AS provider_rating, sp.rating_count AS provider_rating_count,
+                    (SELECT h.reason FROM ticket_status_history h
+                      WHERE h.ticket_id = t.id AND h.status = 'Accepted'
+                      ORDER BY h.created_at DESC LIMIT 1) AS acceptance_note
              FROM tickets t
              ${TICKET_JOINS}
              ${whereClause}

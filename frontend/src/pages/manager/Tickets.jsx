@@ -22,6 +22,7 @@ const STATUS_STYLES = {
   'On Hold': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
   'Reopened': { bg: 'rgba(230,140,30,0.15)', color: '#e68c1e' },
   'Escalated': { bg: 'rgba(220,60,60,0.15)', color: '#dc3c3c' },
+  'Declined': { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
 };
 
 const PRIORITY_STYLES = {
@@ -35,8 +36,9 @@ const TICKET_TRANSITIONS = {
   'New': ['AI Classified', 'Manual Review', 'Cancelled'],
   'AI Classified': ['Assigned', 'Manual Review', 'Cancelled'],
   'Manual Review': ['AI Classified', 'Cancelled'],
-  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated'],
+  'Assigned': ['Accepted', 'Cancelled', 'On Hold', 'Escalated', 'Declined'],
   'Accepted': ['In Progress', 'Cancelled', 'On Hold'],
+  'Declined': ['Assigned', 'Cancelled'],
   'In Progress': ['Waiting for Parts', 'Completed', 'On Hold', 'Escalated'],
   'Waiting for Parts': ['In Progress', 'On Hold'],
   'Completed': ['Tenant Confirmed', 'Reopened'],
@@ -57,7 +59,7 @@ const TRANSITION_LABELS = {
   'Archived': 'Archive', 'On Hold': 'Hold', 'Reopened': 'Reopen', 'Escalated': 'Escalate',
 };
 
-const TABS = ['All', 'New', 'Assigned', 'Accepted', 'In Progress', 'Needs Review', 'SLA Warning', 'SLA Breached', 'Completed'];
+const TABS = ['All', 'New', 'Assigned', 'Accepted', 'In Progress', 'Declined', 'Needs Review', 'SLA Warning', 'SLA Breached', 'Completed'];
 
 const Tickets = () => {
   const session = getSession();
@@ -176,6 +178,7 @@ const Tickets = () => {
     if (activeTab === 'Assigned' && t.status !== 'Assigned') return false;
     if (activeTab === 'Accepted' && t.status !== 'Accepted') return false;
     if (activeTab === 'In Progress' && t.status !== 'In Progress') return false;
+    if (activeTab === 'Declined' && t.status !== 'Declined') return false;
     if (activeTab === 'Completed' && t.status !== 'Completed' && t.status !== 'Tenant Confirmed' && t.status !== 'Closed') return false;
     if (statusFilter && t.status !== statusFilter) return false;
     if (priorityFilter && t.priority !== priorityFilter) return false;
@@ -201,6 +204,7 @@ const Tickets = () => {
     'Assigned': tickets.filter(t => t.status === 'Assigned').length,
     'Accepted': tickets.filter(t => t.status === 'Accepted').length,
     'In Progress': tickets.filter(t => t.status === 'In Progress').length,
+    'Declined': tickets.filter(t => t.status === 'Declined').length,
     'Needs Review': needsReview,
     'SLA Warning': tickets.filter(t => getSlaStatus(t)?.state === 'warning').length,
     'SLA Breached': slaBreached,
@@ -299,9 +303,10 @@ const Tickets = () => {
                 filtered.map(t => {
                   const st = STATUS_STYLES[t.status] || {};
                   const pt = PRIORITY_STYLES[t.priority] || {};
-                  const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated'].includes(t.status);
+                  const canAssign = ['New', 'AI Classified', 'Manual Review', 'Reopened', 'Escalated', 'Declined'].includes(t.status);
                   const canReopen = ['Completed', 'Archived'].includes(t.status);
                   const tc = TICKET_TRANSITIONS[t.status] || [];
+                  const genericButtons = tc.filter(s => s !== 'Reopened' && !(t.status === 'Declined' && s === 'Assigned'));
                   const override = t.aiOriginalCategory && t.category && t.aiOriginalCategory !== t.category;
                   const sla = getSlaStatus(t);
                   return (
@@ -333,7 +338,7 @@ const Tickets = () => {
                         <td>
                           <div className="action-cell">
                             <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowDetails(t); }} title="View full details"><FaEye /></button>
-                            {tc.filter(s => s !== 'Reopened').map(s => <button key={s} className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); handleTransition(t.ticketId, s); }} style={{ fontSize: 9, padding: '2px 5px' }}>{TRANSITION_LABELS[s] || s}</button>)}
+                            {genericButtons.map(s => <button key={s} className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); handleTransition(t.ticketId, s); }} style={{ fontSize: 9, padding: '2px 5px' }}>{TRANSITION_LABELS[s] || s}</button>)}
                             {tc.includes('Reopened') && <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowReopen(t); setReopenText(''); setReopenError(''); }} style={{ fontSize: 9, padding: '2px 5px' }}><FaUndo /> Reopen</button>}
                             {canAssign && <button className="btn btn-teal btn-sm" onClick={(e) => { e.stopPropagation(); setShowReassign(t); setReassignProvider(''); }}><FaUserCheck /></button>}
                             <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); setShowCategoryModal(t); setCategoryValue(t.category || ''); }}><FaTag /></button>
@@ -516,12 +521,20 @@ const Tickets = () => {
                   <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Created:</strong> {t.createdAt || '—'}</div>
                   <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Updated:</strong> {t.updatedAt || '—'}</div>
                   <div><FaUserCheck style={{ marginRight: 4, fontSize: 10 }} /> <strong>Assigned to:</strong> {t.assignedTo || '—'}</div>
+                  <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Postponed until:</strong> {t.postponedUntil ? new Date(t.postponedUntil).toLocaleString() : '—'}</div>
                   <div><FaTag style={{ marginRight: 4, fontSize: 10 }} /> <strong>Category:</strong> {t.category || '—'}</div>
                   <div><FaBrain style={{ marginRight: 4, fontSize: 10 }} /> <strong>AI original:</strong> {t.aiOriginalCategory ? <span>{t.aiOriginalCategory} {dtOverride && <span style={{ color: 'var(--amber)' }}>(overridden)</span>}</span> : '—'}</div>
                   <div><FaBrain style={{ marginRight: 4, fontSize: 10 }} /> <strong>Confidence:</strong> {t.combinedConfidence != null ? `${Math.round(t.combinedConfidence * 100)}%` : '—'}</div>
                   <div><FaExclamationTriangle style={{ marginRight: 4, fontSize: 10 }} /> <strong>SLA:</strong> <span style={{ color: dtSla.color }}>{dtSla.label}</span></div>
                 </div>
                 {t.conflictDetected && <div className="alert alert-error" style={{ fontSize: 11, padding: '6px 10px', marginBottom: 12 }}><FaExclamationTriangle style={{ marginRight: 4 }} />AI conflict detected — manual review recommended.</div>}
+                {t.status === 'Declined' && (
+                  <div className="alert alert-warning" style={{ fontSize: 11, padding: '6px 10px', marginBottom: 12 }}>
+                    <FaExclamationTriangle style={{ marginRight: 4 }} />Declined by the provider.
+                    {t.postponedUntil ? <span> Postponed until <strong>{new Date(t.postponedUntil).toLocaleString()}</strong>.</span> : ' No postponement date set.'}
+                    {t.postponedReason ? <span> Reason: <em>{t.postponedReason}</em></span> : null}
+                  </div>
+                )}
                 {t.images && t.images.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     <strong style={{ fontSize: 11 }}>Attachments ({t.images.length})</strong>

@@ -8,16 +8,15 @@ import AppError from '../../shared/errors/AppError.js';
 import { isValidTransition, TicketStates, isTerminal } from '../../shared/constants/ticketStates.js';
 import { findById as findServiceProvider } from '../technicians/technicians.repository.js';
 import { classify } from '../../shared/utils/aiClassifier.js';
-import { checkTicketSla } from '../../shared/utils/slaChecker.js';
+import { checkTicketSla, loadSlaConfig } from '../../shared/utils/slaChecker.js';
 import { scoreProviders } from '../../shared/utils/routingScore.js';
 import { sendToUser } from '../../shared/utils/sse.js';
 import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
-import { getPresignedUrl } from '../../shared/adapters/s3Adapter.js';
+import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
-import { isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import config from '../../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,6 +94,21 @@ async function assertRoutingAllowed(ticket) {
   }
 }
 
+async function attachSlaDeadlines(tickets) {
+  if (!tickets || tickets.length === 0) return tickets;
+  const slaConfig = await loadSlaConfig();
+  const now = Date.now();
+  for (const t of tickets) {
+    const sla = slaConfig[t.priority || 'MEDIUM'];
+    if (!sla) continue;
+    const createdMs = new Date(t.created_at || now).getTime();
+    if (Number.isNaN(createdMs)) continue;
+    t.slaResponseBefore = createdMs + sla.responseMinutes * 60 * 1000;
+    t.slaResolutionBefore = createdMs + sla.resolutionMinutes * 60 * 1000;
+  }
+  return tickets;
+}
+
 async function attachPhotoData(tickets) {
   if (!tickets || tickets.length === 0) return tickets;
 
@@ -130,6 +144,7 @@ async function list(filters) {
   const queryFilters = { ...filters, limit, offset };
   const { tickets, total } = await repo.findAll(queryFilters);
   await attachPhotoData(tickets);
+  await attachSlaDeadlines(tickets);
   const totalPages = Math.ceil(total / limit);
   return {
     success: true,
@@ -144,6 +159,7 @@ async function getById(id) {
   const history = await repo.getHistory(id);
   const comments = await repo.getComments(id);
   const [withPhotos] = await attachPhotoData([ticket]);
+  await attachSlaDeadlines([withPhotos]);
   return { success: true, data: { ticket: withPhotos, history, comments } };
 }
 
@@ -227,6 +243,7 @@ async function create(data, userId) {
   }
 
   const ticket = await repo.create({ ...data, tenant_id: userId, status: 'New' });
+  await attachSlaDeadlines([ticket]);
   await repo.addHistory(ticket.id, ticket.status, userId, null, 'Ticket created');
   await auditLog(ticket.id, 'created', userId, null, { status: ticket.status, title: ticket.title });
   runAiPipeline(ticket.id).catch(() => {});
@@ -351,6 +368,8 @@ async function assign(id, technicianId, note, userId, userName, role) {
   const updated = await repo.update(id, {
     assigned_to: technicianId,
     status: 'Assigned',
+    postponed_until: null,
+    postponed_reason: null,
   });
   await repo.addHistory(id, 'Assigned', userId, userName, note || `Assigned to ${provider.name}`);
   await auditLog(ticket.id, 'assigned', userId, userName, {
@@ -364,6 +383,46 @@ async function acceptTicket(id, userId, userName, note) {
   const updated = await performTransition(id, TicketStates.ACCEPTED, userId, userName,
     note || 'Provider accepted the assignment', 'ticket_accepted');
   return { success: true, data: { ticket: updated }, message: 'Ticket accepted' };
+}
+
+async function declineTicket(id, userId, userName, note, postponeUntil) {
+  const ticket = await repo.findById(id);
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  await assertNotReadOnly(ticket);
+
+  if (!isValidTransition(ticket.status, TicketStates.DECLINED)) {
+    throw AppError.badRequest(`Cannot decline a '${ticket.status}' ticket`);
+  }
+
+  let parsedUntil = null;
+  if (postponeUntil) {
+    parsedUntil = new Date(postponeUntil);
+    if (Number.isNaN(parsedUntil.getTime())) {
+      throw AppError.badRequest('postponeUntil must be a valid date/time');
+    }
+  }
+
+  const updates = { status: TicketStates.DECLINED, assigned_to: null };
+  if (parsedUntil) updates.postponed_until = parsedUntil;
+  if (note) updates.postponed_reason = note;
+
+  const updated = await repo.update(id, updates);
+  await repo.addHistory(id, TicketStates.DECLINED, userId, userName,
+    note || 'Provider declined the assignment');
+  await auditLog(ticket.id, 'declined', userId, userName, {
+    from: ticket.status, postponeUntil: parsedUntil ? parsedUntil.toISOString() : null, note,
+  });
+
+  if (updated.tenant_id) {
+    sendToUser(updated.tenant_id, 'ticket_declined', {
+      ticketId: id, title: ticket.title, status: TicketStates.DECLINED,
+    });
+  }
+
+  const message = parsedUntil
+    ? `Ticket declined — postponed to ${parsedUntil.toLocaleString()}`
+    : 'Ticket declined';
+  return { success: true, data: { ticket: updated }, message };
 }
 
 async function startWork(id, userId, userName, note) {
@@ -567,6 +626,6 @@ export {
   list, getById, create, update, changeStatus, assign, complete, reopen, rate,
   classifyTicket, confirmLowConfidence, overrideAiLabel, downgradeVisualEmergency,
   getTopProviders, checkSla, softDelete, restore,
-  markAiClassified, acceptTicket, startWork, markWaitingParts, markPartsReceived,
+  markAiClassified, acceptTicket, declineTicket, startWork, markWaitingParts, markPartsReceived,
   tenantConfirm, closeTicket, runAiPipeline,
 };

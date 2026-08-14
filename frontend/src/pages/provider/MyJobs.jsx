@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { FaTicketAlt, FaSearch, FaCheck, FaTimes, FaPlay, FaPause, FaWrench, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaEye, FaUndo } from 'react-icons/fa';
+import { FaTicketAlt, FaSearch, FaCheck, FaTimes, FaPlay, FaPause, FaWrench, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaEye, FaUndo, FaRegCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
-import { acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
+import { acceptJob, declineJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
+import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
 const STATUS_TABS = ['all', 'Assigned', 'Accepted', 'In Progress', 'Waiting for Parts', 'Completed'];
@@ -14,7 +15,12 @@ const MyJobs = ({ onViewDetails }) => {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [declineFor, setDeclineFor] = useState(null);
+  const [declineDate, setDeclineDate] = useState('');
+  const [declineReason, setDeclineReason] = useState('');
+  const [declineBusy, setDeclineBusy] = useState(false);
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   const myTickets = tickets.filter(t => t.assignedTo === providerName || (session && t.assignedToId === session.id));
 
@@ -34,12 +40,52 @@ const MyJobs = ({ onViewDetails }) => {
     else { showMsg(r.error, 'error'); }
   };
 
+  const runDecline = async () => {
+    if (!declineFor) return;
+    setDeclineBusy(true);
+    const r = await declineJob(declineFor, declineReason.trim() || undefined, declineDate || undefined);
+    setDeclineBusy(false);
+    if (r.success) {
+      setDeclineFor(null); setDeclineDate(''); setDeclineReason(''); setExpandedId(null);
+      refresh();
+      showMsg('Job declined.', 'success');
+    } else {
+      showMsg(r.error, 'error');
+    }
+  };
+
+  const openDecline = (ticketId) => {
+    setDeclineFor(ticketId);
+    setDeclineDate('');
+    setDeclineReason('');
+    setExpandedId(expandedId === ticketId ? null : ticketId);
+  };
+
+  const DeclineForm = ({ t }) => (
+    <div style={{ marginTop: 8, padding: 10, border: '1px solid rgba(240,180,50,0.35)', borderRadius: 6, background: 'rgba(240,180,50,0.06)' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}><FaExclamationTriangle style={{ color: 'var(--amber)', marginRight: 4 }} />Decline this job?</div>
+      <div className="form-group">
+        <label className="form-label">Postpone until (optional)</label>
+        <input type="datetime-local" className="form-input" value={declineDate} onChange={e => setDeclineDate(e.target.value)} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Reason for the tenant / manager (optional)</label>
+        <textarea className="form-textarea" style={{ minHeight: 50 }} placeholder="e.g. Waiting for parts — available to reschedule next week." value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className="btn btn-danger btn-sm" disabled={declineBusy} onClick={runDecline}>{declineBusy ? 'Declining...' : 'Confirm Decline'}</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => setDeclineFor(null)}>Cancel</button>
+      </div>
+    </div>
+  );
+
   const ActionButtons = ({ t }) => {
     switch (t.status) {
       case 'Assigned':
         return (
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="btn btn-teal btn-sm" onClick={() => run(acceptJob(t.ticketId), 'Job accepted.')} title="Accept job"><FaPlay /> Accept</button>
+            <button className="btn btn-danger btn-sm" onClick={() => openDecline(t.ticketId)} title="Decline job"><FaTimes /> Decline</button>
           </div>
         );
       case 'Accepted':
@@ -136,13 +182,14 @@ const MyJobs = ({ onViewDetails }) => {
                               <strong>Attachments:</strong>
                               <div className="image-preview-grid" style={{ marginTop: 4 }}>
                                 {t.images.map((img, idx) => (
-                                  <div key={idx} className="image-preview" style={{ width: 60, height: 60 }}>
-                                    <img src={img} alt="" />
+                                  <div key={idx} className="image-preview" style={{ width: 60, height: 60, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                                    <img src={img.data || img} alt="" />
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
+                          {declineFor === t.ticketId && <DeclineForm t={t} />}
                         </td>
                       </tr>
                     )}
@@ -153,6 +200,7 @@ const MyJobs = ({ onViewDetails }) => {
           </div>
         )}
       </div>
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

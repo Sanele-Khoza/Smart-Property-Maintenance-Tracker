@@ -41,7 +41,7 @@ function buildUserPayload(user) {
   };
 }
 
-async function register({ name, surname, email, password, role, phone }, ipAddress) {
+async function register({ name, surname, email, password, role, phone, idNumber, companyName, specialisations }, ipAddress) {
   const existing = await repo.findByEmail(email);
   if (existing) throw AppError.conflict('Email already registered');
 
@@ -50,8 +50,18 @@ async function register({ name, surname, email, password, role, phone }, ipAddre
   const approved = role === 'SYSTEM_ADMIN';
 
   const user = await repo.create({
-    name, surname, email, phone, passwordHash, role, status, approved,
+    name, surname, email, phone, idNumber, passwordHash, role, status, approved,
   });
+
+  if (role === 'SERVICE_PROVIDER') {
+    await repo.createServiceProvider({
+      name: `${name} ${surname}`,
+      companyName,
+      email,
+      phone,
+      specialisations: specialisations || [],
+    });
+  }
 
   const accessToken = signJwt(user);
   const refreshToken = generateRefreshToken();
@@ -122,10 +132,10 @@ async function login(email, password, ipAddress) {
   if (!valid) {
     const attempts = (user.login_attempts || 0) + 1;
     if (attempts >= 5) {
-      const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+      const lockedUntil = new Date(Date.now() + 3 * 60 * 1000);
       await repo.lockUser(user.id, lockedUntil, attempts);
       await audit.log('ACCOUNT_LOCKED', `Locked after ${attempts} failed attempts`, user.id, ipAddress, audit.SEVERITY.WARN);
-      throw AppError.forbidden('Account locked due to too many failed attempts. Try again in 30 minutes.');
+      throw AppError.forbidden('Account locked due to too many failed attempts. Try again in 3 minutes.');
     }
     await repo.updateLoginAttempts(user.id, attempts);
     await audit.log('LOGIN_FAILED', `Failed attempt ${attempts}/5`, user.id, ipAddress, audit.SEVERITY.WARN);

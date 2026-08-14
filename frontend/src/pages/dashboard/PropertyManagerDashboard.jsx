@@ -16,6 +16,7 @@ import Technicians from '../manager/Technicians';
 import Scheduling from '../manager/Scheduling';
 import Reports from '../manager/Reports';
 import AIReview from '../manager/AIReview';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
@@ -91,7 +92,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
                             <div className="ticket-images">
                               {t.images.slice(0, 2).map((img, idx) => (
                                 <div key={idx} className="ticket-thumb" onClick={(e) => { e.stopPropagation(); setSelectedImage(img); }}>
-                                  <img src={img} alt="" />
+                                  <img src={img.data || img} alt="" />
                                 </div>
                               ))}
                             </div>
@@ -211,7 +212,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
                       <div className="image-preview-grid">
                         {selectedTicketDetails.images.map((img, idx) => (
                           <div key={idx} className="image-preview" style={{ width: 100, height: 100 }} onClick={() => setSelectedImage(img)}>
-                            <img src={img} alt={`Attachment ${idx}`} />
+                            <img src={img.data || img} alt={`Attachment ${idx}`} />
                           </div>
                         ))}
                       </div>
@@ -224,7 +225,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
             {selectedImage && (
               <div className="modal" onClick={() => setSelectedImage(null)}>
                 <span className="modal-close">×</span>
-                <img src={selectedImage} alt="Full size" />
+                <img src={selectedImage.data || selectedImage} alt="Full size" />
               </div>
             )}
           </>
@@ -245,6 +246,8 @@ const PropertyManagerDashboard = ({ activePage }) => {
         return <Scheduling />;
       case 'Reports':
         return <Reports />;
+      case 'Ratings':
+        return <RatingsList title="Ratings" subtitle="Individual ratings and comments for your managed properties." />;
       default:
         return <Overview />;
     }

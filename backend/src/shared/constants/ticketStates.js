@@ -14,13 +14,15 @@ const TicketStates = {
   ON_HOLD: 'On Hold',
   REOPENED: 'Reopened',
   ESCALATED: 'Escalated',
+  DECLINED: 'Declined',
 };
 
 const TRANSITIONS = {
   [TicketStates.NEW]: [TicketStates.AI_CLASSIFIED, TicketStates.MANUAL_REVIEW, TicketStates.CANCELLED],
   [TicketStates.AI_CLASSIFIED]: [TicketStates.ASSIGNED, TicketStates.MANUAL_REVIEW, TicketStates.CANCELLED],
   [TicketStates.MANUAL_REVIEW]: [TicketStates.AI_CLASSIFIED, TicketStates.CANCELLED],
-  [TicketStates.ASSIGNED]: [TicketStates.ACCEPTED, TicketStates.CANCELLED, TicketStates.ON_HOLD, TicketStates.ESCALATED],
+  [TicketStates.ASSIGNED]: [TicketStates.ACCEPTED, TicketStates.CANCELLED, TicketStates.ON_HOLD, TicketStates.ESCALATED, TicketStates.DECLINED],
+  [TicketStates.DECLINED]: [TicketStates.ASSIGNED, TicketStates.CANCELLED],
   [TicketStates.ACCEPTED]: [TicketStates.IN_PROGRESS, TicketStates.CANCELLED, TicketStates.ON_HOLD],
   [TicketStates.IN_PROGRESS]: [TicketStates.WAITING_FOR_PARTS, TicketStates.COMPLETED, TicketStates.ON_HOLD, TicketStates.ESCALATED],
   [TicketStates.WAITING_FOR_PARTS]: [TicketStates.IN_PROGRESS, TicketStates.ON_HOLD],

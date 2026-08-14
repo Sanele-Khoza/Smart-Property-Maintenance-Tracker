@@ -2,9 +2,10 @@ import React, { useState, useMemo, useRef } from 'react';
 import { FaArrowLeft, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaClock, FaWrench, FaMapMarkerAlt, FaEnvelope, FaPhone, FaCheck, FaPause, FaPlay, FaIdCard, FaCamera, FaTimes } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
 import { getUsers } from '../../data/authStore';
-import { getTickets, getProperties, getUnits, acceptJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
+import { getTickets, getProperties, getUnits, acceptJob, declineJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
+import ImageLightbox from '../../components/common/ImageLightbox';
 
 const JobDetail = ({ ticketId, onBack }) => {
   const session = getSession();
@@ -20,6 +21,11 @@ const JobDetail = ({ ticketId, onBack }) => {
   const [completionPreviews, setCompletionPreviews] = useState([]);
   const [completionMsg, setCompletionMsg] = useState({ text: '', type: '' });
   const [showComplete, setShowComplete] = useState(false);
+  const [showDecline, setShowDecline] = useState(false);
+  const [declineDate, setDeclineDate] = useState('');
+  const [declineReason, setDeclineReason] = useState('');
+  const [declineBusy, setDeclineBusy] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState(null);
   const fileInputRef = useRef(null);
 
   const ticket = tickets.find(t => t.ticketId === ticketId);
@@ -58,6 +64,14 @@ const JobDetail = ({ ticketId, onBack }) => {
   const runWorkflow = async (promise, newStatus) => {
     const r = await promise;
     if (r.success) { refresh(); showMsg(`Status updated to ${newStatus}`, 'success'); setComment(''); }
+    else { showMsg(r.error, 'error'); }
+  };
+
+  const runDecline = async () => {
+    setDeclineBusy(true);
+    const r = await declineJob(ticketId, declineReason.trim() || undefined, declineDate || undefined);
+    setDeclineBusy(false);
+    if (r.success) { refresh(); showMsg('Job declined.', 'success'); setShowDecline(false); setDeclineDate(''); setDeclineReason(''); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -119,8 +133,8 @@ const JobDetail = ({ ticketId, onBack }) => {
               <div className="card-title">Photos ({ticket.images.length})</div>
               <div className="image-preview-grid">
                 {ticket.images.map((img, idx) => (
-                  <div key={idx} className="image-preview" style={{ width: 100, height: 100 }}>
-                    <img src={img} alt={`Photo ${idx + 1}`} />
+                  <div key={idx} className="image-preview" style={{ width: 100, height: 100, cursor: 'pointer' }} onClick={() => setLightboxImg(img.data || img)}>
+                    <img src={img.data || img} alt={`Photo ${idx + 1}`} />
                   </div>
                 ))}
               </div>
@@ -140,7 +154,26 @@ const JobDetail = ({ ticketId, onBack }) => {
                     <a.icon /> {a.label}
                   </button>
                 ))}
+                {ticket.status === 'Assigned' && (
+                  <button className="btn btn-danger" onClick={() => setShowDecline(!showDecline)}>
+                    <FaTimes /> {showDecline ? 'Cancel' : 'Decline'}
+                  </button>
+                )}
               </div>
+              {showDecline && (
+                <div style={{ marginTop: 12, padding: 10, border: '1px solid rgba(240,180,50,0.35)', borderRadius: 6, background: 'rgba(240,180,50,0.06)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}><FaBolt style={{ color: 'var(--amber)', marginRight: 4 }} />Decline this job?</div>
+                  <div className="form-group">
+                    <label className="form-label">Postpone until (optional)</label>
+                    <input type="datetime-local" className="form-input" value={declineDate} onChange={e => setDeclineDate(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Reason for the tenant / manager (optional)</label>
+                    <textarea className="form-textarea" style={{ minHeight: 50 }} placeholder="e.g. Waiting for parts — available to reschedule next week." value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
+                  </div>
+                  <button className="btn btn-danger" disabled={declineBusy} onClick={runDecline}>{declineBusy ? 'Declining...' : 'Confirm Decline'}</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -221,7 +254,7 @@ const JobDetail = ({ ticketId, onBack }) => {
                   <strong style={{ fontSize: 12 }}>Completion Photos:</strong>
                   <div className="image-preview-grid" style={{ marginTop: 4 }}>
                     {ticket.completionPhotos.map((p, idx) => (
-                      <div key={idx} className="image-preview" style={{ width: 70, height: 70 }}>
+                      <div key={idx} className="image-preview" style={{ width: 70, height: 70, cursor: 'pointer' }} onClick={() => setLightboxImg(p.preview || p.data || p)}>
                         <img src={p.preview || p.data || p} alt="" />
                       </div>
                     ))}
@@ -269,6 +302,7 @@ const JobDetail = ({ ticketId, onBack }) => {
           </div>
         </div>
       </div>
+      <ImageLightbox src={lightboxImg} onClose={() => setLightboxImg(null)} />
     </>
   );
 };

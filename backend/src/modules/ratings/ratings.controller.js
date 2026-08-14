@@ -27,4 +27,17 @@ const getTicketRatings = async (req, res, next) => {
   }
 };
 
-export { createRating, getTicketRatings };
+const listRatings = async (req, res, next) => {
+  try {
+    const result = await service.listRatings(req.user.id, req.user.role);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export { createRating, getTicketRatings, listRatings };

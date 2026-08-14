@@ -29,6 +29,7 @@ const STATUS_STYLE = {
   'On Hold': { className: 'badge', style: { color: '#f0b432', background: 'rgba(240,180,50,0.15)' } },
   'Reopened': { className: 'badge badge-open' },
   'Escalated': { className: 'badge', style: { color: '#e05252', background: 'rgba(224,82,82,0.15)' } },
+  'Declined': { className: 'badge', style: { color: '#f0b432', background: 'rgba(240,180,50,0.15)' } },
 };
 
 const StatusBadge = ({ status }) => {

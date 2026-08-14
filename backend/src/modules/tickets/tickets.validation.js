@@ -72,6 +72,11 @@ const acceptSchema = z.object({
   note: z.string().optional().nullable(),
 });
 
+const declineSchema = z.object({
+  note: z.string().optional().nullable(),
+  postponeUntil: z.string().optional().nullable(),
+});
+
 const startWorkSchema = z.object({
   note: z.string().optional().nullable(),
 });
@@ -96,7 +101,7 @@ const closeSchema = z.object({
 export {
   createTicketSchema, updateTicketSchema, changeStatusSchema, assignTicketSchema,
   reopenTicketSchema, rateTicketSchema, overrideAiSchema, classifyTicketSchema,
-  acceptSchema, startWorkSchema, waitingPartsSchema, partsReceivedSchema,
+  acceptSchema, declineSchema, startWorkSchema, waitingPartsSchema, partsReceivedSchema,
   tenantConfirmSchema, closeSchema, noteOnlySchema,
 };
 

@@ -22,6 +22,7 @@ import Roles from '../admin/Roles';
 import SystemHealth from '../admin/SystemHealth';
 import Technicians from '../admin/Technicians';
 import Tenants from '../admin/Tenants';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const SystemAdminDashboard = ({ activePage }) => {
   const [stats, setStats] = useState(getStats());
@@ -140,7 +141,7 @@ const SystemAdminDashboard = ({ activePage }) => {
                         <div className="ticket-images">
                           {t.images.slice(0, 3).map((img, idx) => (
                             <div key={idx} className="ticket-thumb" onClick={(e) => { e.stopPropagation(); setSelectedImage(img); }}>
-                              <img src={img} alt="" />
+                              <img src={img.data || img} alt="" />
                             </div>
                           ))}
                         </div>
@@ -208,7 +209,7 @@ const SystemAdminDashboard = ({ activePage }) => {
                       <div className="image-preview-grid">
                         {selectedTicketDetails.images.map((img, idx) => (
                           <div key={idx} className="image-preview" style={{ width: 100, height: 100 }} onClick={() => setSelectedImage(img)}>
-                            <img src={img} alt={`Attachment ${idx}`} />
+                            <img src={img.data || img} alt={`Attachment ${idx}`} />
                           </div>
                         ))}
                       </div>
@@ -221,7 +222,7 @@ const SystemAdminDashboard = ({ activePage }) => {
             {selectedImage && (
               <div className="modal" onClick={() => setSelectedImage(null)}>
                 <span className="modal-close">×</span>
-                <img src={selectedImage} alt="Full size" />
+                <img src={selectedImage.data || selectedImage} alt="Full size" />
               </div>
             )}
           </>
@@ -262,6 +263,8 @@ const SystemAdminDashboard = ({ activePage }) => {
         return <Technicians />;
       case 'Tenants':
         return <Tenants />;
+      case 'Ratings':
+        return <RatingsList title="All Ratings" subtitle="Every individual rating and comment across the system." />;
       default:
         return <Overview />;
     }

@@ -18,23 +18,24 @@ const adminNavItems = [
   'Categories', 'Reports', 'Audit Logs', 'Activity',
   'Notifications', 'Messages', 'Settings', 'Backup',
   'Analytics', 'Help', 'Roles', 'System Health',
-  'Technicians', 'Tenants',
+  'Technicians', 'Tenants', 'Ratings',
 ];
 
 const managerNavItems = [
   'Overview', 'Properties', 'Units', 'Tenants',
   'Tickets', 'AI Review', 'Technicians', 'Scheduling', 'Reports',
+  'Ratings',
 ];
 
 const tenantNavItems = [
   'Overview', 'Create Ticket', 'Profile', 'My Property', 'My Unit',
-  'Ticket Tracking', 'Notification',
+  'Ticket Tracking', 'Notification', 'My Ratings',
 ];
 
 const providerNavItems = [
   'Overview', 'Profile', 'My Jobs', 'Job Detail',
   'Schedule', 'Emergency', 'Notifications', 'Messages',
-  'Work History', 'My Performance',
+  'Work History', 'My Performance', 'My Ratings',
 ];
 
 function App() {
@@ -147,6 +148,7 @@ function App() {
     await refreshTickets();
     refreshUsers();
     setPage('app');
+    startSlaPolling();
     startRealtime();
   };
 

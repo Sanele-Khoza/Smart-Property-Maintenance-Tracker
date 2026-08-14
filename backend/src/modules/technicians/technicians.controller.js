@@ -8,6 +8,8 @@ const updateStatus = async (req, res, next) => { try { const result = await serv
 const updateLocation = async (req, res, next) => { try { const result = await service.updateLocation(req.params.id, req.body.latitude, req.body.longitude); res.json(result); } catch (err) { next(err); } };
 const getAvailability = async (req, res, next) => { try { const result = await service.getAvailability(req.params.id); res.json(result); } catch (err) { next(err); } };
 const addAvailability = async (req, res, next) => { try { const result = await service.addAvailability(req.params.id, req.body); res.json(result); } catch (err) { next(err); } };
+const getMe = async (req, res, next) => { try { const result = await service.getMe(req.user.email); res.json(result); } catch (err) { next(err); } };
+const updateMe = async (req, res, next) => { try { const result = await service.updateMe(req.user.email, req.validatedBody || req.body); res.json(result); } catch (err) { next(err); } };
 const remove = async (req, res, next) => { try { const result = await service.remove(req.params.id); res.json(result); } catch (err) { next(err); } };
 
-export { list, getById, create, update, updateStatus, updateLocation, getAvailability, addAvailability, remove };
+export { list, getById, create, update, updateStatus, updateLocation, getAvailability, addAvailability, remove, getMe, updateMe };

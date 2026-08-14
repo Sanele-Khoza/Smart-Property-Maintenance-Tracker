@@ -101,6 +101,68 @@ const getTicketRatings = async (ticketId) => {
   return result.rows;
 };
 
+/*
+ * Role-scoped list of individual ratings:
+ *  - TENANT           → only ratings submitted by the caller
+ *  - SERVICE_PROVIDER → only ratings on tickets assigned to the caller
+ *  - PROPERTY_MANAGER → only ratings on tickets in the caller's properties
+ *  - SYSTEM_ADMIN     → every rating in the system
+ */
+const listRatings = async ({ userId, role }) => {
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  if (role === 'TENANT') {
+    conditions.push(`r.rated_by = $${idx++}`);
+    params.push(userId);
+  } else if (role === 'SERVICE_PROVIDER') {
+    conditions.push(
+      `t.assigned_to = (
+         SELECT sp.id FROM service_providers sp
+         WHERE sp.email = (SELECT u.email FROM users u WHERE u.id = $${idx++})
+       )`
+    );
+    params.push(userId);
+  } else if (role === 'PROPERTY_MANAGER') {
+    conditions.push(`p.manager_id = $${idx++}`);
+    params.push(userId);
+  }
+
+  const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const result = await query(
+    `SELECT
+        r.id,
+        r.rating,
+        r.comment,
+        r.created_at,
+        r.rated_by AS rated_by_id,
+        TRIM(CONCAT(tenant_user.name, ' ', tenant_user.surname)) AS tenant_name,
+        t.id AS ticket_id,
+        t.title AS ticket_title,
+        t.status AS ticket_status,
+        t.assigned_to AS provider_id,
+        sp.name AS provider_name,
+        sp.rating AS provider_rating,
+        sp.rating_count AS provider_rating_count,
+        p.name AS property_name,
+        u.unit_number,
+        p.manager_id
+     FROM performance_ratings r
+     JOIN tickets t ON t.id = r.ticket_id
+     LEFT JOIN users tenant_user ON tenant_user.id = r.rated_by
+     LEFT JOIN service_providers sp ON sp.id = t.assigned_to
+     LEFT JOIN units u ON u.id = t.unit_id
+     LEFT JOIN properties p ON p.id = u.property_id
+     ${whereClause}
+     ORDER BY r.created_at DESC`,
+    params
+  );
+
+  return result.rows;
+};
+
 export {
   findTicket,
   findExistingRating,
@@ -108,4 +170,5 @@ export {
   createRatingWithSync,
   syncProviderRating,
   getTicketRatings,
+  listRatings,
 };

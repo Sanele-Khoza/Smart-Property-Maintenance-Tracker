@@ -24,6 +24,11 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.includes('@')) return `email:${email.toLowerCase()}`;
+    return req.ip;
+  },
   message: { error: 'Too many login attempts, please try again later', code: 'RATE_LIMIT' },
 });
 

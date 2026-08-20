@@ -40,6 +40,7 @@ const providerNavItems = [
 function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('loading');
+  const [theme, setTheme] = useState(() => localStorage.getItem('spmt-theme') || 'dark');
   const [activeAdminPage, setActiveAdminPage] = useState('Overview');
   const [activeManagerPage, setActiveManagerPage] = useState('Overview');
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
@@ -50,6 +51,13 @@ function App() {
   const userRef = useRef(null);
   userRef.current = user;
   const esRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('spmt-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   const stopRealtime = () => {
     if (esRef.current) {
@@ -227,6 +235,8 @@ function App() {
         activeSidebarItem={sidebar?.active}
         onSidebarItemClick={sidebar?.setter}
         sidebarBadges={sidebarBadges}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <div className="layout">
         <div className="main" style={{ width: '100%' }}>

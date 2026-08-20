@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaLock, FaBuilding, FaStar, FaCheckCircle, FaExclamationCircle, FaMapMarkerAlt, FaClock, FaToolbox, FaToggleOn, FaToggleOff, FaIdCard, FaBriefcase, FaWrench } from 'react-icons/fa';
 import { getSession, getUsers, updateUser } from '../../data/authStore';
 import { getTechnicians, updateTechnicianStatus, updateTechnician } from '../../data/store';
+import { getMyTechnician, updateMyTechnician } from '../../data/technicianStore';
 
 const maskIdNumber = (idNumber) => {
   if (!idNumber) return '—';
@@ -26,12 +27,20 @@ const Profile = () => {
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' });
   const [msg, setMsg] = useState({ text: '', type: '' });
 
-  const refreshTech = () => {
+  const refreshTech = async () => {
     const all = getTechnicians();
     const found = all.find(t => t.name === providerName);
     setTech(found || null);
     if (found) {
       setTechForm({ companyName: found.companyName || '', specialisations: found.specialisations || [] });
+      return;
+    }
+    if (session?.role === 'SERVICE_PROVIDER') {
+      const r = await getMyTechnician();
+      if (r.success) {
+        setTech(r.data);
+        setTechForm({ companyName: r.data.companyName || '', specialisations: r.data.specialisations || [] });
+      }
     }
   };
 
@@ -62,15 +71,29 @@ const Profile = () => {
     if (r.success) {
       const updated = getUsers().find(u => u.id === session.id);
       setUser(updated);
-      if (tech) {
-        await updateTechnician(tech.id, {
-          companyName: techForm.companyName.trim(),
-          specialisations: techForm.specialisations,
-          email: form.email.trim(), phone: form.phone.trim(),
-        });
-      }
       showMsg('Profile updated successfully.', 'success');
       setEditing(false);
+      refreshTech();
+    } else {
+      showMsg(r.error, 'error');
+    }
+  };
+
+  const saveBusinessDetails = async () => {
+    if (!techForm.companyName.trim()) { showMsg('Company name is required.', 'error'); return; }
+    const payload = { companyName: techForm.companyName.trim(), specialisations: techForm.specialisations };
+    let r;
+    if (session?.role === 'SERVICE_PROVIDER') {
+      r = await updateMyTechnician(payload);
+    } else if (tech) {
+      r = await updateTechnician(tech.id, payload);
+    } else {
+      showMsg('No provider record found.', 'error');
+      return;
+    }
+    if (r.success) {
+      setTech(r.data || tech);
+      showMsg('Business details saved.', 'success');
       refreshTech();
     } else {
       showMsg(r.error, 'error');
@@ -121,7 +144,7 @@ const Profile = () => {
           <div className="card-title"><FaBuilding /> Business Details</div>
           <div className="form-group">
             <label className="form-label"><FaBriefcase /> Company Name</label>
-            <input className="form-input" value={techForm.companyName} onChange={e => setTechForm(f => ({ ...f, companyName: e.target.value }))} disabled={!editing} />
+            <input className="form-input" value={techForm.companyName} onChange={e => setTechForm(f => ({ ...f, companyName: e.target.value }))} placeholder="e.g. Bob's Plumbing Co" />
           </div>
           <div className="form-group">
             <label className="form-label"><FaWrench /> Specialisations</label>
@@ -130,15 +153,15 @@ const Profile = () => {
                 <button
                   key={spec}
                   className={`btn btn-sm ${techForm.specialisations.includes(spec) ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => editing && toggleSpecialisation(spec)}
-                  style={{ cursor: editing ? 'pointer' : 'default', opacity: editing ? 1 : 0.7, fontSize: 11 }}
-                  disabled={!editing}
+                  onClick={() => toggleSpecialisation(spec)}
+                  style={{ cursor: 'pointer', fontSize: 11 }}
                 >
                   {techForm.specialisations.includes(spec) ? <FaToggleOn /> : <FaToggleOff />} {spec}
                 </button>
               ))}
             </div>
           </div>
+          <button className="btn btn-primary" onClick={saveBusinessDetails} style={{ marginTop: 4 }}><FaCheckCircle /> Save Business Details</button>
           <div className="form-group">
             <label className="form-label"><FaToolbox /> Availability Status</label>
             <div style={{ display: 'flex', gap: 4 }}>

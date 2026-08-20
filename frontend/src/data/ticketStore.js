@@ -64,6 +64,7 @@ function mapTicket(t) {
     deletedBy: t.deleted_by || t.deletedBy || null,
     postponedUntil: t.postponed_until || t.postponedUntil || null,
     postponedReason: t.postponed_reason || t.postponedReason || null,
+    acceptanceNote: t.acceptance_note || t.acceptanceNote || null,
     images: Array.isArray(t.photoUrls)
       ? t.photoUrls
           .filter(Boolean)

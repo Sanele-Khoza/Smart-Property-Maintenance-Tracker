@@ -7,6 +7,7 @@ import MyProperty from '../tenant/MyProperty';
 import MyUnit from '../tenant/MyUnit';
 import TicketTracking from '../tenant/TicketTracking';
 import Notification from '../tenant/Notification';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const TenantDashboard = ({ currentUser, activePage }) => {
   const [tickets, refresh] = useTickets();
@@ -73,6 +74,8 @@ const TenantDashboard = ({ currentUser, activePage }) => {
         return <TicketTracking />;
       case 'Notification':
         return <Notification />;
+      case 'My Ratings':
+        return <RatingsList title="My Ratings" subtitle="The ratings and comments you have submitted." />;
       default:
         return <Overview />;
     }

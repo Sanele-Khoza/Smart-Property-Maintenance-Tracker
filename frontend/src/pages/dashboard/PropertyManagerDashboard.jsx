@@ -16,6 +16,7 @@ import Technicians from '../manager/Technicians';
 import Scheduling from '../manager/Scheduling';
 import Reports from '../manager/Reports';
 import AIReview from '../manager/AIReview';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
@@ -245,6 +246,8 @@ const PropertyManagerDashboard = ({ activePage }) => {
         return <Scheduling />;
       case 'Reports':
         return <Reports />;
+      case 'Ratings':
+        return <RatingsList title="Ratings" subtitle="Individual ratings and comments for your managed properties." />;
       default:
         return <Overview />;
     }

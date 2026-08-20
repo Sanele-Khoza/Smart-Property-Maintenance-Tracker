@@ -22,6 +22,7 @@ import Roles from '../admin/Roles';
 import SystemHealth from '../admin/SystemHealth';
 import Technicians from '../admin/Technicians';
 import Tenants from '../admin/Tenants';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const SystemAdminDashboard = ({ activePage }) => {
   const [stats, setStats] = useState(getStats());
@@ -262,6 +263,8 @@ const SystemAdminDashboard = ({ activePage }) => {
         return <Technicians />;
       case 'Tenants':
         return <Tenants />;
+      case 'Ratings':
+        return <RatingsList title="All Ratings" subtitle="Every individual rating and comment across the system." />;
       default:
         return <Overview />;
     }

@@ -3,14 +3,16 @@ import { jest } from '@jest/globals';
 const mockFindTicket = jest.fn();
 const mockFindExistingRating = jest.fn();
 const mockCreateRatingWithSync = jest.fn();
+const mockListRatings = jest.fn();
 
 jest.unstable_mockModule('../modules/ratings/ratings.repository.js', () => ({
   findTicket: mockFindTicket,
   findExistingRating: mockFindExistingRating,
   createRatingWithSync: mockCreateRatingWithSync,
+  listRatings: mockListRatings,
 }));
 
-const { createRating, computeFinalRating } = await import('../modules/ratings/ratings.service.js');
+const { createRating, listRatings, computeFinalRating } = await import('../modules/ratings/ratings.service.js');
 
 describe('computeFinalRating formula', () => {
   test('combines the old rating (weighted by count) with the new score', () => {
@@ -100,6 +102,33 @@ describe('createRating service', () => {
   test('rejects a rating outside 1-5', async () => {
     await expect(createRating('u1', { ticketId: 't1', rating: 7 })).rejects.toThrow('between 1 and 5');
     await expect(createRating('u1', { ticketId: 't1', rating: 0 })).rejects.toThrow('between 1 and 5');
+  });
+});
+
+describe('listRatings service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('delegates to the repository with the caller role and id', async () => {
+    mockListRatings.mockResolvedValue([
+      { id: 1, rating: 5, comment: 'Great work', tenant_name: 'John Tenant' },
+    ]);
+
+    const result = await listRatings('u1', 'PROPERTY_MANAGER');
+
+    expect(mockListRatings).toHaveBeenCalledWith({ userId: 'u1', role: 'PROPERTY_MANAGER' });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ rating: 5, comment: 'Great work' });
+  });
+
+  test('returns an empty array when there are no ratings', async () => {
+    mockListRatings.mockResolvedValue([]);
+
+    const result = await listRatings('u1', 'TENANT');
+
+    expect(mockListRatings).toHaveBeenCalledWith({ userId: 'u1', role: 'TENANT' });
+    expect(result).toEqual([]);
   });
 });
 

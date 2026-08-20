@@ -15,6 +15,7 @@ import Notifications from '../provider/Notifications';
 import Messages from '../provider/Messages';
 import WorkHistory from '../provider/WorkHistory';
 import Reports from '../provider/Reports';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const ServiceProviderDashboard = ({ activePage }) => {
   const [tickets, refresh] = useTickets();
@@ -240,6 +241,8 @@ const ServiceProviderDashboard = ({ activePage }) => {
         return <WorkHistory />;
       case 'My Performance':
         return <Reports />;
+      case 'My Ratings':
+        return <RatingsList title="My Ratings" subtitle="Every individual rating and comment you have received." />;
       default:
         return <Overview />;
     }

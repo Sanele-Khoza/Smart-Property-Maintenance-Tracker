@@ -97,4 +97,32 @@ export const updateTechnician = async (techId, updates) => {
   }
 };
 
+export const getMyTechnician = async () => {
+  try {
+    const result = await api('/technicians/me');
+    if (result.success && result.data?.technician) {
+      return { success: true, data: mapTechnician(result.data.technician) };
+    }
+    return { success: false, error: result.error || 'No provider record found' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const updateMyTechnician = async (updates) => {
+  try {
+    const result = await api('/technicians/me', {
+      method: 'PUT',
+      body: updates,
+    });
+    if (result.success && result.data) {
+      const updated = result.data.technician || result.data;
+      return { success: true, data: mapTechnician(updated) };
+    }
+    return { success: false, error: result.error || 'Failed to update provider details' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const getProviders = () => getTechnicians();

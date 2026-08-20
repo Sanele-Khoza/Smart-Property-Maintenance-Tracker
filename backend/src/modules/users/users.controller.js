@@ -24,7 +24,7 @@ const getUsers = async (req, res, next) => {
 
     params.push(limit);
     params.push(offset);
-    const result = await query(`SELECT id, name, surname, email, phone, role, status, approved, approved_at, last_login, created_at FROM users ${whereClause} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, params);
+    const result = await query(`SELECT id, name, surname, email, phone, role, status, approved, approved_at, last_login, created_at, login_attempts, locked_until FROM users ${whereClause} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, params);
     res.json({ success: true, data: { users: result.rows }, error: null, meta: { timestamp: new Date().toISOString(), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } } });
   } catch (err) { next(err); }
 };

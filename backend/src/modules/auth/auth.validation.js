@@ -4,7 +4,6 @@ const PASSWORD_MIN = 8;
 const NAME_MAX = 100;
 const SURNAME_MAX = 100;
 const EMAIL_MAX = 255;
-const PHONE_MAX = 20;
 
 const passwordSchema = z.string()
   .min(PASSWORD_MIN, `Password must be at least ${PASSWORD_MIN} characters`)
@@ -20,7 +19,10 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email').max(EMAIL_MAX).transform(e => e.toLowerCase()),
   password: passwordSchema,
   role: z.enum(['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER']),
-  phone: z.string().max(PHONE_MAX).optional().nullable(),
+  idNumber: z.string().regex(/^\d{13}$/, 'ID number must be exactly 13 digits'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+  companyName: z.string().trim().max(200).optional().nullable(),
+  specialisations: z.array(z.string()).optional().nullable(),
 });
 
 const loginSchema = z.object({

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 const roleLabels = {
   TENANT: 'Tenant',
@@ -7,7 +8,7 @@ const roleLabels = {
   SYSTEM_ADMIN: 'System Admin',
 };
 
-const Navbar = ({ user, onLogout, sidebarItems, activeSidebarItem, onSidebarItemClick, sidebarBadges }) => {
+const Navbar = ({ user, onLogout, sidebarItems, activeSidebarItem, onSidebarItemClick, sidebarBadges, theme, onToggleTheme }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleItemClick = (item) => {
@@ -27,6 +28,14 @@ const Navbar = ({ user, onLogout, sidebarItems, activeSidebarItem, onSidebarItem
       <div className="user-info">
         <span className="user-role">{roleLabels[user?.role] || user?.role}</span>
         <span className="header-badge">{user?.name} {user?.surname}</span>
+        <button
+          className="theme-toggle-btn"
+          onClick={onToggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? <FaSun /> : <FaMoon />}
+        </button>
         <button className="nav-menu-btn" onClick={() => setMenuOpen(true)}>⋮</button>
       </div>
       {menuOpen && <div className="nav-menu-overlay" onClick={() => setMenuOpen(false)} />}

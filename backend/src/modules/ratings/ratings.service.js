@@ -72,4 +72,8 @@ const getTicketRatings = async (ticketId) => {
   return repository.getTicketRatings(ticketId);
 };
 
-export { createRating, getTicketRatings, computeFinalRating };
+const listRatings = async (userId, role) => {
+  return repository.listRatings({ userId, role });
+};
+
+export { createRating, getTicketRatings, listRatings, computeFinalRating };

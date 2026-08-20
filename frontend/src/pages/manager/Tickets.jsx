@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser, FaTrash } from 'react-icons/fa';
+import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser, FaTrash, FaCommentDots } from 'react-icons/fa';
 import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians, trashTicket, restoreTicket, getTrashTickets } from '../../data/store';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
@@ -533,6 +533,11 @@ const Tickets = () => {
                     <FaExclamationTriangle style={{ marginRight: 4 }} />Declined by the provider.
                     {t.postponedUntil ? <span> Postponed until <strong>{new Date(t.postponedUntil).toLocaleString()}</strong>.</span> : ' No postponement date set.'}
                     {t.postponedReason ? <span> Reason: <em>{t.postponedReason}</em></span> : null}
+                  </div>
+                )}
+                {t.acceptanceNote && (
+                  <div className="alert" style={{ fontSize: 11, padding: '6px 10px', marginBottom: 12, background: 'rgba(0,150,136,0.08)', borderColor: 'rgba(0,150,136,0.35)' }}>
+                    <FaCommentDots style={{ marginRight: 4, color: 'var(--teal)' }} />Message from provider when accepting: <em>"{t.acceptanceNote}"</em>
                   </div>
                 )}
                 {t.images && t.images.length > 0 && (

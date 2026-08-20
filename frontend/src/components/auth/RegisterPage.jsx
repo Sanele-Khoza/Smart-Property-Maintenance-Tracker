@@ -9,10 +9,13 @@ const ROLE_OPTIONS = [
   { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
 ];
 
+const SPECIALISATION_OPTIONS = ['Plumbing', 'Electrical', 'HVAC', 'Structural', 'Pest Control', 'General'];
+
 const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   const [form, setForm] = useState({
     name: '', surname: '', age: '', email: '', phone: '',
     idNumber: '', password: '', confirmPassword: '', role: '',
+    companyName: '', specialisations: [],
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,6 +25,15 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const toggleSpecialisation = (spec) => {
+    setForm(f => ({
+      ...f,
+      specialisations: f.specialisations.includes(spec)
+        ? f.specialisations.filter(s => s !== spec)
+        : [...f.specialisations, spec],
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -48,6 +60,21 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
+    if (!/^\d{13}$/.test(form.idNumber)) {
+      setError('ID number must be exactly 13 digits.');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(form.phone)) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
+    if (form.role === 'SERVICE_PROVIDER' && !form.companyName.trim()) {
+      setError('Company name is required for service providers.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await registerUser({
@@ -59,6 +86,8 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
         idNumber: form.idNumber,
         password: form.password,
         role: form.role,
+        companyName: form.companyName,
+        specialisations: form.specialisations,
       });
 
       if (result.success) {
@@ -68,6 +97,7 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
         setForm({
           name: '', surname: '', age: '', email: '', phone: '',
           idNumber: '', password: '', confirmPassword: '', role: '',
+          companyName: '', specialisations: [],
         });
       } else {
         setError(result.error);
@@ -136,6 +166,30 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
               ))}
             </select>
           </div>
+          {form.role === 'SERVICE_PROVIDER' && (
+            <>
+              <div className="form-group">
+                <label className="form-label" htmlFor="reg-company">Company Name</label>
+                <input className="form-input" type="text" name="companyName" id="reg-company" placeholder="e.g. Bob's Plumbing Co" value={form.companyName} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Specialisations (categories you service)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {SPECIALISATION_OPTIONS.map(spec => (
+                    <button
+                      key={spec}
+                      type="button"
+                      className={`btn btn-sm ${form.specialisations.includes(spec) ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => toggleSpecialisation(spec)}
+                      style={{ fontSize: 11 }}
+                    >
+                      {spec}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
             System Administrator accounts are provisioned by an existing admin only.
           </p>

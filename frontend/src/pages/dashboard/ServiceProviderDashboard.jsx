@@ -171,6 +171,10 @@ const ServiceProviderDashboard = ({ activePage }) => {
                       <span className="ticket-details-value">{selectedTicketDetails.title}</span>
                     </div>
                     <div className="ticket-details-row">
+                      <span className="ticket-details-label">Ticket ID:</span>
+                      <span className="ticket-details-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{selectedTicketDetails.ticketId}</span>
+                    </div>
+                    <div className="ticket-details-row">
                       <span className="ticket-details-label">Description:</span>
                       <span className="ticket-details-value">{selectedTicketDetails.description}</span>
                     </div>

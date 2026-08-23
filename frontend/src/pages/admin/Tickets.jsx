@@ -368,6 +368,7 @@ const Tickets = () => {
                       <td colSpan="13" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 24, fontSize: 12, flexWrap: 'wrap' }}>
                           <div style={{ flex: 2, minWidth: 240 }}>
+                            <div style={{ marginBottom: 6 }}><strong>Ticket ID:</strong> <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{t.ticketId}</span></div>
                             <strong>Description:</strong>
                             <p style={{ margin: '4px 0', color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{t.description}</p>
                             <strong style={{ marginTop: 8, display: 'block' }}>Audit Trail:</strong>

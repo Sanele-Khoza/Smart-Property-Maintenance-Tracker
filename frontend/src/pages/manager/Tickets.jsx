@@ -511,6 +511,10 @@ const Tickets = () => {
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{t.title}</div>
                 </div>
                 <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600 }}>Ticket ID</label>
+                  <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-mid)' }}>{t.ticketId}</div>
+                </div>
+                <div className="form-group" style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, fontWeight: 600 }}>Description</label>
                   <p style={{ margin: '4px 0', color: 'var(--text-dim)', whiteSpace: 'pre-wrap', fontSize: 13 }}>{t.description}</p>
                 </div>

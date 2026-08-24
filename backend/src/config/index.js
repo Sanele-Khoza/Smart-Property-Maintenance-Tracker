@@ -34,6 +34,15 @@ const config = {
     ],
     uploadDir: process.env.UPLOAD_DIR || "uploads",
   },
+  smtp: {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    secure: process.env.SMTP_SECURE !== "false", // true = port 465 (SSL)
+    user: process.env.GMAIL_USER || "",
+    pass: process.env.GMAIL_APP_PASSWORD || "",
+    from: process.env.SMTP_FROM || process.env.GMAIL_USER || "noreply@spmt.com",
+  },
+  adminEmail: process.env.ADMIN_ALERT_EMAIL || "",
   ai: {
     textConfidenceThreshold:
       parseFloat(process.env.AI_TEXT_CONFIDENCE_THRESHOLD) || 0.6,

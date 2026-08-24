@@ -60,24 +60,32 @@ async function sendNotificationEmail(userEmail, userName, notification) {
   return sendEmail({ to: userEmail, subject, text, html });
 }
 
-async function sendTenantRegisteredAlert(tenant) {
+async function sendNewUserRegisteredAlert(user) {
   if (!config.adminEmail) {
-    logger.warn('ADMIN_ALERT_EMAIL not set — skipping tenant registration alert');
+    logger.warn('ADMIN_ALERT_EMAIL not set — skipping registration alert');
     return false;
   }
 
-  const subject = `New tenant registered: ${tenant.name} ${tenant.surname}`;
-  const text = `A new tenant has registered on SPMT.\n\n` +
-    `Name: ${tenant.name} ${tenant.surname}\n` +
-    `Email: ${tenant.email}\n` +
-    `Phone: ${tenant.phone || 'N/A'}\n` +
+  const roleLabel = {
+    TENANT: 'Tenant',
+    PROPERTY_MANAGER: 'Property Manager',
+    SERVICE_PROVIDER: 'Service Provider',
+  }[user.role] || user.role;
+
+  const subject = `New ${roleLabel.toLowerCase()} registered: ${user.name} ${user.surname}`;
+  const text = `A new ${roleLabel.toLowerCase()} has registered on SPMT.\n\n` +
+    `Role: ${roleLabel}\n` +
+    `Name: ${user.name} ${user.surname}\n` +
+    `Email: ${user.email}\n` +
+    `Phone: ${user.phone || 'N/A'}\n` +
     `Registered at: ${new Date().toISOString()}`;
   const html = `
     <div style="font-family: Arial; max-width: 600px;">
-      <h2>New Tenant Registration</h2>
-      <p><strong>Name:</strong> ${tenant.name} ${tenant.surname}</p>
-      <p><strong>Email:</strong> ${tenant.email}</p>
-      <p><strong>Phone:</strong> ${tenant.phone || 'N/A'}</p>
+      <h2>New ${roleLabel} Registration</h2>
+      <p><strong>Role:</strong> ${roleLabel}</p>
+      <p><strong>Name:</strong> ${user.name} ${user.surname}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
       <p><strong>Registered at:</strong> ${new Date().toISOString()}</p>
       <hr>
       <p style="color: #888;">
@@ -89,4 +97,4 @@ async function sendTenantRegisteredAlert(tenant) {
   return sendEmail({ to: config.adminEmail, subject, text, html });
 }
 
-export { sendEmail, sendNotificationEmail, sendTenantRegisteredAlert };
+export { sendEmail, sendNotificationEmail, sendNewUserRegisteredAlert };

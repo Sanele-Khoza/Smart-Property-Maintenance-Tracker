@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaArrowLeft } from 'react-icons/fa';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getSession } from '../../data/authStore';
 import { acceptJob, startJob, submitJobCompletion } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -69,6 +70,29 @@ const ServiceProviderDashboard = ({ activePage }) => {
               <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'In Progress').length}</div><div className="stat-label">In Progress</div></div>
               <div className="stat-card"><div className="stat-value">{myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length}</div><div className="stat-label">Completed</div></div>
             </div>
+            {myTickets.length > 0 && (
+              <div className="card" style={{ marginBottom: 20 }}>
+                <div className="chart-block-title">My Job Status Overview</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={[
+                    { name: 'Assigned', count: myTickets.filter(t => t.status === 'Assigned').length },
+                    { name: 'Accepted', count: myTickets.filter(t => t.status === 'Accepted').length },
+                    { name: 'In Progress', count: myTickets.filter(t => t.status === 'In Progress').length },
+                    { name: 'Completed', count: myTickets.filter(t => t.status === 'Completed' || t.status === 'Tenant Confirmed' || t.status === 'Closed').length },
+                  ]}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11 }} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      <Cell fill="#3498db" />
+                      <Cell fill="#9b59b6" />
+                      <Cell fill="#f39c12" />
+                      <Cell fill="#2ecc71" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
             <div className="main-cols">
               <div>
                 <div className="card">

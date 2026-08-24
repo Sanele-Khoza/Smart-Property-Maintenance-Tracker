@@ -6,7 +6,7 @@ import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendEmail } from '../../shared/adapters/sesAdapter.js';
-import { sendTenantRegisteredAlert } from '../../shared/utils/email.service.js';
+import {sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
@@ -96,14 +96,13 @@ async function register({ name, surname, email, password, role, phone, idNumber,
     console.log(`══════════════════════════════════════════════\n`);
   });
 
-  if (role === 'TENANT') {
-    sendTenantRegisteredAlert(user).catch((err) => {
+  sendNewUserRegisteredAlert(user)
+    .catch((err) => {
       console.log(`\n══════════════════════════════════════════════`);
       console.log(`  TENANT ALERT EMAIL ERROR (${err.message})`);
       console.log(`  Tenant: ${email}`);
       console.log(`══════════════════════════════════════════════\n`);
     });
-  }
 
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaWrench } from 'react-icons/fa';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { getStats, getTickets, getProperties, getUnits, getAllData, resetData } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
@@ -112,11 +113,52 @@ const SystemAdminDashboard = ({ activePage }) => {
               <div>
                 <div className="card">
                   <div className="card-title">Ticket Analytics</div>
-                  <div className="stat-grid">
-                    <div className="stat-card"><div className="stat-value">{openTickets.length}</div><div className="stat-label">Open</div></div>
-                    <div className="stat-card"><div className="stat-value">{assignedTickets.length}</div><div className="stat-label">Assigned</div></div>
-                    <div className="stat-card"><div className="stat-value">{inProgressTickets.length}</div><div className="stat-label">In Progress</div></div>
-                    <div className="stat-card"><div className="stat-value">{completedTickets.length}</div><div className="stat-label">Completed</div></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <div className="chart-block-title">By Status</div>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={[
+                          { name: 'Open', count: openTickets.length },
+                          { name: 'Assigned', count: assignedTickets.length },
+                          { name: 'In Progress', count: inProgressTickets.length },
+                          { name: 'Completed', count: completedTickets.length },
+                        ]}>
+                          <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                          <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} allowDecimals={false} />
+                          <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11 }} />
+                          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                            <Cell fill="#00c9a7" />
+                            <Cell fill="#3498db" />
+                            <Cell fill="#f39c12" />
+                            <Cell fill="#2ecc71" />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <div className="chart-block-title">By Priority</div>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(
+                              tickets.reduce((acc, t) => { acc[t.priority] = (acc[t.priority] || 0) + 1; return acc; }, {})
+                            ).map(([name, value]) => ({ name, value }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={35}
+                            outerRadius={55}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {['EMERGENCY', 'URGENT', 'HIGH', 'MEDIUM', 'LOW'].map((p, i) => (
+                              <Cell key={p} fill={['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#95a5a6'][i]} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11 }} />
+                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -12,7 +12,7 @@ async function sendEmail({ to, subject, text, html }) {
     logger.warn(`SES failed for ${to}, falling back to nodemailer: ${sesResult.error}`);
   }
 
-  if (config.nodeEnv === 'production' && config.smtp?.host) {
+  if (config.smtp?.user && config.smtp?.pass) {
     try {
       const nodemailer = await import('nodemailer');
       const transporter = nodemailer.default.createTransport({
@@ -60,4 +60,33 @@ async function sendNotificationEmail(userEmail, userName, notification) {
   return sendEmail({ to: userEmail, subject, text, html });
 }
 
-export { sendEmail, sendNotificationEmail };
+async function sendTenantRegisteredAlert(tenant) {
+  if (!config.adminEmail) {
+    logger.warn('ADMIN_ALERT_EMAIL not set — skipping tenant registration alert');
+    return false;
+  }
+
+  const subject = `New tenant registered: ${tenant.name} ${tenant.surname}`;
+  const text = `A new tenant has registered on SPMT.\n\n` +
+    `Name: ${tenant.name} ${tenant.surname}\n` +
+    `Email: ${tenant.email}\n` +
+    `Phone: ${tenant.phone || 'N/A'}\n` +
+    `Registered at: ${new Date().toISOString()}`;
+  const html = `
+    <div style="font-family: Arial; max-width: 600px;">
+      <h2>New Tenant Registration</h2>
+      <p><strong>Name:</strong> ${tenant.name} ${tenant.surname}</p>
+      <p><strong>Email:</strong> ${tenant.email}</p>
+      <p><strong>Phone:</strong> ${tenant.phone || 'N/A'}</p>
+      <p><strong>Registered at:</strong> ${new Date().toISOString()}</p>
+      <hr>
+      <p style="color: #888;">
+        <a href="${config.appUrl || 'http://localhost:5000'}">View in SPMT admin panel</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({ to: config.adminEmail, subject, text, html });
+}
+
+export { sendEmail, sendNotificationEmail, sendTenantRegisteredAlert };

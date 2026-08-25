@@ -56,6 +56,10 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const resendVerificationSchema = z.object({
+  email: z.string().email('Invalid email').transform(e => e.toLowerCase()),
+});
+
 export {
   registerSchema,
   loginSchema,
@@ -65,4 +69,5 @@ export {
   changePasswordSchema,
   deactivateAccountSchema,
   refreshTokenSchema,
+  resendVerificationSchema,
 };

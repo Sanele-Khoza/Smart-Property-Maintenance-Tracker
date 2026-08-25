@@ -190,6 +190,7 @@ const TicketTracking = () => {
           </div>
           <table className="table">
             <tbody>
+              <tr><td style={{ fontWeight: 600, width: 160 }}>Ticket ID</td><td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{selected.ticketId}</td></tr>
               <tr><td style={{ fontWeight: 600, width: 160 }}>Description</td><td>{selected.description}</td></tr>
               <tr><td style={{ fontWeight: 600 }}>Status</td><td><StatusBadge status={selected.status} /></td></tr>
               <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${selected.priority === 'URGENT' || selected.priority === 'EMERGENCY' ? 'badge-danger' : selected.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{selected.priority}</span></td></tr>

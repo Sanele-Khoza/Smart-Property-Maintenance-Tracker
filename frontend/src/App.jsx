@@ -41,6 +41,8 @@ const providerNavItems = [
 function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('loading');
+  const [theme, setTheme] = useState(() => localStorage.getItem('spmt-theme') || 'dark');
+  const [slideDir, setSlideDir] = useState('right');
   const [activeAdminPage, setActiveAdminPage] = useState('Overview');
   const [activeManagerPage, setActiveManagerPage] = useState('Overview');
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
@@ -51,6 +53,13 @@ function App() {
   const userRef = useRef(null);
   userRef.current = user;
   const esRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('spmt-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   const stopRealtime = () => {
     if (esRef.current) {
@@ -160,8 +169,8 @@ function App() {
     setPage('login');
   };
 
-  const navigateToRegister = () => setPage('register');
-  const navigateToLogin = () => setPage('login');
+  const navigateToRegister = () => { setSlideDir('left'); setPage('register'); };
+  const navigateToLogin = () => { setSlideDir('right'); setPage('login'); };
   const navigateToVerify = (token) => { setVerificationToken(token); setPage('verify-email'); };
   const navigateToForgotPassword = () => setPage('forgot-password');
   const handleVerified = () => setPage('login');
@@ -200,11 +209,11 @@ function App() {
   if (page === 'loading') return null;
 
   if (page === 'login') {
-    return <LoginPage onLogin={handleLogin} onRegisterNavigate={navigateToRegister} onForgotPassword={navigateToForgotPassword} />;
+    return <div key="login" className={`auth-slide auth-slide-${slideDir}`}><LoginPage onLogin={handleLogin} onRegisterNavigate={navigateToRegister} onForgotPassword={navigateToForgotPassword} /></div>;
   }
 
   if (page === 'register') {
-    return <RegisterPage onRegisterSuccess={navigateToLogin} onVerifyNavigate={navigateToVerify} />;
+    return <div key="register" className={`auth-slide auth-slide-${slideDir}`}><RegisterPage onRegisterSuccess={navigateToLogin} onVerifyNavigate={navigateToVerify} /></div>;
   }
 
   if (page === 'verify-email') {
@@ -228,6 +237,8 @@ function App() {
         activeSidebarItem={sidebar?.active}
         onSidebarItemClick={sidebar?.setter}
         sidebarBadges={sidebarBadges}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <div className="layout">
         <div className="main" style={{ width: '100%' }}>

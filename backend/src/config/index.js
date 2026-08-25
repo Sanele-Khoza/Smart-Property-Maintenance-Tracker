@@ -34,6 +34,18 @@ const config = {
     ],
     uploadDir: process.env.UPLOAD_DIR || "uploads",
   },
+  smtp: {
+    host: process.env.SMTP_HOST || 'localhost',
+    port: parseInt(process.env.SMTP_PORT, 10) || 1025,
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASSWORD || '',
+  },
+  mail: {
+    from: process.env.MAIL_FROM || 'no-reply@localhost',
+  },
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  backendUrl: process.env.BACKEND_URL || 'http://localhost:5000',
   ai: {
     textConfidenceThreshold:
       parseFloat(process.env.AI_TEXT_CONFIDENCE_THRESHOLD) || 0.6,

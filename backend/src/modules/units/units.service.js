@@ -1,5 +1,10 @@
 import * as repo from './units.repository.js';
 import AppError from '../../shared/errors/AppError.js';
+import { query } from '../../db/connection.js';
+import {
+  sendUnitAssignedToTenantNotification,
+  sendUnitAssignedToManagerNotification,
+} from '../../shared/utils/email.service.js';
 
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
@@ -56,6 +61,29 @@ async function assign(unitId, tenantId, tenantName) {
 
   await repo.assign(unitId, resolvedTenantId);
   const updated = await repo.findById(unitId);
+
+  (async () => {
+    try {
+      const tenantUser = (await query(
+        `SELECT name, surname, email FROM users WHERE id = $1`, [resolvedTenantId]
+      )).rows[0];
+      const propRow = (await query(
+        `SELECT p.id, p.name, p.address, p.manager_id FROM properties p WHERE p.id = $1`,
+        [updated.property_id]
+      )).rows[0];
+      const property = { name: propRow?.name, address: propRow?.address };
+      const unit = { unit_number: updated.unit_number, type: updated.type, bedrooms: updated.bedrooms, bathrooms: updated.bathrooms, size_sqm: updated.size_sqm };
+      const tenantName = tenantUser ? `${tenantUser.name} ${tenantUser.surname}` : 'Tenant';
+
+      sendUnitAssignedToTenantNotification(resolvedTenantId, unit, property).catch(() => {});
+      if (propRow?.manager_id) {
+        sendUnitAssignedToManagerNotification(propRow.manager_id, unit, property, tenantName).catch(() => {});
+      }
+    } catch (e) {
+      console.error('Unit assignment notification failed:', e.message);
+    }
+  })();
+
   return { success: true, data: { unit: updated }, message: 'Unit assigned' };
 }
 

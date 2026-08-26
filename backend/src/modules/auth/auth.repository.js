@@ -104,6 +104,19 @@ const updateUser = async (userId, fields) => {
   return result.rows[0] || null;
 };
 
+
+async function findSystemAdmins() {
+  const result = await query(
+    `SELECT id, email, name, surname 
+     FROM users 
+     WHERE role = 'SYSTEM_ADMIN' 
+       AND status = 'ACTIVE' 
+       AND approved = true
+       AND deleted_at IS NULL`
+  );
+  return result.rows;
+}
+
 export {
   findByEmail, findById, findByIdFull, create,
   updateLoginAttempts, lockUser, updateLastLogin,
@@ -112,4 +125,5 @@ export {
   deactivateAccount, reactivateAccount,
   saveRefreshToken, findRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens,
   updateUser,
+  findSystemAdmins,
 };

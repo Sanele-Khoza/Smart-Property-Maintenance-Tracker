@@ -48,6 +48,8 @@ function App() {
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
   const [activeProviderPage, setActiveProviderPage] = useState('Overview');
   const [verificationToken, setVerificationToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const pageRef = useRef(page);
   useEffect(() => { pageRef.current = page; }, [page]);
   const userRef = useRef(null);
@@ -100,9 +102,16 @@ function App() {
 
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
+    const resetPasswordToken = params.get('reset-token');
     if (urlToken) {
       setVerificationToken(urlToken);
       setPage('verify-email');
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    if (resetPasswordToken) {
+      setResetToken(resetPasswordToken);
+      setPage('forgot-password');
       window.history.replaceState({}, '', window.location.pathname);
       return;
     }
@@ -171,7 +180,7 @@ function App() {
 
   const navigateToRegister = () => { setSlideDir('left'); setPage('register'); };
   const navigateToLogin = () => { setSlideDir('right'); setPage('login'); };
-  const navigateToVerify = (token) => { setVerificationToken(token); setPage('verify-email'); };
+  const navigateToVerify = (token, email) => { setVerificationToken(token); setRegisteredEmail(email || ''); setPage('verify-email'); };
   const navigateToForgotPassword = () => setPage('forgot-password');
   const handleVerified = () => setPage('login');
 
@@ -217,11 +226,11 @@ function App() {
   }
 
   if (page === 'verify-email') {
-    return <VerifyEmailPage token={verificationToken} onVerified={handleVerified} />;
+    return <VerifyEmailPage token={verificationToken} onVerified={handleVerified} registeredEmail={registeredEmail} />;
   }
 
   if (page === 'forgot-password') {
-    return <ForgotPasswordPage onBack={() => setPage('login')} />;
+    return <ForgotPasswordPage onBack={() => setPage('login')} initialToken={resetToken} />;
   }
 
   const sidebar = getSidebarProps();

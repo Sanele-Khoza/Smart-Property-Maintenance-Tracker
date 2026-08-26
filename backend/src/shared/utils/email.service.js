@@ -1,6 +1,15 @@
 import config from '../../config/index.js';
 import logger from './logger.js';
 import { sendEmail as sendSesEmail } from '../adapters/sesAdapter.js';
+import { sendMail } from '../adapters/mailAdapter.js';
+import * as userRepo from '../../modules/users/users.repository.js';
+import {
+  ticketCreatedForManager,
+  ticketAssignedToProvider,
+  ticketStatusChangedForTenant,
+  unitAssignedToTenant,
+  unitAssignedToManager,
+} from './notificationTemplates.js';
 
 async function sendEmail({ to, subject, text, html }) {
   if (config.aws.enabled) {
@@ -12,7 +21,7 @@ async function sendEmail({ to, subject, text, html }) {
     logger.warn(`SES failed for ${to}, falling back to nodemailer: ${sesResult.error}`);
   }
 
-  if (config.smtp?.user && config.smtp?.pass) {
+  if (config.nodeEnv === 'production' && config.smtp?.host) {
     try {
       const nodemailer = await import('nodemailer');
       const transporter = nodemailer.default.createTransport({
@@ -60,6 +69,87 @@ async function sendNotificationEmail(userEmail, userName, notification) {
   return sendEmail({ to: userEmail, subject, text, html });
 }
 
+async function sendTicketCreatedNotification(managerId, ticket) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = ticketCreatedForManager({
+      managerName: manager.name,
+      ticket,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Ticket created notification sent to ${manager.email} for ticket ${ticket.id}`);
+  } catch (err) {
+    logger.error(`Failed to send ticket created notification: ${err.message}`);
+  }
+}
+
+async function sendTicketAssignedNotification(providerId, ticket) {
+  try {
+    const provider = await userRepo.findById(providerId);
+    if (!provider?.email) return;
+    const { subject, html } = ticketAssignedToProvider({
+      providerName: provider.name,
+      ticket,
+    });
+    await sendMail({ to: provider.email, subject, html });
+    logger.info(`Ticket assigned notification sent to ${provider.email} for ticket ${ticket.id}`);
+  } catch (err) {
+    logger.error(`Failed to send ticket assigned notification: ${err.message}`);
+  }
+}
+
+async function sendTicketStatusChangedNotification(tenantId, ticket, newStatus, previousStatus, reason) {
+  try {
+    const tenant = await userRepo.findById(tenantId);
+    if (!tenant?.email) return;
+    const { subject, html } = ticketStatusChangedForTenant({
+      tenantName: tenant.name,
+      ticket,
+      newStatus,
+      previousStatus,
+      reason,
+    });
+    await sendMail({ to: tenant.email, subject, html });
+    logger.info(`Ticket status changed notification sent to ${tenant.email} for ticket ${ticket.id} (${previousStatus} → ${newStatus})`);
+  } catch (err) {
+    logger.error(`Failed to send ticket status changed notification: ${err.message}`);
+  }
+}
+
+async function sendUnitAssignedToTenantNotification(tenantId, unit, property) {
+  try {
+    const tenant = await userRepo.findById(tenantId);
+    if (!tenant?.email) return;
+    const { subject, html } = unitAssignedToTenant({
+      tenantName: tenant.name,
+      unit,
+      property,
+    });
+    await sendMail({ to: tenant.email, subject, html });
+    logger.info(`Unit assigned notification sent to ${tenant.email} for unit ${unit.unit_number}`);
+  } catch (err) {
+    logger.error(`Failed to send unit assigned to tenant notification: ${err.message}`);
+  }
+}
+
+async function sendUnitAssignedToManagerNotification(managerId, unit, property, tenantName) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = unitAssignedToManager({
+      managerName: manager.name,
+      unit,
+      property,
+      tenantName,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Unit assigned manager notification sent to ${manager.email} for unit ${unit.unit_number}`);
+  } catch (err) {
+    logger.error(`Failed to send unit assigned to manager notification: ${err.message}`);
+  }
+}
+
 async function sendNewUserRegisteredAlert(user) {
   if (!config.adminEmail) {
     logger.warn('ADMIN_ALERT_EMAIL not set — skipping registration alert');
@@ -97,4 +187,13 @@ async function sendNewUserRegisteredAlert(user) {
   return sendEmail({ to: config.adminEmail, subject, text, html });
 }
 
-export { sendEmail, sendNotificationEmail, sendNewUserRegisteredAlert };
+export {
+  sendEmail,
+  sendNotificationEmail,
+  sendTicketCreatedNotification,
+  sendTicketAssignedNotification,
+  sendTicketStatusChangedNotification,
+  sendUnitAssignedToTenantNotification,
+  sendUnitAssignedToManagerNotification,
+  sendNewUserRegisteredAlert,
+};

@@ -21,7 +21,7 @@ async function sendEmail({ to, subject, text, html }) {
     logger.warn(`SES failed for ${to}, falling back to nodemailer: ${sesResult.error}`);
   }
 
-  if (config.nodeEnv === 'production' && config.smtp?.host) {
+  if (config.smtp?.user && config.smtp?.pass) {
     try {
       const nodemailer = await import('nodemailer');
       const transporter = nodemailer.default.createTransport({

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerUser } from '../../data/authStore';
+import { registerUser, resendVerificationEmail } from '../../data/authStore';
 import Alert from '../common/Alert';
 
 const ROLE_OPTIONS = [
@@ -20,8 +20,10 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [verificationToken, setVerificationToken] = useState('');
+  const [registered, setRegistered] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendMsg, setResendMsg] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -91,9 +93,8 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       });
 
       if (result.success) {
-        setVerificationToken(result.verificationToken);
+        setRegistered(true);
         setRegisteredEmail(form.email);
-        setSuccess('Account created! Please verify your email.');
         setForm({
           name: '', surname: '', age: '', email: '', phone: '',
           idNumber: '', password: '', confirmPassword: '', role: '',
@@ -106,6 +107,55 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       setSubmitting(false);
     }
   };
+
+  if (registered) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'rgba(0,201,167,0.15)', color: 'var(--teal)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, margin: '0 auto 16px', fontWeight: 700,
+            }}>✉</div>
+            <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--ink)', marginBottom: 8 }}>
+              Check your email
+            </h2>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 8 }}>
+              We sent a verification link to
+            </p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink)', fontWeight: 600, marginBottom: 20 }}>
+              {registeredEmail}
+            </p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 24 }}>
+              Click the link in the email to verify your account.
+              Check your spam folder if you don't see it.
+            </p>
+            {resendMsg && (
+              <Alert msg={resendMsg} type="success" />
+            )}
+            <button className="btn btn-primary btn-full" style={{ marginBottom: 12 }} onClick={onRegisterSuccess}>
+              Go to Login
+            </button>
+            <button
+              className="btn btn-secondary btn-full"
+              disabled={resending}
+              onClick={async () => {
+                setResending(true);
+                setResendMsg('');
+                await resendVerificationEmail(registeredEmail);
+                setResendMsg('Verification email resent. Check your inbox.');
+                setResending(false);
+              }}
+            >
+              {resending ? 'Sending…' : 'Resend Verification Email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
@@ -197,25 +247,6 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
             {submitting ? 'Creating account…' : 'Register'}
           </button>
         </form>
-
-        {verificationToken && (
-          <div style={{
-            background: 'rgba(0,201,167,0.08)', border: '1px dashed var(--teal)',
-            borderRadius: 6, padding: 14, marginTop: 14,
-          }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', marginTop: 6 }}>
-              A verification email has been sent to <strong>{registeredEmail}</strong>. 
-              Please check your inbox (and spam folder) and click the link to activate your account.
-            </div>
-            <button
-              className="btn btn-teal btn-full"
-              style={{ marginTop: 12 }}
-              onClick={() => onVerifyNavigate(verificationToken)}
-            >
-              Verify my email now
-            </button>
-          </div>
-        )}
 
         <div className="auth-footer">
           <span>Already have an account?</span>

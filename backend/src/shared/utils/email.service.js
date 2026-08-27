@@ -73,9 +73,17 @@ async function sendTicketCreatedNotification(managerId, ticket) {
   try {
     const manager = await userRepo.findById(managerId);
     if (!manager?.email) return;
+
+    let submitterName = 'A tenant';
+    if (ticket.tenant_id) {
+      const tenant = await userRepo.findById(ticket.tenant_id);
+      if (tenant) submitterName = `${tenant.name} ${tenant.surname}`;
+    }
+
     const { subject, html } = ticketCreatedForManager({
       managerName: manager.name,
       ticket,
+      submitterName,
     });
     await sendMail({ to: manager.email, subject, html });
     logger.info(`Ticket created notification sent to ${manager.email} for ticket ${ticket.id}`);

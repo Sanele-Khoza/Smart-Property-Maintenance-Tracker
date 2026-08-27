@@ -61,7 +61,12 @@ function normalizeUser(u) {
     account_status: status,
     approved: u.approved !== undefined ? u.approved : true,
     preferredNotificationChannel: u.preferredNotificationChannel || 'EMAIL',
-    failedLoginCount: u.failed_login_count ?? u.failedLoginCount ?? 0,
+    failedLoginCount: u.login_attempts ?? u.failed_login_count ?? u.failedLoginCount ?? 0,
+    lockedUntil: u.locked_until || u.lockedUntil || null,
+    isLocked: (() => {
+      const until = u.locked_until || u.lockedUntil;
+      return until ? new Date(until).getTime() > Date.now() : false;
+    })(),
   };
 }
 
@@ -76,10 +81,13 @@ export const registerUser = async (userData) => {
         password: userData.password,
         role: userData.role,
         phone: userData.phone || '',
+        idNumber: userData.idNumber || '',
+        companyName: userData.companyName || '',
+        specialisations: userData.specialisations || [],
       },
     });
     if (result.success && result.data) {
-      return { success: true, data: result.data.user, verificationToken: result.data.verificationToken };
+      return { success: true, data: result.data.user };
     }
     return { success: false, error: result.error || 'Registration failed' };
   } catch (err) {
@@ -286,5 +294,14 @@ export const resetPassword = async (token, newPassword) => {
     return { success: false, error: result.error || 'Failed to reset password' };
   } catch (err) {
     return { success: false, error: err.message };
+  }
+};
+
+export const resendVerificationEmail = async (email) => {
+  try {
+    const result = await api('/auth/resend-verification', { body: { email } });
+    return { success: true, message: result.message || 'If the email exists, a verification link was sent.' };
+  } catch {
+    return { success: true, message: 'If the email exists, a verification link was sent.' };
   }
 };

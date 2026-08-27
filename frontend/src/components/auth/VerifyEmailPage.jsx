@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { verifyEmail } from '../../data/authStore';
+import { verifyEmail, resendVerificationEmail } from '../../data/authStore';
 
 const spinnerKeyframes = `
 @keyframes spin {
@@ -8,13 +8,15 @@ const spinnerKeyframes = `
 }
 `;
 
-const VerifyEmailPage = ({ token, onVerified }) => {
+const VerifyEmailPage = ({ token, onVerified, registeredEmail }) => {
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const [resendMsg, setResendMsg] = useState('');
+  const [resending, setResending] = useState(false);
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (startedRef.current) return;
+    if (startedRef.current || !token) return;
     startedRef.current = true;
     (async () => {
       const result = await verifyEmail(token);
@@ -26,6 +28,15 @@ const VerifyEmailPage = ({ token, onVerified }) => {
       }
     })();
   }, [token]);
+
+  const handleResend = async () => {
+    if (!registeredEmail) return;
+    setResending(true);
+    setResendMsg('');
+    await resendVerificationEmail(registeredEmail);
+    setResendMsg('Verification email resent. Check your inbox.');
+    setResending(false);
+  };
 
   return (
     <div className="auth-page">
@@ -50,12 +61,12 @@ const VerifyEmailPage = ({ token, onVerified }) => {
               background: 'rgba(0,201,167,0.15)', color: 'var(--teal)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 24, margin: '0 auto 16px', fontWeight: 700,
-            }}>✓</div>
+            }}>&#10003;</div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--ink)', marginBottom: 8 }}>
               Email verified successfully!
             </div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 20 }}>
-              Your account is now pending approval from your Property Manager or System Administrator (REQ-005).
+              Your account is now pending approval from your Property Manager or System Administrator.
             </div>
             <button className="btn btn-primary" onClick={onVerified}>Go to Login</button>
           </div>
@@ -67,11 +78,32 @@ const VerifyEmailPage = ({ token, onVerified }) => {
               background: 'rgba(224,82,82,0.15)', color: 'var(--danger)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 24, margin: '0 auto 16px', fontWeight: 700,
-            }}>✕</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--danger)', marginBottom: 20 }}>
+            }}>&#10007;</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--danger)', marginBottom: 8 }}>
               {error}
             </div>
-            <button className="btn btn-primary" onClick={onVerified}>Go to Login</button>
+            {error.includes('already verified') ? (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)', marginBottom: 20 }}>
+                Your email has already been verified. You can log in to your account.
+              </p>
+            ) : (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)', marginBottom: 20 }}>
+                The verification link may have expired or already been used.
+              </p>
+            )}
+            {resendMsg && (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--teal)', marginBottom: 12 }}>
+                {resendMsg}
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+              {registeredEmail && !error.includes('already verified') && (
+                <button className="btn btn-secondary" disabled={resending} onClick={handleResend}>
+                  {resending ? 'Sending…' : 'Resend Verification Email'}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={onVerified}>Go to Login</button>
+            </div>
           </div>
         )}
       </div>

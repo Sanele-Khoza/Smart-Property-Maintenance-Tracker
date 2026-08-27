@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamationTriangle, FaCheckCircle, FaClock, FaBrain } from 'react-icons/fa';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Property from '../../components/Property';
 import Assignment from '../../components/Assignment';
 import { getStats, getProperties, getUnits } from '../../data/store';
@@ -16,6 +17,7 @@ import Technicians from '../manager/Technicians';
 import Scheduling from '../manager/Scheduling';
 import Reports from '../manager/Reports';
 import AIReview from '../manager/AIReview';
+import RatingsList from '../../components/ratings/RatingsList';
 
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
@@ -119,22 +121,59 @@ const PropertyManagerDashboard = ({ activePage }) => {
                   <span>SLA Status</span>
                   <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-dim)' }}><FaClock /> SRS §3.1.4</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 8 }}>
-                  <div style={{ padding: '8px', borderRadius: 4, backgroundColor: 'rgba(45,183,145,0.08)', textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--teal)' }}>{slaOntrack}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>On Track</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div>
+                    <div className="chart-block-title">Ticket Status</div>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={[
+                        { name: 'Open', count: openTickets.length, fill: '#00c9a7' },
+                        { name: 'Assigned', count: assignedTickets.length, fill: '#3498db' },
+                        { name: 'In Progress', count: inProgressTickets.length, fill: '#f39c12' },
+                        { name: 'Completed', count: completedTickets.length, fill: '#2ecc71' },
+                      ]}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
+                        <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} allowDecimals={false} />
+                        <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11 }} />
+                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                          {[
+                            { fill: '#00c9a7' },
+                            { fill: '#3498db' },
+                            { fill: '#f39c12' },
+                            { fill: '#2ecc71' },
+                          ].map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div style={{ padding: '8px', borderRadius: 4, backgroundColor: 'rgba(243,156,18,0.08)', textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: slaWarning > 0 ? 'var(--amber)' : 'var(--text-dim)' }}>{slaWarning}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>Warning (≥75%)</div>
-                  </div>
-                  <div style={{ padding: '8px', borderRadius: 4, backgroundColor: 'rgba(192,57,43,0.08)', textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: slaBreached > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>{slaBreached}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>Breached</div>
+                  <div>
+                    <div className="chart-block-title">SLA Overview</div>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'On Track', value: slaOntrack },
+                            { name: 'Warning', value: slaWarning },
+                            { name: 'Breached', value: slaBreached },
+                          ].filter(d => d.value > 0)}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={35}
+                          outerRadius={55}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          <Cell fill="#00c9a7" />
+                          <Cell fill="#f39c12" />
+                          <Cell fill="#e05252" />
+                        </Pie>
+                        <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 11 }} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
                 {slaBreached > 0 && (
-                  <div style={{ fontSize: 10, padding: '4px 8px', backgroundColor: 'rgba(192,57,43,0.08)', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 10, padding: '4px 8px', backgroundColor: 'rgba(192,57,43,0.08)', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
                     <FaExclamationTriangle style={{ color: 'var(--danger)', fontSize: 10 }} />
                     {slaBreached} ticket(s) past SLA deadline — immediate attention required
                   </div>
@@ -171,6 +210,10 @@ const PropertyManagerDashboard = ({ activePage }) => {
                     <div className="ticket-details-row">
                       <span className="ticket-details-label">Title:</span>
                       <span className="ticket-details-value">{selectedTicketDetails.title}</span>
+                    </div>
+                    <div className="ticket-details-row">
+                      <span className="ticket-details-label">Ticket ID:</span>
+                      <span className="ticket-details-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{selectedTicketDetails.ticketId}</span>
                     </div>
                     <div className="ticket-details-row">
                       <span className="ticket-details-label">Description:</span>
@@ -245,6 +288,8 @@ const PropertyManagerDashboard = ({ activePage }) => {
         return <Scheduling />;
       case 'Reports':
         return <Reports />;
+      case 'Ratings':
+        return <RatingsList title="Ratings" subtitle="Individual ratings and comments for your managed properties." />;
       default:
         return <Overview />;
     }

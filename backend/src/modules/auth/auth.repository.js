@@ -17,12 +17,12 @@ const findByIdFull = async (id) => {
   return result.rows[0] || null;
 };
 
-const create = async ({ name, surname, email, phone, passwordHash, role, status, approved }) => {
+const create = async ({ name, surname, email, phone, idNumber, passwordHash, role, status, approved }) => {
   const result = await query(
-    `INSERT INTO users (name, surname, email, phone, password_hash, role, status, approved, email_verification_token, password_changed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+    `INSERT INTO users (name, surname, email, phone, id_number, password_hash, role, status, approved, email_verification_token, password_changed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
      RETURNING id, name, surname, email, role, phone, status`,
-    [name, surname, email, phone || null, passwordHash, role, status, approved, null]
+    [name, surname, email, phone || null, idNumber || null, passwordHash, role, status, approved, null]
   );
   return result.rows[0];
 };
@@ -104,7 +104,6 @@ const updateUser = async (userId, fields) => {
   return result.rows[0] || null;
 };
 
-
 async function findSystemAdmins() {
   const result = await query(
     `SELECT id, email, name, surname 
@@ -117,8 +116,18 @@ async function findSystemAdmins() {
   return result.rows;
 }
 
+const createServiceProvider = async ({ name, companyName, email, phone, specialisations }) => {
+  const list = specialisations || [];
+  const result = await query(
+    `INSERT INTO service_providers (name, company_name, email, phone, specialisations)
+     VALUES ($1, $2, $3, $4, $5::text[]) RETURNING id, name, company_name, email, phone, specialisations`,
+    [name, companyName || null, email || null, phone || null, `{${list.join(',')}}`]
+  );
+  return result.rows[0];
+};
+
 export {
-  findByEmail, findById, findByIdFull, create,
+  findByEmail, findById, findByIdFull, create, createServiceProvider,
   updateLoginAttempts, lockUser, updateLastLogin,
   findByVerificationToken, verifyUser,
   setResetToken, findByResetToken, updatePassword,

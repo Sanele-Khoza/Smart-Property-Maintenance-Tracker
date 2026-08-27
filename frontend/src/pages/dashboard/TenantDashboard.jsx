@@ -1,4 +1,5 @@
 import React from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Ticket from '../../components/Ticket';
 import useTickets from '../../hooks/useTickets';
 import Overview from '../tenant/Overview';
@@ -7,6 +8,9 @@ import MyProperty from '../tenant/MyProperty';
 import MyUnit from '../tenant/MyUnit';
 import TicketTracking from '../tenant/TicketTracking';
 import Notification from '../tenant/Notification';
+import RatingsList from '../../components/ratings/RatingsList';
+
+const STATUS_COLORS = { New: '#00c9a7', Assigned: '#3498db', 'In Progress': '#f39c12', Completed: '#2ecc71', Closed: '#27ae60', 'Tenant Confirmed': '#1abc9c' };
 
 const TenantDashboard = ({ currentUser, activePage }) => {
   const [tickets, refresh] = useTickets();
@@ -44,6 +48,34 @@ const TenantDashboard = ({ currentUser, activePage }) => {
                       <div className="stat-label">Completed</div>
                     </div>
                   </div>
+                  {myTickets.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div className="chart-block-title">Ticket Status Breakdown</div>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(
+                              myTickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {})
+                            ).map(([name, value]) => ({ name, value }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {Object.entries(
+                              myTickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {})
+                            ).map(([status]) => (
+                              <Cell key={status} fill={STATUS_COLORS[status] || '#7f8c8d'} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
@@ -73,6 +105,8 @@ const TenantDashboard = ({ currentUser, activePage }) => {
         return <TicketTracking />;
       case 'Notification':
         return <Notification />;
+      case 'My Ratings':
+        return <RatingsList title="My Ratings" subtitle="The ratings and comments you have submitted." />;
       default:
         return <Overview />;
     }

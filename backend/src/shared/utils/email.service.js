@@ -1,6 +1,15 @@
 import config from '../../config/index.js';
 import logger from './logger.js';
 import { sendEmail as sendSesEmail } from '../adapters/sesAdapter.js';
+import { sendMail } from '../adapters/mailAdapter.js';
+import * as userRepo from '../../modules/users/users.repository.js';
+import {
+  ticketCreatedForManager,
+  ticketAssignedToProvider,
+  ticketStatusChangedForTenant,
+  unitAssignedToTenant,
+  unitAssignedToManager,
+} from './notificationTemplates.js';
 
 async function sendEmail({ to, subject, text, html }) {
   if (config.aws.enabled) {
@@ -60,4 +69,131 @@ async function sendNotificationEmail(userEmail, userName, notification) {
   return sendEmail({ to: userEmail, subject, text, html });
 }
 
-export { sendEmail, sendNotificationEmail };
+async function sendTicketCreatedNotification(managerId, ticket) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = ticketCreatedForManager({
+      managerName: manager.name,
+      ticket,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Ticket created notification sent to ${manager.email} for ticket ${ticket.id}`);
+  } catch (err) {
+    logger.error(`Failed to send ticket created notification: ${err.message}`);
+  }
+}
+
+async function sendTicketAssignedNotification(providerId, ticket) {
+  try {
+    const provider = await userRepo.findById(providerId);
+    if (!provider?.email) return;
+    const { subject, html } = ticketAssignedToProvider({
+      providerName: provider.name,
+      ticket,
+    });
+    await sendMail({ to: provider.email, subject, html });
+    logger.info(`Ticket assigned notification sent to ${provider.email} for ticket ${ticket.id}`);
+  } catch (err) {
+    logger.error(`Failed to send ticket assigned notification: ${err.message}`);
+  }
+}
+
+async function sendTicketStatusChangedNotification(tenantId, ticket, newStatus, previousStatus, reason) {
+  try {
+    const tenant = await userRepo.findById(tenantId);
+    if (!tenant?.email) return;
+    const { subject, html } = ticketStatusChangedForTenant({
+      tenantName: tenant.name,
+      ticket,
+      newStatus,
+      previousStatus,
+      reason,
+    });
+    await sendMail({ to: tenant.email, subject, html });
+    logger.info(`Ticket status changed notification sent to ${tenant.email} for ticket ${ticket.id} (${previousStatus} → ${newStatus})`);
+  } catch (err) {
+    logger.error(`Failed to send ticket status changed notification: ${err.message}`);
+  }
+}
+
+async function sendUnitAssignedToTenantNotification(tenantId, unit, property) {
+  try {
+    const tenant = await userRepo.findById(tenantId);
+    if (!tenant?.email) return;
+    const { subject, html } = unitAssignedToTenant({
+      tenantName: tenant.name,
+      unit,
+      property,
+    });
+    await sendMail({ to: tenant.email, subject, html });
+    logger.info(`Unit assigned notification sent to ${tenant.email} for unit ${unit.unit_number}`);
+  } catch (err) {
+    logger.error(`Failed to send unit assigned to tenant notification: ${err.message}`);
+  }
+}
+
+async function sendUnitAssignedToManagerNotification(managerId, unit, property, tenantName) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = unitAssignedToManager({
+      managerName: manager.name,
+      unit,
+      property,
+      tenantName,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Unit assigned manager notification sent to ${manager.email} for unit ${unit.unit_number}`);
+  } catch (err) {
+    logger.error(`Failed to send unit assigned to manager notification: ${err.message}`);
+  }
+}
+
+async function sendNewUserRegisteredAlert(user) {
+  if (!config.adminEmail) {
+    logger.warn('ADMIN_ALERT_EMAIL not set — skipping registration alert');
+    return false;
+  }
+
+  const roleLabel = {
+    TENANT: 'Tenant',
+    PROPERTY_MANAGER: 'Property Manager',
+    SERVICE_PROVIDER: 'Service Provider',
+  }[user.role] || user.role;
+
+  const subject = `New ${roleLabel.toLowerCase()} registered: ${user.name} ${user.surname}`;
+  const text = `A new ${roleLabel.toLowerCase()} has registered on SPMT.\n\n` +
+    `Role: ${roleLabel}\n` +
+    `Name: ${user.name} ${user.surname}\n` +
+    `Email: ${user.email}\n` +
+    `Phone: ${user.phone || 'N/A'}\n` +
+    `Registered at: ${new Date().toISOString()}`;
+  const html = `
+    <div style="font-family: Arial; max-width: 600px;">
+      <h2>New ${roleLabel} Registration</h2>
+      <p><strong>Role:</strong> ${roleLabel}</p>
+      <p><strong>Name:</strong> ${user.name} ${user.surname}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+      <p><strong>Registered at:</strong> ${new Date().toISOString()}</p>
+      <hr>
+      <p style="color: #888;">
+        <a href="${config.appUrl || 'http://localhost:5000'}">View in SPMT admin panel</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({ to: config.adminEmail, subject, text, html });
+}
+
+export {
+  sendEmail,
+  sendNotificationEmail,
+  sendTicketCreatedNotification,
+  sendTicketAssignedNotification,
+  sendTicketStatusChangedNotification,
+  sendUnitAssignedToTenantNotification,
+  sendUnitAssignedToManagerNotification,
+  sendNewUserRegisteredAlert,
+};

@@ -169,6 +169,7 @@ const MyJobs = ({ onViewDetails }) => {
                             <div>
                               <strong>Details</strong>
                               <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.8 }}>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>ID: {t.ticketId}</div>
                                 <div><FaBuilding /> {t.propertyName}</div>
                                 <div><FaBox /> Unit {t.unitNumber}</div>
                                 <div><FaUser /> {t.createdBy}</div>

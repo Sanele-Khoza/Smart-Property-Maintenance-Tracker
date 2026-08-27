@@ -108,6 +108,7 @@ const JobDetail = ({ ticketId, onBack }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0 }}><FaWrench /> {ticket.title}</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12, fontFamily: 'var(--font-mono)' }}>ID: {ticket.ticketId}</p>
             <p style={{ margin: '4px 0 0', fontSize: 12 }}><StatusBadge status={ticket.status} /> <span className={`badge ${ticket.priority === 'URGENT' || ticket.priority === 'EMERGENCY' ? 'badge-danger' : ticket.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{ticket.priority}</span></p>
           </div>
           <div style={{ textAlign: 'right' }}>

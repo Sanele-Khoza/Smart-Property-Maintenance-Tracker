@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerUser } from '../../data/authStore';
+import { registerUser, resendVerificationEmail } from '../../data/authStore';
 import Alert from '../common/Alert';
 
 const ROLE_OPTIONS = [
@@ -9,19 +9,33 @@ const ROLE_OPTIONS = [
   { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
 ];
 
+const SPECIALISATION_OPTIONS = ['Plumbing', 'Electrical', 'HVAC', 'Structural', 'Pest Control', 'General'];
+
 const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   const [form, setForm] = useState({
     name: '', surname: '', age: '', email: '', phone: '',
     idNumber: '', password: '', confirmPassword: '', role: '',
+    companyName: '', specialisations: [],
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [verificationToken, setVerificationToken] = useState('');
+  const [registered, setRegistered] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendMsg, setResendMsg] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const toggleSpecialisation = (spec) => {
+    setForm(f => ({
+      ...f,
+      specialisations: f.specialisations.includes(spec)
+        ? f.specialisations.filter(s => s !== spec)
+        : [...f.specialisations, spec],
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -48,6 +62,21 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
+    if (!/^\d{13}$/.test(form.idNumber)) {
+      setError('ID number must be exactly 13 digits.');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(form.phone)) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
+    if (form.role === 'SERVICE_PROVIDER' && !form.companyName.trim()) {
+      setError('Company name is required for service providers.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await registerUser({
@@ -59,15 +88,17 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
         idNumber: form.idNumber,
         password: form.password,
         role: form.role,
+        companyName: form.companyName,
+        specialisations: form.specialisations,
       });
 
       if (result.success) {
-        setVerificationToken(result.verificationToken);
+        setRegistered(true);
         setRegisteredEmail(form.email);
-        setSuccess('Account created! Please verify your email.');
         setForm({
           name: '', surname: '', age: '', email: '', phone: '',
           idNumber: '', password: '', confirmPassword: '', role: '',
+          companyName: '', specialisations: [],
         });
       } else {
         setError(result.error);
@@ -76,6 +107,55 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       setSubmitting(false);
     }
   };
+
+  if (registered) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'rgba(0,201,167,0.15)', color: 'var(--teal)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, margin: '0 auto 16px', fontWeight: 700,
+            }}>✉</div>
+            <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--ink)', marginBottom: 8 }}>
+              Check your email
+            </h2>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 8 }}>
+              We sent a verification link to
+            </p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink)', fontWeight: 600, marginBottom: 20 }}>
+              {registeredEmail}
+            </p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 24 }}>
+              Click the link in the email to verify your account.
+              Check your spam folder if you don't see it.
+            </p>
+            {resendMsg && (
+              <Alert msg={resendMsg} type="success" />
+            )}
+            <button className="btn btn-primary btn-full" style={{ marginBottom: 12 }} onClick={onRegisterSuccess}>
+              Go to Login
+            </button>
+            <button
+              className="btn btn-secondary btn-full"
+              disabled={resending}
+              onClick={async () => {
+                setResending(true);
+                setResendMsg('');
+                await resendVerificationEmail(registeredEmail);
+                setResendMsg('Verification email resent. Check your inbox.');
+                setResending(false);
+              }}
+            >
+              {resending ? 'Sending…' : 'Resend Verification Email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
@@ -136,6 +216,30 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
               ))}
             </select>
           </div>
+          {form.role === 'SERVICE_PROVIDER' && (
+            <>
+              <div className="form-group">
+                <label className="form-label" htmlFor="reg-company">Company Name</label>
+                <input className="form-input" type="text" name="companyName" id="reg-company" placeholder="e.g. Bob's Plumbing Co" value={form.companyName} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Specialisations (categories you service)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {SPECIALISATION_OPTIONS.map(spec => (
+                    <button
+                      key={spec}
+                      type="button"
+                      className={`btn btn-sm ${form.specialisations.includes(spec) ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => toggleSpecialisation(spec)}
+                      style={{ fontSize: 11 }}
+                    >
+                      {spec}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
             System Administrator accounts are provisioned by an existing admin only.
           </p>
@@ -143,25 +247,6 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
             {submitting ? 'Creating account…' : 'Register'}
           </button>
         </form>
-
-        {verificationToken && (
-          <div style={{
-            background: 'rgba(0,201,167,0.08)', border: '1px dashed var(--teal)',
-            borderRadius: 6, padding: 14, marginTop: 14,
-          }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', marginTop: 6 }}>
-              A verification email has been sent to <strong>{registeredEmail}</strong>. 
-              Please check your inbox (and spam folder) and click the link to activate your account.
-            </div>
-            <button
-              className="btn btn-teal btn-full"
-              style={{ marginTop: 12 }}
-              onClick={() => onVerifyNavigate(verificationToken)}
-            >
-              Verify my email now
-            </button>
-          </div>
-        )}
 
         <div className="auth-footer">
           <span>Already have an account?</span>

@@ -462,7 +462,7 @@ const Users = () => {
                         >
                           {u.failedLoginCount}
                         </span>
-                        {u.failedLoginCount >= 5 && (
+                        {u.isLocked && (
                           <FaLock
                             style={{ color: "var(--danger)", marginLeft: 4 }}
                             title="Account locked"
@@ -504,7 +504,7 @@ const Users = () => {
                             </button>
                           )}
                           {(u.status === "Suspended" ||
-                            u.failedLoginCount >= 5) && (
+                            u.isLocked) && (
                             <button
                               className="btn btn-primary btn-sm"
                               onClick={() => handleUnlock(u.id)}

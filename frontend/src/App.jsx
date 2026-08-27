@@ -18,38 +18,50 @@ const adminNavItems = [
   'Categories', 'Reports', 'Audit Logs', 'Activity',
   'Notifications', 'Messages', 'Settings', 'Backup',
   'Analytics', 'Help', 'Roles', 'System Health',
-  'Technicians', 'Tenants',
+  'Technicians', 'Tenants', 'Ratings',
 ];
 
 const managerNavItems = [
   'Overview', 'Properties', 'Units', 'Tenants',
   'Tickets', 'AI Review', 'Technicians', 'Scheduling', 'Reports',
+  'Ratings',
 ];
 
 const tenantNavItems = [
   'Overview', 'Create Ticket', 'Profile', 'My Property', 'My Unit',
-  'Ticket Tracking', 'Notification',
+  'Ticket Tracking', 'Notification', 'My Ratings',
 ];
 
 const providerNavItems = [
   'Overview', 'Profile', 'My Jobs', 'Job Detail',
   'Schedule', 'Emergency', 'Notifications', 'Messages',
-  'Work History', 'My Performance',
+  'Work History', 'My Performance', 'My Ratings',
 ];
 
 function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('loading');
+  const [theme, setTheme] = useState(() => localStorage.getItem('spmt-theme') || 'dark');
+  const [slideDir, setSlideDir] = useState('right');
   const [activeAdminPage, setActiveAdminPage] = useState('Overview');
   const [activeManagerPage, setActiveManagerPage] = useState('Overview');
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
   const [activeProviderPage, setActiveProviderPage] = useState('Overview');
   const [verificationToken, setVerificationToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const pageRef = useRef(page);
   useEffect(() => { pageRef.current = page; }, [page]);
   const userRef = useRef(null);
   userRef.current = user;
   const esRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('spmt-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   const stopRealtime = () => {
     if (esRef.current) {
@@ -90,9 +102,16 @@ function App() {
 
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
+    const resetPasswordToken = params.get('reset-token');
     if (urlToken) {
       setVerificationToken(urlToken);
       setPage('verify-email');
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    if (resetPasswordToken) {
+      setResetToken(resetPasswordToken);
+      setPage('forgot-password');
       window.history.replaceState({}, '', window.location.pathname);
       return;
     }
@@ -159,9 +178,9 @@ function App() {
     setPage('login');
   };
 
-  const navigateToRegister = () => setPage('register');
-  const navigateToLogin = () => setPage('login');
-  const navigateToVerify = (token) => { setVerificationToken(token); setPage('verify-email'); };
+  const navigateToRegister = () => { setSlideDir('left'); setPage('register'); };
+  const navigateToLogin = () => { setSlideDir('right'); setPage('login'); };
+  const navigateToVerify = (token, email) => { setVerificationToken(token); setRegisteredEmail(email || ''); setPage('verify-email'); };
   const navigateToForgotPassword = () => setPage('forgot-password');
   const handleVerified = () => setPage('login');
 
@@ -199,19 +218,19 @@ function App() {
   if (page === 'loading') return null;
 
   if (page === 'login') {
-    return <LoginPage onLogin={handleLogin} onRegisterNavigate={navigateToRegister} onForgotPassword={navigateToForgotPassword} />;
+    return <div key="login" className={`auth-slide auth-slide-${slideDir}`}><LoginPage onLogin={handleLogin} onRegisterNavigate={navigateToRegister} onForgotPassword={navigateToForgotPassword} /></div>;
   }
 
   if (page === 'register') {
-    return <RegisterPage onRegisterSuccess={navigateToLogin} onVerifyNavigate={navigateToVerify} />;
+    return <div key="register" className={`auth-slide auth-slide-${slideDir}`}><RegisterPage onRegisterSuccess={navigateToLogin} onVerifyNavigate={navigateToVerify} /></div>;
   }
 
   if (page === 'verify-email') {
-    return <VerifyEmailPage token={verificationToken} onVerified={handleVerified} />;
+    return <VerifyEmailPage token={verificationToken} onVerified={handleVerified} registeredEmail={registeredEmail} />;
   }
 
   if (page === 'forgot-password') {
-    return <ForgotPasswordPage onBack={() => setPage('login')} />;
+    return <ForgotPasswordPage onBack={() => setPage('login')} initialToken={resetToken} />;
   }
 
   const sidebar = getSidebarProps();
@@ -227,6 +246,8 @@ function App() {
         activeSidebarItem={sidebar?.active}
         onSidebarItemClick={sidebar?.setter}
         sidebarBadges={sidebarBadges}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <div className="layout">
         <div className="main" style={{ width: '100%' }}>

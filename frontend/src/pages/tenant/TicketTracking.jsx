@@ -190,6 +190,7 @@ const TicketTracking = () => {
           </div>
           <table className="table">
             <tbody>
+              <tr><td style={{ fontWeight: 600, width: 160 }}>Ticket ID</td><td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{selected.ticketId}</td></tr>
               <tr><td style={{ fontWeight: 600, width: 160 }}>Description</td><td>{selected.description}</td></tr>
               <tr><td style={{ fontWeight: 600 }}>Status</td><td><StatusBadge status={selected.status} /></td></tr>
               <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${selected.priority === 'URGENT' || selected.priority === 'EMERGENCY' ? 'badge-danger' : selected.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{selected.priority}</span></td></tr>
@@ -288,6 +289,12 @@ const TicketTracking = () => {
                 <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3 }}>{selected.combinedConfidence ? `${(selected.combinedConfidence * 100).toFixed(0)}%` : 'Not yet classified'}</div>
               </div>
             </div>
+            {selected.acceptanceNote && (
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px', marginTop: 8 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)' }}>Message from provider</div>
+                <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3, fontStyle: 'italic' }}>"{selected.acceptanceNote}"</div>
+              </div>
+            )}
           </div>
           <div className="card" style={{ marginTop: 12 }}>
             <div className="card-title"><FaHistory /> Audit Trail</div>

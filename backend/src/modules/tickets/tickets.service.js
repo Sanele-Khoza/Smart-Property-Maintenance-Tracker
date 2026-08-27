@@ -263,12 +263,17 @@ async function create(data, userId) {
     (async () => {
       try {
         const unitRow = (await query(
-          `SELECT u.property_id FROM units u WHERE u.id = $1`, [ticket.unit_id]
+          `SELECT u.property_id, u.unit_number FROM units u WHERE u.id = $1`, [ticket.unit_id]
         )).rows[0];
+
+        ticket.unit_number = unitRow?.unit_number || null;
+
         if (unitRow?.property_id) {
           const propRow = (await query(
-            `SELECT p.manager_id FROM properties p WHERE p.id = $1`, [unitRow.property_id]
+            `SELECT p.id, p.name, p.manager_id FROM properties p WHERE p.id = $1`, [unitRow.property_id]
           )).rows[0];
+          ticket.property_name = propRow?.name || null;
+
           if (propRow?.manager_id) {
             sendTicketCreatedNotification(propRow.manager_id, ticket).catch(() => {});
           }

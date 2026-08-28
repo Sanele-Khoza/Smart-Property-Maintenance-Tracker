@@ -64,7 +64,8 @@ export const updateTechnicianStatus = async (techId, newStatus) => {
       body: { status: newStatus },
     });
     if (result.success && result.data) {
-      const updated = result.data.technician || result.data;
+      const raw = result.data.technician || result.data;
+      const updated = mapTechnician(raw);
       const store = getStore();
       const idx = store.technicians.findIndex(t => t.id === techId);
       if (idx !== -1) store.technicians[idx] = { ...store.technicians[idx], ...updated };

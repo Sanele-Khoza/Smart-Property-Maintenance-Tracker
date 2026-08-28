@@ -1,22 +1,45 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaBuilding, FaBox } from 'react-icons/fa';
 import Alert from './common/Alert';
 import EmptyState from './common/EmptyState';
 import { addProperty, addUnit, getProperties, getUnits, assignTenantToUnit } from '../data/store';
+import { getUsers, refreshUsers } from '../data/authStore';
 
 const Property = ({ refreshData, pmName }) => {
   const [allProperties, setAllProperties] = useState(getProperties());
   const [allUnits, setAllUnits] = useState(getUnits());
+  const [allUsers, setAllUsers] = useState(() => getUsers());
   const properties = useMemo(() => pmName ? allProperties.filter(p => p.managerName === pmName) : allProperties, [allProperties, pmName]);
   const propIds = useMemo(() => new Set(properties.map(p => p.propertyId)), [properties]);
   const units = useMemo(() => pmName ? allUnits.filter(u => propIds.has(u.propertyId)) : allUnits, [allUnits, propIds, pmName]);
-  
+
+  useEffect(() => {
+    let cancelled = false;
+    refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    const onUsersUpdated = () => { if (!cancelled) setAllUsers(getUsers()); };
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
+  }, []);
+
+  // Tenants with a real account but no unit assigned anywhere in the system —
+  // the pool a PM can pick from when assigning a vacant unit.
+  const orphanedTenants = useMemo(() => {
+    const occupiedNames = new Set(
+      allUnits.filter(u => u.status === 'OCCUPIED' && u.tenantName).map(u => u.tenantName)
+    );
+    return allUsers
+      .filter(u => u.role === 'TENANT')
+      .map(u => ({ id: u.id, name: `${u.name} ${u.surname}` }))
+      .filter(t => !occupiedNames.has(t.name));
+  }, [allUsers, allUnits]);
+
   // Form state objects: Controlled component state for user input
   // Implements two-way data binding pattern with onChange handlers
   const [propForm, setPropForm] = useState({ name: '', address: '', propertyType: 'RESIDENTIAL', managerName: pmName || '' });
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumber: '', floor: '' });
   const [tenantAssign, setTenantAssign] = useState({ unitId: '', tenantName: '' });
-  
+  const [useManualEntry, setUseManualEntry] = useState(false);
+
   // Message/feedback state: Implements user feedback mechanism via Alert component
   // Each operation has dedicated message state for displaying success/error feedback
   const [propMsg, setPropMsg] = useState({ text: '', type: '' });
@@ -86,6 +109,7 @@ const Property = ({ refreshData, pmName }) => {
     } else {
       setAssignMsg({ text: `Tenant assigned successfully!`, type: 'success' });
       setTenantAssign({ unitId: '', tenantName: '' });
+      setUseManualEntry(false);
       refresh();
     }
   };
@@ -164,12 +188,49 @@ const Property = ({ refreshData, pmName }) => {
               ))}
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Tenant Name</label>
-            <input className="form-input" placeholder="Tenant full name" value={tenantAssign.tenantName}
-              onChange={e => setTenantAssign(f => ({ ...f, tenantName: e.target.value }))} />
-          </div>
-          <button className="btn btn-teal" onClick={handleAssignTenant} disabled={!tenantAssign.unitId}>Assign Tenant</button>
+
+          {!useManualEntry ? (
+            <div className="form-group">
+              <label className="form-label">Tenant</label>
+              {orphanedTenants.length === 0 ? (
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: '4px 0' }}>
+                  No unassigned tenants found in the system.
+                </p>
+              ) : (
+                <select className="form-select" value={tenantAssign.tenantName}
+                  onChange={e => setTenantAssign(f => ({ ...f, tenantName: e.target.value }))}>
+                  <option value="">— Select tenant —</option>
+                  {orphanedTenants.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: 8, fontSize: 10 }}
+                onClick={() => { setUseManualEntry(true); setTenantAssign(f => ({ ...f, tenantName: '' })); }}
+              >
+                Tenant not listed? Enter name manually
+              </button>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label className="form-label">Tenant Name</label>
+              <input className="form-input" placeholder="Tenant full name" value={tenantAssign.tenantName}
+                onChange={e => setTenantAssign(f => ({ ...f, tenantName: e.target.value }))} />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: 8, fontSize: 10 }}
+                onClick={() => { setUseManualEntry(false); setTenantAssign(f => ({ ...f, tenantName: '' })); }}
+              >
+                ← Choose from list instead
+              </button>
+            </div>
+          )}
+
+          <button className="btn btn-teal" onClick={handleAssignTenant} disabled={!tenantAssign.unitId || !tenantAssign.tenantName}>Assign Tenant</button>
         </div>
       </div>
 

@@ -28,19 +28,23 @@ const Profile = () => {
   const [msg, setMsg] = useState({ text: '', type: '' });
 
   const refreshTech = async () => {
-    const all = getTechnicians();
-    const found = all.find(t => t.name === providerName);
-    setTech(found || null);
-    if (found) {
-      setTechForm({ companyName: found.companyName || '', specialisations: found.specialisations || [] });
-      return;
-    }
+    // For service providers, always fetch their own record fresh via /me —
+    // the local technicians cache (populated by syncTechnicians(), used by
+    // PM/Admin bulk views) isn't kept in sync with self-service edits made
+    // here, so relying on it can overwrite a just-saved change with stale data.
     if (session?.role === 'SERVICE_PROVIDER') {
       const r = await getMyTechnician();
       if (r.success) {
         setTech(r.data);
         setTechForm({ companyName: r.data.companyName || '', specialisations: r.data.specialisations || [] });
       }
+      return;
+    }
+    const all = getTechnicians();
+    const found = all.find(t => t.name === providerName);
+    setTech(found || null);
+    if (found) {
+      setTechForm({ companyName: found.companyName || '', specialisations: found.specialisations || [] });
     }
   };
 
@@ -161,7 +165,7 @@ const Profile = () => {
               ))}
             </div>
           </div>
-          <button className="btn btn-primary" onClick={saveBusinessDetails} style={{ marginTop: 4 }}><FaCheckCircle /> Save Business Details</button>
+          <button className="btn btn-primary" onClick={saveBusinessDetails} style={{ marginTop: 8, marginBottom: 16 }}><FaCheckCircle /> Save Business Details</button>
           <div className="form-group">
             <label className="form-label"><FaToolbox /> Availability Status</label>
             <div style={{ display: 'flex', gap: 4 }}>

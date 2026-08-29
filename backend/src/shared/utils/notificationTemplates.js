@@ -62,24 +62,25 @@ function ctaButton(text, url, color) {
 </div>`;
 }
 
-function ticketCreatedForManager({ managerName, ticket, propertyUrl }) {
+function ticketCreatedForManager({ managerName, ticket, submitterName }) {
   const headerColor = "#3b82f6";
-  const btnUrl = propertyUrl || BASE_URL;
+  const btnUrl = BASE_URL;
   const body = `
     <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">New Ticket Submitted</h2>
     <p style="margin:0 0 20px;color:#4b5563;font-size:14px;">Hi ${managerName},</p>
     <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">A new maintenance ticket has been submitted for your property and requires your attention.</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:20px;">
+      ${detailRow("Submitted by", submitterName || "A tenant")}
       ${detailRow("Title", ticket.title)}
       ${detailRow("Description", ticket.description ? (ticket.description.length > 120 ? ticket.description.substring(0, 120) + "..." : ticket.description) : null)}
       ${detailRow("Category", ticket.category)}
       ${detailRow("Priority", `<span style="color:${ticket.priority === "EMERGENCY" ? "#dc2626" : "#d97706"};font-weight:600;">${ticket.priority || "MEDIUM"}</span>`)}
-      ${detailRow("Property", ticket.property_name)}
+      ${detailRow("Building", ticket.property_name)}
       ${detailRow("Unit", ticket.unit_number)}
       ${detailRow("Ticket ID", `<span style="font-family:monospace;font-size:12px;">${ticket.id}</span>`)}
     </table>
     <p style="margin:0 0 8px;color:#4b5563;font-size:14px;">Log in to review and assign a service provider.</p>
-    ${ctaButton("View Ticket", btnUrl, headerColor)}
+    ${ctaButton("Log In to View Ticket", btnUrl, headerColor)}
     <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;">Or copy this link: <a href="${btnUrl}" style="color:#3b82f6;">${btnUrl}</a></p>`;
   return {
     subject: `[SPMT] New Ticket: ${ticket.title}`,
@@ -194,10 +195,59 @@ function unitAssignedToManager({ managerName, unit, property, tenantName }) {
   };
 }
 
+function propertyCreatedForManager({ managerName, property }) {
+  const headerColor = "#10b981";
+  const btnUrl = BASE_URL;
+  const body = `
+    <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">New Property Created</h2>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">Hi ${managerName},</p>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">A new property has been created in the system.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin-bottom:20px;">
+      ${detailRow("Property", property.name)}
+      ${detailRow("Type", property.type)}
+      ${detailRow("Status", property.status)}
+      ${detailRow("Address", property.address)}
+    </table>
+    <p style="margin:0 0 8px;color:#4b5563;font-size:14px;">Log in to manage this property.</p>
+    ${ctaButton("Log In to View Property", btnUrl, headerColor)}
+    <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;">Or copy this link: <a href="${btnUrl}" style="color:#10b981;">${btnUrl}</a></p>`;
+  return {
+    subject: `[SPMT] New Property Created: ${property.name}`,
+    html: buildShell("New Property Created", headerColor, body),
+  };
+}
+
+function unitCreatedForManager({ managerName, unit, propertyName }) {
+  const headerColor = "#059669";
+  const btnUrl = BASE_URL;
+  const body = `
+    <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">New Unit Added</h2>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">Hi ${managerName},</p>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">A new unit has been added to a property.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin-bottom:20px;">
+      ${detailRow("Building", propertyName)}
+      ${detailRow("Unit", unit.unit_number)}
+      ${detailRow("Floor", unit.floor)}
+      ${detailRow("Type", unit.type)}
+      ${detailRow("Bedrooms", unit.bedrooms)}
+      ${detailRow("Bathrooms", unit.bathrooms)}
+      ${detailRow("Size", unit.size_sqm ? unit.size_sqm + " m²" : null)}
+    </table>
+    <p style="margin:0 0 8px;color:#4b5563;font-size:14px;">Log in to manage this unit.</p>
+    ${ctaButton("Log In to View Units", btnUrl, headerColor)}
+    <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;">Or copy this link: <a href="${btnUrl}" style="color:#059669;">${btnUrl}</a></p>`;
+  return {
+    subject: `[SPMT] New Unit Added: ${propertyName} - ${unit.unit_number}`,
+    html: buildShell("New Unit Added", headerColor, body),
+  };
+}
+
 export {
   ticketCreatedForManager,
   ticketAssignedToProvider,
   ticketStatusChangedForTenant,
   unitAssignedToTenant,
   unitAssignedToManager,
+  propertyCreatedForManager,
+  unitCreatedForManager,
 };

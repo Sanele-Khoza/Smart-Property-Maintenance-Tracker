@@ -9,6 +9,8 @@ import {
   ticketStatusChangedForTenant,
   unitAssignedToTenant,
   unitAssignedToManager,
+  propertyCreatedForManager,
+  unitCreatedForManager,
 } from './notificationTemplates.js';
 
 async function sendEmail({ to, subject, text, html }) {
@@ -195,6 +197,37 @@ async function sendNewUserRegisteredAlert(user) {
   return sendEmail({ to: config.adminEmail, subject, text, html });
 }
 
+async function sendPropertyCreatedNotification(managerId, property) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = propertyCreatedForManager({
+      managerName: manager.name,
+      property,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Property created notification sent to ${manager.email} for property ${property.name}`);
+  } catch (err) {
+    logger.error(`Failed to send property created notification: ${err.message}`);
+  }
+}
+
+async function sendUnitCreatedNotification(managerId, unit, propertyName) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = unitCreatedForManager({
+      managerName: manager.name,
+      unit,
+      propertyName,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Unit created notification sent to ${manager.email} for unit ${unit.unit_number}`);
+  } catch (err) {
+    logger.error(`Failed to send unit created notification: ${err.message}`);
+  }
+}
+
 export {
   sendEmail,
   sendNotificationEmail,
@@ -203,5 +236,7 @@ export {
   sendTicketStatusChangedNotification,
   sendUnitAssignedToTenantNotification,
   sendUnitAssignedToManagerNotification,
+  sendPropertyCreatedNotification,
+  sendUnitCreatedNotification,
   sendNewUserRegisteredAlert,
 };

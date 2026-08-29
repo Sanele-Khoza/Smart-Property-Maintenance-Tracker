@@ -1,5 +1,6 @@
 import * as repo from './properties.repository.js';
 import AppError from '../../shared/errors/AppError.js';
+import { sendPropertyCreatedNotification } from '../../shared/utils/email.service.js';
 
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
@@ -19,6 +20,9 @@ async function getById(id) {
 }
 async function create(data) {
   const property = await repo.create(data);
+  if (property.manager_id) {
+    sendPropertyCreatedNotification(property.manager_id, property).catch(() => {});
+  }
   return { success: true, data: { property }, message: 'Property created' };
 }
 async function update(id, data) {

@@ -51,7 +51,7 @@ async function register({ name, surname, email, password, role, phone, idNumber,
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const status = role === 'SYSTEM_ADMIN' ? 'ACTIVE' : 'PENDING';
-  const approved = role === 'SYSTEM_ADMIN';
+  const approved = true;
 
   const user = await repo.create({
     name, surname, email, phone, idNumber, passwordHash, role, status, approved,

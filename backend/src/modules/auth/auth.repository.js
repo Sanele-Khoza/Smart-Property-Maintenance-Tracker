@@ -45,7 +45,7 @@ const findByVerificationToken = async (token) => {
 };
 
 const verifyUser = async (userId) => {
-  await query("UPDATE users SET email_verification_token = NULL, status = 'ACTIVE' WHERE id = $1", [userId]);
+  await query("UPDATE users SET email_verification_token = NULL, status = 'ACTIVE', approved = TRUE WHERE id = $1", [userId]);
 };
 
 const setResetToken = async (userId, token, expiry) => {

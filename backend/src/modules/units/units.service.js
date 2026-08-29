@@ -4,6 +4,7 @@ import { query } from '../../db/connection.js';
 import {
   sendUnitAssignedToTenantNotification,
   sendUnitAssignedToManagerNotification,
+  sendUnitCreatedNotification,
 } from '../../shared/utils/email.service.js';
 
 async function list(filters) {
@@ -26,6 +27,20 @@ async function getById(id) {
 
 async function create(data) {
   const unit = await repo.create(data);
+  if (unit.property_id) {
+    (async () => {
+      try {
+        const propRow = (await query(
+          `SELECT p.manager_id, p.name FROM properties p WHERE p.id = $1`, [unit.property_id]
+        )).rows[0];
+        if (propRow?.manager_id) {
+          sendUnitCreatedNotification(propRow.manager_id, unit, propRow.name).catch(() => {});
+        }
+      } catch (e) {
+        console.error('Unit created notification failed:', e.message);
+      }
+    })();
+  }
   return { success: true, data: { unit }, message: 'Unit created' };
 }
 

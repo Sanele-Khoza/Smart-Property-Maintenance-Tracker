@@ -284,15 +284,15 @@ async function seed(query) {
 
   /* ── 11. sla_config ── */
   const slaData = [
-    { priority: "EMERGENCY", responseMinutes: 30, resolutionMinutes: 240 },
-    { priority: "HIGH", responseMinutes: 120, resolutionMinutes: 480 },
-    { priority: "MEDIUM", responseMinutes: 480, resolutionMinutes: 2880 },
-    { priority: "LOW", responseMinutes: 1440, resolutionMinutes: 10080 },
+    { priority: "EMERGENCY", responseMinutes: 30, resolutionMinutes: 240, autoAssignMinutes: 30 },
+    { priority: "HIGH", responseMinutes: 120, resolutionMinutes: 480, autoAssignMinutes: 120 },
+    { priority: "MEDIUM", responseMinutes: 480, resolutionMinutes: 2880, autoAssignMinutes: 480 },
+    { priority: "LOW", responseMinutes: 1440, resolutionMinutes: 10080, autoAssignMinutes: 1440 },
   ];
   for (const s of slaData) {
     await query(
-      "INSERT INTO sla_config (priority, response_minutes, resolution_minutes) VALUES ($1, $2, $3) ON CONFLICT (priority) DO NOTHING",
-      [s.priority, s.responseMinutes, s.resolutionMinutes],
+      "INSERT INTO sla_config (priority, response_minutes, resolution_minutes, auto_assign_minutes) VALUES ($1, $2, $3, $4) ON CONFLICT (priority) DO NOTHING",
+      [s.priority, s.responseMinutes, s.resolutionMinutes, s.autoAssignMinutes],
     );
   }
 
@@ -310,6 +310,7 @@ async function seed(query) {
     { key: "AI_EMERGENCY_KEYWORD_WEIGHT",         value: "2.00", desc: "Weight multiplier for emergency keywords (SDD §5.3.5)" },
     { key: "AI_SENTIMENT_NEGATIVE_THRESHOLD",     value: "0.40", desc: "Sentiment below this flags negative tenant feedback (SDD §5.3.6)" },
     { key: "AI_AUTO_ASSIGN_CONFIDENCE",           value: "0.80", desc: "Minimum confidence to auto-assign tickets (SDD §5.3.7)" },
+    { key: "AUTO_ASSIGN_ENABLED",                 value: "true",  desc: "Enable automatic provider assignment for all priorities (Prompt 22 v2 §8)" },
     { key: "AI_MULTI_MODAL_CONFLICT_THRESHOLD",   value: "0.15", desc: "Label probability gap triggering conflict (SDD §4.1.1)" },
     { key: "AI_RETENTION_DAYS",                   value: "365",  desc: "Inference log retention in days (SDD §5.3.8)" },
   ];

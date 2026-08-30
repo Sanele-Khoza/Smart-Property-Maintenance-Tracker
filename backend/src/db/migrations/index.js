@@ -30,6 +30,7 @@ async function run(query) {
     { name: '024_provider_rating_sync', file: '024_provider_rating_sync.js' },
     { name: '025_decline_postpone', file: '025_decline_postpone.js' },
     { name: '026_users_id_number', file: '026_users_id_number.js' },
+    { name: '027_auto_assign', file: '027_auto_assign.js' },
   ];
 
   await query(`

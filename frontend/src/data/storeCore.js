@@ -11,8 +11,26 @@ const getDefaultData = () => ({
     { id: 'CAT-005', name: 'General', description: 'General maintenance and repairs', defaultPriority: 'LOW', aiKeywords: ['paint', 'clean', 'fix', 'repair', 'replace'], rekognitionLabel: 'General' },
   ],
   technicians: [],
-  systemSettings: [],
-  slaConfig: [],
+  systemSettings: [
+    {
+      key: 'AUTO_ASSIGN_ENABLED',
+      value: 'true',
+      type: 'boolean',
+      category: 'sla',
+      description: 'Enable automatic provider assignment for all priorities (Prompt 22 v2 §8)',
+    },
+    { key: 'AI_TEXT_CONFIDENCE_THRESHOLD', value: '0.60', type: 'decimal', category: 'ai', description: 'Minimum confidence for Comprehend text classification' },
+    { key: 'AI_EMERGENCY_VISUAL_THRESHOLD', value: '0.70', type: 'decimal', category: 'ai', description: 'Minimum confidence for Rekognition emergency detection' },
+    { key: 'AI_TEXT_WEIGHT', value: '0.40', type: 'decimal', category: 'ai', description: 'Weight of text analysis (Comprehend) in combined score' },
+    { key: 'AI_VISUAL_WEIGHT', value: '0.60', type: 'decimal', category: 'ai', description: 'Weight of image analysis (Rekognition) in combined score' },
+  ],
+  slaConfig: [
+    { priority: 'EMERGENCY', responseMinutes: 30, resolutionMinutes: 240, warningPercent: 75, autoAssignMinutes: 30 },
+    { priority: 'URGENT', responseMinutes: 30, resolutionMinutes: 240, warningPercent: 75, autoAssignMinutes: 30 },
+    { priority: 'HIGH', responseMinutes: 120, resolutionMinutes: 480, warningPercent: 75, autoAssignMinutes: 120 },
+    { priority: 'MEDIUM', responseMinutes: 480, resolutionMinutes: 2880, warningPercent: 75, autoAssignMinutes: 480 },
+    { priority: 'LOW', responseMinutes: 1440, resolutionMinutes: 10080, warningPercent: 75, autoAssignMinutes: 1440 },
+  ],
   auditLog: [],
   securityAuditLog: [],
   notifications: [],
@@ -57,7 +75,9 @@ const saveToLocalStorage = () => {
 const migrateSavedData = (parsed) => {
   const defaults = getDefaultData();
   FIELDS_WITH_DEFAULTS.forEach(field => {
-    if (!parsed[field]) parsed[field] = defaults[field];
+    if (!parsed[field] || (Array.isArray(parsed[field]) && parsed[field].length === 0)) {
+      parsed[field] = defaults[field];
+    }
   });
   parsed.tickets = (parsed.tickets || []).map(t => {
     const match = defaults.tickets.find(dt => dt.ticketId === t.ticketId);

@@ -25,11 +25,16 @@ const getSlaConfig = async () => {
   return result.rows.sort((a, b) => (order[a.priority] ?? 99) - (order[b.priority] ?? 99));
 };
 
-const upsertSla = async (priority, responseMinutes, resolutionMinutes) => {
+const upsertSla = async (priority, fields = {}) => {
+  const { responseMinutes, resolutionMinutes, autoAssignMinutes, warningPercent } = fields;
   await query(
-    `INSERT INTO sla_config (priority, response_minutes, resolution_minutes) VALUES ($1, $2, $3)
-     ON CONFLICT (priority) DO UPDATE SET response_minutes = $2, resolution_minutes = $3`,
-    [priority, responseMinutes, resolutionMinutes]
+    `INSERT INTO sla_config (priority, response_minutes, resolution_minutes, auto_assign_minutes)
+     VALUES ($1, COALESCE($2, 30), COALESCE($3, 240), COALESCE($4, 30))
+     ON CONFLICT (priority) DO UPDATE SET
+       response_minutes = COALESCE(EXCLUDED.response_minutes, sla_config.response_minutes),
+       resolution_minutes = COALESCE(EXCLUDED.resolution_minutes, sla_config.resolution_minutes),
+       auto_assign_minutes = COALESCE(EXCLUDED.auto_assign_minutes, sla_config.auto_assign_minutes)`,
+    [priority, responseMinutes ?? null, resolutionMinutes ?? null, autoAssignMinutes ?? null]
   );
   const result = await query('SELECT * FROM sla_config WHERE priority = $1', [priority]);
   return result.rows[0];

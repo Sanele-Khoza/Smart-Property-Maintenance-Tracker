@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { FaCog, FaSave, FaExclamationTriangle, FaTimes, FaCheck, FaClock, FaDatabase, FaAws, FaShieldAlt, FaImage, FaKey, FaUserLock, FaChartLine } from 'react-icons/fa';
+import { FaCog, FaSave, FaExclamationTriangle, FaTimes, FaCheck, FaClock, FaDatabase, FaAws, FaShieldAlt, FaImage, FaKey, FaUserLock, FaChartLine, FaRobot } from 'react-icons/fa';
 import { getSystemSettings, updateSystemSetting, getSlaConfig, updateSlaConfig } from '../../data/store';
 import Alert from '../../components/common/Alert';
 
 const CATEGORY_META = {
-  ai:   { label: 'AI Classification', icon: FaCog, color: 'var(--info)' },
+  ai:   { label: 'AI Classification', icon: FaRobot, color: 'var(--info)' },
   auth: { label: 'Authentication & Security', icon: FaShieldAlt, color: 'var(--teal)' },
   general: { label: 'General', icon: FaCog, color: 'var(--text-dim)' },
   sla:  { label: 'SLA & Auto-Assignment', icon: FaClock, color: 'var(--amber)' },
@@ -13,7 +13,7 @@ const CATEGORY_META = {
   aws:  { label: 'AWS Integration', icon: FaAws, color: 'var(--amber)' },
 };
 
-const PRIORITY_ORDER = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'];
+const PRIORITY_ORDER = ['EMERGENCY', 'URGENT', 'HIGH', 'MEDIUM', 'LOW'];
 
 const Settings = () => {
   const [settings, setSettings] = useState(getSystemSettings);
@@ -53,7 +53,9 @@ const Settings = () => {
     if (raw === undefined || raw === '') return;
     const orig = settings.find(s => s.key === key);
     let parsed;
-    if (orig.type === 'int') {
+    if (orig.type === 'boolean') {
+      parsed = raw === 'true' || raw === true;
+    } else if (orig.type === 'int') {
       parsed = parseInt(raw, 10);
       if (isNaN(parsed) || parsed < 0) { showAlert(`${key} must be a positive integer.`, 'error'); return; }
     } else {
@@ -121,19 +123,36 @@ const Settings = () => {
                     {items.map(s => {
                       const isEditing = edits[s.key] !== undefined;
                       const displayVal = isEditing ? edits[s.key] : s.value;
+                      const isBoolean = s.type === 'boolean';
+                      const checked = isBoolean && (isEditing
+                        ? edits[s.key] === 'true' || edits[s.key] === true
+                        : s.value === 'true' || s.value === true);
                       return (
                         <tr key={s.key}>
                           <td className="cell-mono" style={{ fontSize: 11 }}>{s.key}</td>
                           <td>
-                            <input
-                              type={s.type === 'int' ? 'number' : 'number'}
-                              step={s.type === 'int' ? '1' : '0.01'}
-                              min="0"
-                              className="form-input"
-                              style={{ width: 80, fontSize: 11, padding: '2px 6px' }}
-                              value={displayVal}
-                              onChange={e => handleEdit(s.key, e.target.value)}
-                            />
+                            {isBoolean ? (
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={e => handleEdit(s.key, String(e.target.checked))}
+                                />
+                                <span style={{ fontSize: 10, color: checked ? 'var(--success)' : 'var(--text-dim)' }}>
+                                  {checked ? 'ON' : 'OFF'}
+                                </span>
+                              </label>
+                            ) : (
+                              <input
+                                type="number"
+                                step={s.type === 'int' ? '1' : '0.01'}
+                                min="0"
+                                className="form-input"
+                                style={{ width: 80, fontSize: 11, padding: '2px 6px' }}
+                                value={displayVal}
+                                onChange={e => handleEdit(s.key, e.target.value)}
+                              />
+                            )}
                           </td>
                           <td style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.type}</td>
                           <td style={{ fontSize: 11 }}>{s.description}</td>
@@ -172,6 +191,8 @@ const Settings = () => {
                 <th />
                 <th>Warning %</th>
                 <th />
+                <th>Auto-Assign Delay (min)</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -181,15 +202,18 @@ const Settings = () => {
                 const respKey = `${priority}.responseMinutes`;
                 const resolKey = `${priority}.resolutionMinutes`;
                 const warnKey = `${priority}.warningPercent`;
+                const assignKey = `${priority}.autoAssignMinutes`;
                 const respEdit = slaEdits[respKey] !== undefined;
                 const resolEdit = slaEdits[resolKey] !== undefined;
                 const warnEdit = slaEdits[warnKey] !== undefined;
+                const assignEdit = slaEdits[assignKey] !== undefined;
                 const respVal = respEdit ? slaEdits[respKey] : sla.responseMinutes;
                 const resolVal = resolEdit ? slaEdits[resolKey] : sla.resolutionMinutes;
                 const warnVal = warnEdit ? slaEdits[warnKey] : sla.warningPercent;
+                const assignVal = assignEdit ? slaEdits[assignKey] : sla.autoAssignMinutes ?? '';
                 return (
-                  <tr key={priority} style={priority === 'URGENT' ? { backgroundColor: 'rgba(220,60,60,0.04)' } : {}}>
-                    <td><strong style={{ color: priority === 'URGENT' ? 'var(--danger)' : 'inherit' }}>{priority}</strong></td>
+                  <tr key={priority} style={['EMERGENCY', 'URGENT'].includes(priority) ? { backgroundColor: 'rgba(220,60,60,0.04)' } : {}}>
+                    <td><strong style={{ color: ['EMERGENCY', 'URGENT'].includes(priority) ? 'var(--danger)' : 'inherit' }}>{priority}</strong></td>
                     <td>
                       <input type="number" min="1" className="form-input" style={{ width: 70, fontSize: 11, padding: '2px 6px' }} value={respVal} onChange={e => handleSlaEdit(priority, 'responseMinutes', e.target.value)} />
                     </td>
@@ -220,6 +244,18 @@ const Settings = () => {
                     <td>
                       {warnEdit ? (
                         <button className="btn btn-teal btn-sm" onClick={() => saveSlaField(priority, 'warningPercent')} disabled={saving === warnKey} style={{ fontSize: 9, padding: '2px 5px' }}>
+                          <FaSave />
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <input type="number" min="1" className="form-input" style={{ width: 80, fontSize: 11, padding: '2px 6px' }} value={assignVal} onChange={e => handleSlaEdit(priority, 'autoAssignMinutes', e.target.value)} />
+                    </td>
+                    <td>
+                      {assignEdit ? (
+                        <button className="btn btn-teal btn-sm" onClick={() => saveSlaField(priority, 'autoAssignMinutes')} disabled={saving === assignKey} style={{ fontSize: 9, padding: '2px 5px' }}>
                           <FaSave />
                         </button>
                       ) : (

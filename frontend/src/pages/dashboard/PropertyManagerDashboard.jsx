@@ -191,6 +191,7 @@ const PropertyManagerDashboard = ({ activePage }) => {
                       <div className="ticket-desc">{t.title}</div>
                       <div className="ticket-meta">
                         <span><FaWrench /> {t.assignedTo}</span>
+                        {t.autoAssigned && <span style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginLeft: 6 }}>Auto-assigned by system</span>}
                         <span><FaCalendarAlt /> Updated: {t.updatedAt}</span>
                       </div>
                     </div>

@@ -165,7 +165,10 @@ const TicketTracking = () => {
                     <td><span className={`badge ${t.priority === 'URGENT' || t.priority === 'EMERGENCY' ? 'badge-danger' : t.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{t.priority}</span></td>
                     <td>{t.propertyName}</td>
                     <td>Unit {t.unitNumber}</td>
-                    <td>{t.assignedTo || '—'}</td>
+                    <td>
+                      {t.assignedTo || '—'}
+                      {t.autoAssigned && <div style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginTop: 2 }}>Auto-assigned by system</div>}
+                    </td>
                     <td style={{ fontSize: 11 }}>{t.createdAt}</td>
                     <td>
                       {t.status === 'Tenant Confirmed' ? (
@@ -195,7 +198,9 @@ const TicketTracking = () => {
               <tr><td style={{ fontWeight: 600 }}>Status</td><td><StatusBadge status={selected.status} /></td></tr>
               <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${selected.priority === 'URGENT' || selected.priority === 'EMERGENCY' ? 'badge-danger' : selected.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{selected.priority}</span></td></tr>
               <tr><td style={{ fontWeight: 600 }}>Category</td><td>{selected.category || '—'}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Assigned To</td><td>{selected.assignedTo || 'Not assigned yet'}</td></tr>
+              <tr><td style={{ fontWeight: 600 }}>Assigned To</td><td>{selected.assignedTo || 'Not assigned yet'}
+                    {selected.autoAssigned && <span style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginLeft: 6 }}>Auto-assigned by system</span>}
+                  </td></tr>
               <tr><td style={{ fontWeight: 600 }}>Property / Unit</td><td>{selected.propertyName} — Unit {selected.unitNumber}</td></tr>
               <tr><td style={{ fontWeight: 600 }}>Created</td><td>{selected.createdAt}</td></tr>
               <tr><td style={{ fontWeight: 600 }}>Last Updated</td><td>{selected.updatedAt}</td></tr>

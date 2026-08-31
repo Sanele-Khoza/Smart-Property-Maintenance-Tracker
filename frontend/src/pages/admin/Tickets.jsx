@@ -336,7 +336,10 @@ const Tickets = () => {
                         return <span style={{ display: 'inline-block', padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 600, backgroundColor: bg, color: sla.color, whiteSpace: 'nowrap' }}>{sla.label}</span>;
                       })()}
                     </td>
-                    <td style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t.assignedTo || '—'}</td>
+                    <td style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                          {t.assignedTo || '—'}
+                          {t.autoAssigned && <div style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginTop: 2 }}>Auto-assigned by system</div>}
+                        </td>
                     <td style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.createdAt}</td>
                     <td>
                       <div className="action-cell">

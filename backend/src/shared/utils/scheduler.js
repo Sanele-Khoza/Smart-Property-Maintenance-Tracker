@@ -1,9 +1,9 @@
 /*
- * Background scheduler for BR-003 (emergency auto-assign + SLA breach).
+ * Background scheduler for BR-003 (auto-assign + SLA breach).
  * Runs every 5 minutes in production.
  */
 
-import { autoAssignEmergencyTickets, markSlaBreaches } from './emergencyScheduler.js';
+import { autoAssignTickets, markSlaBreaches } from './emergencyScheduler.js';
 
 const INTERVAL_MS = 5 * 60 * 1000; /* 5 minutes */
 
@@ -29,9 +29,9 @@ function stop() {
 
 async function runTasks() {
   try {
-    const autoAssigned = await autoAssignEmergencyTickets();
-    if (autoAssigned > 0) {
-      console.log(`[Scheduler] Auto-assigned ${autoAssigned} emergency ticket(s)`);
+    const result = await autoAssignTickets();
+    if (result.assigned > 0) {
+      console.log(`[Scheduler] Auto-assigned ${result.assigned} ticket(s)`);
     }
 
     const breached = await markSlaBreaches();

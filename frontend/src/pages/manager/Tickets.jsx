@@ -335,7 +335,10 @@ const Tickets = () => {
                             {sla.label}
                           </div>
                         </td>
-                        <td style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t.assignedTo || '—'}</td>
+                        <td style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                          {t.assignedTo || '—'}
+                          {t.autoAssigned && <div style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginTop: 2 }}>Auto-assigned by system</div>}
+                        </td>
                         <td style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{t.createdAt}</td>
                         <td>
                           <div className="action-cell">
@@ -526,7 +529,8 @@ const Tickets = () => {
                   <div><FaUser style={{ marginRight: 4, fontSize: 10 }} /> <strong>Submitted by:</strong> {t.createdBy || '—'}</div>
                   <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Created:</strong> {t.createdAt || '—'}</div>
                   <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Updated:</strong> {t.updatedAt || '—'}</div>
-                  <div><FaUserCheck style={{ marginRight: 4, fontSize: 10 }} /> <strong>Assigned to:</strong> {t.assignedTo || '—'}</div>
+                  <div><FaUserCheck style={{ marginRight: 4, fontSize: 10 }} /> <strong>Assigned to:</strong> {t.assignedTo || '—'}
+                    {t.autoAssigned && <span style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 600, marginLeft: 6 }}>Auto-assigned by system</span>}</div>
                   <div><FaCalendarAlt style={{ marginRight: 4, fontSize: 10 }} /> <strong>Postponed until:</strong> {t.postponedUntil ? new Date(t.postponedUntil).toLocaleString() : '—'}</div>
                   <div><FaTag style={{ marginRight: 4, fontSize: 10 }} /> <strong>Category:</strong> {t.category || '—'}</div>
                   <div><FaBrain style={{ marginRight: 4, fontSize: 10 }} /> <strong>AI original:</strong> {t.aiOriginalCategory ? <span>{t.aiOriginalCategory} {dtOverride && <span style={{ color: 'var(--amber)' }}>(overridden)</span>}</span> : '—'}</div>

@@ -1,5 +1,5 @@
 import logger from '../../shared/utils/logger.js';
-import { autoAssignEmergencyTickets, markSlaBreaches } from '../../shared/utils/emergencyScheduler.js';
+import { autoAssignTickets, markSlaBreaches } from '../../shared/utils/emergencyScheduler.js';
 import { markBreachedTickets } from '../../shared/utils/slaChecker.js';
 import { query } from '../../db/connection.js';
 
@@ -7,10 +7,10 @@ let intervalId = null;
 
 async function checkSla() {
   try {
-    /* BR-003: Emergency auto-assign if unassigned >20min */
-    const autoAssigned = await autoAssignEmergencyTickets();
-    if (autoAssigned > 0) {
-      logger.info(`Auto-assigned ${autoAssigned} emergency tickets`);
+    /* PROMPT 22 (v2) §4 — auto-assign every priority past its per-priority delay */
+    const result = await autoAssignTickets();
+    if (result.assigned > 0) {
+      logger.info(`Auto-assigned ${result.assigned} ticket(s) (scanned ${result.scanned})`);
     }
 
     /* Mark SLA breaches across all priorities */

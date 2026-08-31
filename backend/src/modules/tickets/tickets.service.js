@@ -15,6 +15,7 @@ import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
+import { reassignAfterDecline } from '../routing/routing.service.js';
 import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
 import config from '../../config/index.js';
@@ -411,9 +412,17 @@ async function assign(id, technicianId, note, userId, userName, role) {
   const updated = await repo.update(id, {
     assigned_to: technicianId,
     status: 'Assigned',
+    auto_assigned: false,
+    auto_assigned_at: null,
+    no_provider_flagged_at: null,
     postponed_until: null,
     postponed_reason: null,
   });
+  await query(
+    `UPDATE low_confidence_queue SET status = 'resolved'
+     WHERE ticket_id = $1 AND status = 'pending'`,
+    [id]
+  );
   await repo.addHistory(id, 'Assigned', userId, userName, note || `Assigned to ${provider.name}`);
   await auditLog(ticket.id, 'assigned', userId, userName, {
     providerId: technicianId, provider: provider.name, note,
@@ -462,6 +471,25 @@ async function declineTicket(id, userId, userName, note, postponeUntil) {
     sendToUser(updated.tenant_id, 'ticket_declined', {
       ticketId: id, title: ticket.title, status: TicketStates.DECLINED,
     });
+  }
+
+  /* §4 — a decline must trigger real fallback (unless the provider is
+   * postponing, in which case the ticket stays open for them later):
+   * auto-move to the next-ranked candidate from the original scoring. */
+  if (!parsedUntil) {
+    const fallback = await reassignAfterDecline(id);
+    if (fallback.success) {
+      return {
+        success: true,
+        data: { ticket: { ...updated, assigned_to: fallback.data.provider.id, status: 'Assigned', auto_assigned: true } },
+        message: `Provider declined — automatically reassigned to ${fallback.data.provider.name}`,
+      };
+    }
+    return {
+      success: true,
+      data: { ticket: updated },
+      message: 'Provider declined — no automatic fallback available; flagged for manager attention',
+    };
   }
 
   const message = parsedUntil

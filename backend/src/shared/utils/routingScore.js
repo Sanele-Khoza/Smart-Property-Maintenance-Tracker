@@ -16,11 +16,23 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 function calcSpecScore(providerSpecs, ticketCategory) {
-  if (!providerSpecs || providerSpecs.length === 0) return 0;
-  const lowerSpecs = providerSpecs.map(s => s.toLowerCase());
-  const lowerCat = (ticketCategory || '').toLowerCase();
-  if (lowerSpecs.some(s => s === lowerCat || s.includes(lowerCat) || lowerCat.includes(s))) return 1;
-  return 0;
+  return providerMatchesCategory(providerSpecs, ticketCategory) ? 1 : 0;
+}
+
+/**
+ * PROMPT 22 (v2) §3 — skill match is a HARD filter, not a scoring input.
+ * True only when at least one provider specialisation matches the ticket
+ * category (same loose matching used for the scoring bonus, so the two
+ * agree exactly). Used both as the SQL pre-filter and for tests.
+ */
+function providerMatchesCategory(providerSpecs, ticketCategory) {
+  if (!providerSpecs || providerSpecs.length === 0) return false;
+  const lowerCat = (ticketCategory || '').toLowerCase().trim();
+  if (!lowerCat) return true;
+  return providerSpecs.some(s => {
+    const spec = String(s).toLowerCase();
+    return spec === lowerCat || spec.includes(lowerCat) || lowerCat.includes(spec);
+  });
 }
 
 async function resolveTicketLocation(ticket) {
@@ -50,7 +62,7 @@ async function scoreProviders(ticket, opts = {}) {
   const {
     excludeOffDuty = true,
     topN = 3,
-    requireSpecialisation = false,
+    requireSpecialisation = true,
     category = ticket.category || ticket.ai_category || 'Other',
   } = opts;
 
@@ -71,7 +83,18 @@ async function scoreProviders(ticket, opts = {}) {
     clauses.push("sp.status != 'OFF_DUTY'");
   }
   if (requireSpecialisation) {
-    clauses.push(`sp.specialisations IS NOT NULL AND array_length(sp.specialisations, 1) > 0`);
+    /* PROMPT 22 (v2) §3 — providers must hold the matching specialisation
+     * BEFORE any rating/proximity/workload scoring happens. Providers without
+     * it never enter the candidate pool, regardless of overall score. */
+    params.push(category);
+    clauses.push(`(
+      EXISTS (
+        SELECT 1 FROM unnest(sp.specialisations) AS _spec
+        WHERE LOWER(_spec) = LOWER($${params.length})
+           OR LOWER(_spec) LIKE '%' || LOWER($${params.length}) || '%'
+           OR LOWER($${params.length}) LIKE '%' || LOWER(_spec) || '%'
+      )
+    )`);
   }
 
   if (clauses.length > 0) sql += ' WHERE ' + clauses.join(' AND ');
@@ -128,4 +151,4 @@ async function scoreProviders(ticket, opts = {}) {
   return scored.slice(0, topN);
 }
 
-export { scoreProviders, haversineKm, calcSpecScore };
+export { scoreProviders, haversineKm, calcSpecScore, providerMatchesCategory };

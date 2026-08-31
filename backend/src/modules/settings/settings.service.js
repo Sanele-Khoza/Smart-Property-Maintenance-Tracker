@@ -28,9 +28,9 @@ async function getSla() {
   return { success: true, data: { slaConfig } };
 }
 
-async function updateSla(priority, responseMinutes, resolutionMinutes) {
+async function updateSla(priority, fields = {}) {
   if (!priority) throw new Error('Priority is required');
-  const config = await repo.upsertSla(priority, responseMinutes, resolutionMinutes);
+  const config = await repo.upsertSla(priority, fields);
   return { success: true, data: { sla: config }, message: 'SLA config updated' };
 }
 

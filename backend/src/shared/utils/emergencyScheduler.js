@@ -1,6 +1,7 @@
 import { AUTO_ASSIGNED_STATUSES, getAutoAssignCutoff, isEligibleForAutoAssign } from './autoAssignGate.js';
 import { query } from '../../db/connection.js';
 import { scoreProviders } from './routingScore.js';
+import { scoreProvidersWithPython } from '../adapters/pythonAiClient.js';
 import { commitAutoAssignment } from './assignmentCommitter.js';
 import { sendToUser } from './sse.js';
 import { publishTopic as snsPublishTopic } from '../adapters/snsAdapter.js';
@@ -81,11 +82,21 @@ async function autoAssignTickets() {
 
 async function tryAutoAssignOne(ticket) {
   const category = ticket.ai_category || ticket.category || 'Other';
-  const top = await scoreProviders(ticket, {
+
+  /* PROMPT — prefer the Python AI scorer when enabled; fall back to the Node
+   * scorer when it is unavailable (service down, disabled, or no matches). */
+  let top = await scoreProvidersWithPython(ticket, {
     topN: MAX_AUTO_ASSIGN_TOP_N,
     requireSpecialisation: true,
     category,
   });
+  if (top.length === 0) {
+    top = await scoreProviders(ticket, {
+      topN: MAX_AUTO_ASSIGN_TOP_N,
+      requireSpecialisation: true,
+      category,
+    });
+  }
 
   /* §4 — zero eligible providers: surface to the manager, stop retrying. */
   if (top.length === 0) {

@@ -58,15 +58,17 @@ async function resolveTicketLocation(ticket) {
   return { ticketLat, ticketLng };
 }
 
-async function scoreProviders(ticket, opts = {}) {
+/**
+ * Fetch candidate providers for a ticket (same pre-filter + SQL used by
+ * scoreProviders). Shared with the Python AI scorer so both paths consider
+ * exactly the same candidate pool.
+ */
+async function loadCandidateProviders(ticket, opts = {}) {
   const {
     excludeOffDuty = true,
-    topN = 3,
     requireSpecialisation = true,
-    category = ticket.category || ticket.ai_category || 'Other',
+    category = 'Other',
   } = opts;
-
-  const { ticketLat, ticketLng } = await resolveTicketLocation(ticket);
 
   let sql = `SELECT sp.*,
               COALESCE(sp.rating, 0) AS rating,
@@ -100,7 +102,20 @@ async function scoreProviders(ticket, opts = {}) {
   if (clauses.length > 0) sql += ' WHERE ' + clauses.join(' AND ');
   sql += ' ORDER BY sp.rating DESC';
 
-  const providers = (await query(sql, params)).rows;
+  return (await query(sql, params)).rows;
+}
+
+async function scoreProviders(ticket, opts = {}) {
+  const {
+    excludeOffDuty = true,
+    topN = 3,
+    requireSpecialisation = true,
+    category = ticket.category || ticket.ai_category || 'Other',
+  } = opts;
+
+  const { ticketLat, ticketLng } = await resolveTicketLocation(ticket);
+
+  const providers = await loadCandidateProviders(ticket, { excludeOffDuty, requireSpecialisation, category });
   if (providers.length === 0) return [];
 
   const maxRating = Math.max(...providers.map(p => p.rating || 0), 1);
@@ -151,4 +166,4 @@ async function scoreProviders(ticket, opts = {}) {
   return scored.slice(0, topN);
 }
 
-export { scoreProviders, haversineKm, calcSpecScore, providerMatchesCategory };
+export { scoreProviders, haversineKm, calcSpecScore, providerMatchesCategory, loadCandidateProviders, resolveTicketLocation };

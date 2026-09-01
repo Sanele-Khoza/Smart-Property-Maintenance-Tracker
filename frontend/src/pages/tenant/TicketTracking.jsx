@@ -287,7 +287,27 @@ const TicketTracking = () => {
               </div>
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)' }}>Category</div>
-                <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3 }}>{selected.category || 'Pending AI Classification'}</div>
+                <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3 }}>
+                  {selected.category || 'Pending AI Classification'}
+                  {selected.aiService && (
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        marginLeft: 8,
+                        padding: '2px 8px',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        verticalAlign: 'middle',
+                        color: selected.aiService === 'PYTHON_SKLEARN' ? '#fff' : 'var(--text-dim)',
+                        background: selected.aiService === 'PYTHON_SKLEARN' ? 'var(--teal)' : 'var(--surface)',
+                        border: selected.aiService === 'PYTHON_SKLEARN' ? 'none' : '1px solid var(--border)',
+                      }}
+                    >
+                      {selected.aiService === 'PYTHON_SKLEARN' ? 'Python AI' : selected.aiService}
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)' }}>AI Confidence</div>

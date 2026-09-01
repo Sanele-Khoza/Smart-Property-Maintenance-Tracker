@@ -77,8 +77,10 @@ async function persistClassification(id, textResult, visualResult, classificatio
       visual_emergency = COALESCE($10, visual_emergency),
       visual_emergency_escalated_by = COALESCE($11, visual_emergency_escalated_by),
       pm_confirmed = COALESCE($12, pm_confirmed),
+      ai_service = COALESCE($13, ai_service),
+      ai_method = COALESCE($14, ai_method),
       updated_at = NOW()
-    WHERE id = $13`,
+    WHERE id = $15`,
     [
       updates.ai_text_label, updates.ai_visual_label,
       updates.ai_text_confidence, updates.ai_visual_confidence,
@@ -89,6 +91,8 @@ async function persistClassification(id, textResult, visualResult, classificatio
       updates.visual_emergency ?? null,
       updates.visual_emergency_escalated_by || null,
       updates.pm_confirmed ?? null,
+      textResult?.service || null,
+      classification.outcome || null,
       id,
     ]
   );

@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { query } from '../../db/connection.js';
 import { classify } from '../../shared/utils/aiClassifier.js';
-import { classifyText } from './comprehend.service.js';
+import { classifyText as comprehendClassifyText } from './comprehend.service.js';
+import { classifyText as pythonClassifyText, autoAssign } from './pythonAi.service.js';
 import { analyzeImage } from './rekognition.service.js';
 import { extractEntities, deduplicateEntities } from './entityExtractor.js';
 import { findDuplicates } from './duplicateDetector.js';
@@ -159,7 +160,7 @@ async function classifyTicket(id) {
   }
 
   const textResult = ticket.description
-    ? await classifyText(ticket.description)
+    ? await (config.pythonAi.enabled ? pythonClassifyText : comprehendClassifyText)(ticket.description)
     : { category: null, confidence: 0, service: 'none' };
 
   let visualResult = { category: null, confidence: 0, service: 'none', visualEmergency: false, labels: [] };
@@ -292,6 +293,50 @@ async function getQueueStats() {
   return result.rows[0] || { pending: 0, reviewed: 0, resolved: 0 };
 }
 
+/**
+ * Pure-Python classification + provider assignment preview.
+ * Returns the Python model's category and a ranked provider list without
+ * persisting anything.
+ */
+async function pythonClassifyAndAssign(ticketId, { topN = 1 } = {}) {
+  const ticketRes = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
+  const ticket = ticketRes.rows[0];
+  if (!ticket) return { error: 'Ticket not found', statusCode: 404 };
+
+  const catResult = await pythonClassifyText(ticket.description || '');
+
+  const category = catResult.category || 'Other';
+  const providers = await query(
+    `SELECT sp.*,
+            COALESCE(sp.rating, 0) AS rating,
+            COALESCE(sp.current_workload, 0) AS current_workload,
+            COALESCE(sp.specialisations, '{}') AS specialisations,
+            pa.auto_accept, pa.current_jobs AS pa_jobs,
+            pa.preferred_radius_km
+     FROM service_providers sp
+     LEFT JOIN provider_availability pa ON pa.provider_id = sp.id
+     WHERE sp.status != 'OFF_DUTY'`
+  );
+
+  const lat = ticket.unit_id
+    ? (await query('SELECT gps_location FROM units WHERE id = $1', [ticket.unit_id])).rows[0]?.gps_location?.x
+    : null;
+  const lng = ticket.unit_id
+    ? (await query('SELECT gps_location FROM units WHERE id = $1', [ticket.unit_id])).rows[0]?.gps_location?.y
+    : null;
+
+  const assignResult = await autoAssign(providers.rows, {
+    category, topN, lat, lng,
+  });
+
+  return {
+    classification: catResult,
+    category,
+    matches: assignResult.data?.matches || [],
+  };
+}
+
+
 export {
   classifyTicket,
   persistClassification,
@@ -302,4 +347,5 @@ export {
   getDuplicates,
   extractEntitiesFromText,
   getQueueStats,
+  pythonClassifyAndAssign,
 };

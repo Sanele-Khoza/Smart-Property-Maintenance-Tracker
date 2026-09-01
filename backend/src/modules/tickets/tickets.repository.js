@@ -26,6 +26,8 @@ function toSnakeTicket(row) {
     ai_overridden_by: row.ai_overridden_by ?? null,
     ai_overridden_at: row.ai_overridden_at ?? null,
     ai_category: row.ai_category ?? null,
+    ai_service: row.ai_service ?? null,
+    ai_method: row.ai_method ?? null,
     conflict_detected: row.conflict_detected,
     visual_emergency: row.visual_emergency,
     pm_confirmed: row.pm_confirmed,

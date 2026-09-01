@@ -52,6 +52,7 @@ function mapTicket(t) {
     combinedConfidence: t.ai_text_confidence || t.ai_visual_confidence || t.combinedConfidence || null,
     conflictDetected: t.conflict_detected || t.conflictDetected || false,
     manualReviewRequired: false,
+    aiService: t.ai_service || t.aiService || null,
     assignedTo: t.assigned_to_name || t.assignedTo || null,
     assignedToId: t.assigned_to || t.assignedToId || null,
     autoAssigned: !!(t.auto_assigned ?? t.autoAssigned ?? false),

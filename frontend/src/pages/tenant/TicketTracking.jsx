@@ -304,7 +304,7 @@ const TicketTracking = () => {
                         border: selected.aiService === 'PYTHON_SKLEARN' ? 'none' : '1px solid var(--border)',
                       }}
                     >
-                      {selected.aiService === 'PYTHON_SKLEARN' ? 'Python AI' : selected.aiService}
+                      {selected.aiService === 'PYTHON_SKLEARN' ? 'SPMT AI' : selected.aiService}
                     </span>
                   )}
                 </div>

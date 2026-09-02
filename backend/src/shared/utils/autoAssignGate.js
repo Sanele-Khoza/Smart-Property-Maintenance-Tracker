@@ -8,9 +8,9 @@
  * 'Manual Review', 'ESCALATED' (dispatched offers pending) etc. are excluded. */
 const AUTO_ASSIGNED_STATUSES = ['New', 'Open', 'AI Classified'];
 
-/** Pure helper — per-priority delay cutoff (kept pure for tests). */
-function getAutoAssignCutoff(baseTime, autoAssignMinutes) {
-  return new Date(new Date(baseTime).getTime() - autoAssignMinutes * 60 * 1000);
+/** Pure helper — per-priority delay cutoff in seconds (kept pure for tests). */
+function getAutoAssignCutoff(baseTime, autoAssignSeconds) {
+  return new Date(new Date(baseTime).getTime() - autoAssignSeconds * 1000);
 }
 
 /** Pure eligibility gate — what the SQL guard AND the race check enforce. */

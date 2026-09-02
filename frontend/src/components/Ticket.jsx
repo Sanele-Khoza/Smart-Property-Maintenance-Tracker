@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { FaBuilding, FaBox, FaBolt, FaCalendarAlt, FaUser, FaTicketAlt, FaCamera, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useState, useMemo, useCallback } from 'react';
+import { FaBuilding, FaBox, FaBolt, FaCalendarAlt, FaUser, FaTicketAlt, FaCamera, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
 import Alert from './common/Alert';
 import EmptyState from './common/EmptyState';
 import StatusBadge from './common/StatusBadge';
 import { createTicket, getUnits, getTickets, getEmergencyHint } from '../data/store';
 import { getSession } from '../data/authStore';
+
+const ASSIGNING_DELAY_MS = 25000;
 
 const Ticket = ({ currentUser, refreshData }) => {
   const [units, setUnits] = useState(getUnits());
@@ -17,6 +19,7 @@ const Ticket = ({ currentUser, refreshData }) => {
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [confirmStep, setConfirmStep] = useState(false);
   const [touched, setTouched] = useState({});
+  const [assigning, setAssigning] = useState(false);
 
   const refresh = () => {
     setUnits(getUnits());
@@ -85,6 +88,8 @@ const Ticket = ({ currentUser, refreshData }) => {
       setDuplicateWarning(null);
       setTouched({});
       refresh();
+      setAssigning(true);
+      window.setTimeout(() => setAssigning(false), ASSIGNING_DELAY_MS);
     }
   };
 
@@ -261,6 +266,16 @@ const Ticket = ({ currentUser, refreshData }) => {
         <div className="modal" onClick={() => setSelectedImage(null)}>
           <span className="modal-close">×</span>
           <img src={selectedImage.data || selectedImage} alt="Full size" />
+        </div>
+      )}
+
+      {assigning && (
+        <div className="modal" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, color: '#fff' }}>
+            <FaSpinner className="spinner" size={40} style={{ color: 'var(--teal)' }} />
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Finding the best provider for you...</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Our AI is matching your ticket to the nearest, best-rated available provider.</div>
+          </div>
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { classify } from '../../shared/utils/aiClassifier.js';
 import { classifyText as comprehendClassifyText } from './comprehend.service.js';
 import { classifyText as pythonClassifyText, autoAssign } from './pythonAi.service.js';
 import { analyzeImage } from './rekognition.service.js';
+import decidePriority from '../../shared/utils/priorityDetector.js';
 import { extractEntities, deduplicateEntities } from './entityExtractor.js';
 import { findDuplicates } from './duplicateDetector.js';
 import * as ticketsRepo from '../tickets/tickets.repository.js';
@@ -63,8 +64,15 @@ async function persistClassification(id, textResult, visualResult, classificatio
     updates.status = 'Manual Review';
   } else if (classification.outcome === 'EMERGENCY') {
     updates.status = 'ESCALATED';
-    updates.priority = 'EMERGENCY';
   }
+
+  /* ── AI priority intelligence (text + Rekognition based) ──
+     The AI decides a priority and overrides the tenant's claim when it is
+     wrong — e.g. a tenant marks EMERGENCY but the description is a minor leak,
+     or a real emergency was marked LOW. This always writes the decided level. */
+  const ticketRow = (await query('SELECT priority, description FROM tickets WHERE id = $1', [id])).rows[0];
+  const priorityDecision = decidePriority(ticketRow || { priority: 'MEDIUM', description: '' }, visualResult);
+  updates.priority = priorityDecision.priority;
 
   await query(
     `UPDATE tickets SET
@@ -73,7 +81,8 @@ async function persistClassification(id, textResult, visualResult, classificatio
       ai_confidence = $5, ai_category = $6,
       category = COALESCE($6, category),
       conflict_detected = $7, status = COALESCE($8, status),
-      priority = COALESCE($9, priority),
+      priority = $9,
+      ai_priority = $16, ai_priority_overridden = $17, ai_priority_reason = $18,
       visual_emergency = COALESCE($10, visual_emergency),
       visual_emergency_escalated_by = COALESCE($11, visual_emergency_escalated_by),
       pm_confirmed = COALESCE($12, pm_confirmed),
@@ -94,6 +103,9 @@ async function persistClassification(id, textResult, visualResult, classificatio
       textResult?.service || null,
       classification.outcome || null,
       id,
+      priorityDecision.priority || null,
+      priorityDecision.overridden || false,
+      priorityDecision.reason || null,
     ]
   );
 

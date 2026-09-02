@@ -1,6 +1,7 @@
 import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
 import { scoreProviders } from '../../shared/utils/routingScore.js';
+import { scoreProvidersWithPython } from '../../shared/adapters/pythonAiClient.js';
 import { sendToUser, broadcast } from '../../shared/utils/sse.js';
 import { commitAutoAssignment, notifyAutoAssignment } from '../../shared/utils/assignmentCommitter.js';
 
@@ -11,6 +12,17 @@ const SDD_CATEGORIES = [
 
 /* Statuses a ticket can be in while eligible for (re)routing. */
 const ROUTABLE_AUTO_STATUSES = ['New', 'Open', 'AI Classified'];
+
+/**
+ * Score providers for a ticket — prefer the Python AI scorer when enabled,
+ * fall back to the Node scorer when the Python service is unavailable or
+ * returns no matches.
+ */
+async function pickProviders(ticket, opts) {
+  const top = await scoreProvidersWithPython(ticket, opts);
+  if (top.length > 0) return top;
+  return scoreProviders(ticket, opts);
+}
 
 async function findTicket(ticketId) {
   const result = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
@@ -55,7 +67,7 @@ async function getTopProviders(ticketId, opts = {}) {
   await assertNotReadOnly(ticket);
 
   const category = ticket.ai_category || ticket.category || 'Other';
-  const providers = await scoreProviders(ticket, { ...opts, category });
+  const providers = await pickProviders(ticket, { ...opts, category });
 
   return {
     success: true,
@@ -78,7 +90,7 @@ async function autoAssign(ticketId, userId, userName, requireSpecialisation = tr
   }
 
   const category = ticket.ai_category || ticket.category || 'Other';
-  const providers = await scoreProviders(ticket, { topN: 1, requireSpecialisation, category });
+  const providers = await pickProviders(ticket, { topN: 1, requireSpecialisation, category });
 
   if (providers.length === 0) {
     throw AppError.badRequest('No suitable providers available for auto-assignment');
@@ -174,7 +186,7 @@ async function dispatchEmergency(ticketId, userId, userName, opts = {}) {
 
   const category = ticket.ai_category || ticket.category || 'Other';
   const requireSpecialisation = opts.requireSpecialisation !== false;
-  const qualified = await scoreProviders(ticket, {
+  const qualified = await pickProviders(ticket, {
     topN: 50, requireSpecialisation, category,
   });
 
@@ -183,7 +195,7 @@ async function dispatchEmergency(ticketId, userId, userName, opts = {}) {
   );
 
   if (eligible.length === 0) {
-    const fallback = await scoreProviders(ticket, {
+    const fallback = await pickProviders(ticket, {
       topN: 10, requireSpecialisation: false, category,
     });
     const offDutyOk = fallback.filter(p => p.status !== 'OFF_DUTY');
@@ -424,7 +436,7 @@ async function reassignAfterDecline(ticketId) {
     }
 
     const category = ticket.ai_category || ticket.category || 'Other';
-    const providers = await scoreProviders(ticket, {
+    const providers = await pickProviders(ticket, {
       topN: 10, requireSpecialisation: true, category,
     });
 

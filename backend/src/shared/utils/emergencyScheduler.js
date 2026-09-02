@@ -26,10 +26,10 @@ async function loadAutoAssignConfig() {
   const enabled = flag.rows.length === 0 ? true : flag.rows[0].value !== 'false';
 
   const sla = await query(
-    `SELECT priority, auto_assign_minutes FROM sla_config ORDER BY priority ASC`
+    `SELECT priority, auto_assign_seconds FROM sla_config ORDER BY priority ASC`
   );
   const delays = {};
-  for (const row of sla.rows) delays[row.priority] = row.auto_assign_minutes;
+  for (const row of sla.rows) delays[row.priority] = row.auto_assign_seconds;
   return { enabled, delays };
 }
 
@@ -46,9 +46,9 @@ async function autoAssignTickets() {
   let scanned = 0;
   let assigned = 0;
 
-  for (const [priority, minutes] of Object.entries(delays)) {
-    if (minutes == null || Number(minutes) <= 0) continue;
-    const cutoff = getAutoAssignCutoff(new Date(now), Number(minutes));
+  for (const [priority, seconds] of Object.entries(delays)) {
+    if (seconds == null || Number(seconds) <= 0) continue;
+    const cutoff = getAutoAssignCutoff(new Date(now), Number(seconds));
 
     const result = await query(
       `SELECT t.*, p.manager_id AS manager_id,

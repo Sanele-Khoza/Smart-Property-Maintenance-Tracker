@@ -38,9 +38,9 @@ async function checkSla() {
 
 function start() {
   if (intervalId) return;
-  logger.info('SLA worker started (every 2 min)');
+  logger.info('SLA worker started (auto-assign every 5s, SLA breach every 2 min)');
   checkSla();
-  intervalId = setInterval(checkSla, 2 * 60 * 1000);
+  intervalId = setInterval(checkSla, 5 * 1000);
 }
 
 function stop() {

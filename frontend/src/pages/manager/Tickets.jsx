@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser, FaTrash, FaCommentDots } from 'react-icons/fa';
+import { FaTicketAlt, FaSearch, FaEye, FaUndo, FaUserCheck, FaTag, FaExclamationTriangle, FaCheck, FaTimes, FaArrowRight, FaBrain, FaRedo, FaFilter, FaBuilding, FaBox, FaCalendarAlt, FaUser, FaTrash, FaCommentDots, FaRobot } from 'react-icons/fa';
 import { getTicketById, updateTicketStatus, assignTicket, reopenTicket, updateTicketCategory, getProviders, getProperties, getCategories, getInferenceLogs, getAuditLogs, getTechnicians, trashTicket, restoreTicket, getTrashTickets } from '../../data/store';
 import { getSlaStatus as computeSlaStatus } from '../../data/slaEngine';
 import { getSession } from '../../data/authStore';
@@ -322,7 +322,16 @@ const Tickets = () => {
                         <td>{t.propertyName}</td>
                         <td className="cell-mono">{t.unitNumber}</td>
                         <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600, backgroundColor: st.bg || '', color: st.color || 'var(--text)' }}><span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: st.color || 'var(--text-dim)', display: 'inline-block' }} />{t.status}</span></td>
-                        <td><span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 700, backgroundColor: pt.bg || '', color: pt.color || 'var(--text)' }}>{t.priority}</span></td>
+                        <td>{t.aiPriorityOverridden && t.aiPriority ? (
+                          <span title={`AI reclassified priority: ${t.aiPriority} (${t.aiPriorityReason || 'no reason'})`} style={{ cursor: 'help' }}>
+                            <span style={{ color: 'var(--text-dim)', textDecoration: 'line-through' }}>{t.priority}</span>
+                            <FaArrowRight style={{ fontSize: 8, margin: '0 3px', color: 'var(--amber)' }} />
+                            <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{t.aiPriority}</span>
+                            <FaRobot style={{ marginLeft: 3, color: 'var(--teal)' }} />
+                          </span>
+                        ) : (
+                          <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 700, backgroundColor: pt.bg || '', color: pt.color || 'var(--text)' }}>{t.priority}</span>
+                        )}</td>
                         <td>{t.category || <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>
                         <td>{override ? <span title={`${t.aiOriginalCategory} → ${t.category}`} style={{ cursor: 'help' }}><span style={{ color: 'var(--text-dim)', textDecoration: 'line-through' }}>{t.aiOriginalCategory}</span><FaArrowRight style={{ fontSize: 8, margin: '0 3px', color: 'var(--amber)' }} /><span style={{ color: 'var(--amber)', fontWeight: 600 }}>{t.category}</span></span> : (t.aiOriginalCategory || <span style={{ color: 'var(--text-dim)' }}>—</span>)}</td>
                         <td className="cell-mono">{t.combinedConfidence != null ? <span style={{ color: t.combinedConfidence >= 0.8 ? 'var(--teal)' : t.combinedConfidence >= 0.6 ? 'var(--amber)' : 'var(--danger)', fontWeight: 600 }}>{Math.round(t.combinedConfidence * 100)}%</span> : <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>

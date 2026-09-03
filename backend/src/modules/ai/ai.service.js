@@ -4,10 +4,10 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { query } from '../../db/connection.js';
 import { classify } from '../../shared/utils/aiClassifier.js';
-import { classifyText as comprehendClassifyText } from './comprehend.service.js';
 import { classifyText as pythonClassifyText, autoAssign } from './pythonAi.service.js';
 import { analyzeImage } from './rekognition.service.js';
 import decidePriority from '../../shared/utils/priorityDetector.js';
+import classifyTextWithFallback from '../../shared/utils/classifyWithFallback.js';
 import { extractEntities, deduplicateEntities } from './entityExtractor.js';
 import { findDuplicates } from './duplicateDetector.js';
 import * as ticketsRepo from '../tickets/tickets.repository.js';
@@ -176,7 +176,7 @@ async function classifyTicket(id) {
   }
 
   const textResult = ticket.description
-    ? await (config.pythonAi.enabled ? pythonClassifyText : comprehendClassifyText)(ticket.description)
+    ? await classifyTextWithFallback(ticket.description)
     : { category: null, confidence: 0, service: 'none' };
 
   let visualResult = { category: null, confidence: 0, service: 'none', visualEmergency: false, labels: [] };

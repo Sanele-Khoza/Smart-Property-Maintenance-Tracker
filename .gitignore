@@ -18,3 +18,5 @@ __pycache__/
 *.pyc
 ai-service/data/*.csv
 
+PROMPT_22_v2_Full_Automatic_AI_Pipeline.md
+Prompt_ Generate a Complete Full-Stack SPMT System Technical Documentation Word Document.md

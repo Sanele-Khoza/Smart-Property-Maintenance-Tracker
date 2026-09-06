@@ -6,6 +6,7 @@ import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendMail } from '../../shared/adapters/mailAdapter.js';
+import { sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;

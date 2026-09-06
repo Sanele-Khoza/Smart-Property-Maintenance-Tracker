@@ -47,8 +47,8 @@ function App() {
   const [activeManagerPage, setActiveManagerPage] = useState('Overview');
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
   const [activeProviderPage, setActiveProviderPage] = useState('Overview');
-  const [verificationToken, setVerificationToken] = useState('');
-  const [resetToken, setResetToken] = useState('');
+  const [verificationToken, setVerificationToken] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset-token') || '');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const pageRef = useRef(page);
   useEffect(() => { pageRef.current = page; }, [page]);
@@ -101,18 +101,15 @@ function App() {
     });
 
     const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    const resetPasswordToken = params.get('reset-token');
-    if (urlToken) {
-      setVerificationToken(urlToken);
-      setPage('verify-email');
+    if (params.get('token') || params.get('reset-token')) {
       window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (verificationToken) {
+      setPage('verify-email');
       return;
     }
-    if (resetPasswordToken) {
-      setResetToken(resetPasswordToken);
+    if (resetToken) {
       setPage('forgot-password');
-      window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
@@ -157,7 +154,7 @@ function App() {
     };
     window.addEventListener('spmt:sla-breach', handleSlaBreach);
     return () => { cancelled = true; window.removeEventListener('spmt:sla-breach', handleSlaBreach); };
-  }, []);
+  }, [verificationToken, resetToken]);
 
   const handleLogin = async (userData) => {
     setUser(userData);

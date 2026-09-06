@@ -18,6 +18,13 @@ RATING_WEIGHT = 0.30
 PROXIMITY_WEIGHT = 0.25
 WORKLOAD_WEIGHT = 0.20
 
+# Emergencies must go to the nearest available expert fast, so proximity and
+# free-capacity dominate over the usual rating preference.
+EMERGENCY_SPECIALISATION_WEIGHT = 0.25
+EMERGENCY_RATING_WEIGHT = 0.10
+EMERGENCY_PROXIMITY_WEIGHT = 0.40
+EMERGENCY_WORKLOAD_WEIGHT = 0.25
+
 CATEGORIES = [
     "Plumbing",
     "Electrical",
@@ -74,12 +81,16 @@ def score_providers(
     top_n: int = 1,
     ticket_lat=None,
     ticket_lng=None,
+    priority: str | None = None,
 ) -> list[dict]:
     """Score candidate providers and return the top_n, best first.
 
     Each provider dict may contain: id, name, company_name, rating,
     current_workload, current_jobs, max_concurrent_jobs, status,
     preferred_radius_km, auto_accept, specialisations, gps_lat, gps_lng.
+
+    When priority == "EMERGENCY" the weights shift so proximity and free
+    capacity dominate, getting the nearest/fastest specialist on-site.
     """
     if require_specialisation:
         providers = [
@@ -90,6 +101,14 @@ def score_providers(
 
     if not providers:
         return []
+
+    emergency = (priority or "").upper() == "EMERGENCY"
+    w_spec = (
+        EMERGENCY_SPECIALISATION_WEIGHT if emergency else SPECIALISATION_WEIGHT
+    )
+    w_rating = EMERGENCY_RATING_WEIGHT if emergency else RATING_WEIGHT
+    w_prox = EMERGENCY_PROXIMITY_WEIGHT if emergency else PROXIMITY_WEIGHT
+    w_work = EMERGENCY_WORKLOAD_WEIGHT if emergency else WORKLOAD_WEIGHT
 
     ratings = [float(p.get("rating") or 0) for p in providers]
     max_rating = max([max(ratings, default=0), 1.0])
@@ -103,12 +122,12 @@ def score_providers(
     scored = []
     for p, workload in zip(providers, workloads):
         specs = _specs_of(p)
-        spec_score = SPECIALISATION_WEIGHT * (
+        spec_score = w_spec * (
             1.0 if any(_matches(s, category) for s in specs) else 0.0
         )
-        rating_score = RATING_WEIGHT * (float(p.get("rating") or 0) / max_rating)
+        rating_score = w_rating * (float(p.get("rating") or 0) / max_rating)
 
-        proximity_score = PROXIMITY_WEIGHT * 0.5
+        proximity_score = w_prox * 0.5
         if (
             ticket_lat is not None
             and ticket_lng is not None
@@ -120,9 +139,9 @@ def score_providers(
             )
             radius = float(p.get("preferred_radius_km") or 50)
             prox = max(0.0, 1.0 - dist / radius)
-            proximity_score = PROXIMITY_WEIGHT * prox
+            proximity_score = w_prox * prox
 
-        workload_score = WORKLOAD_WEIGHT * (1.0 - workload / max_workload)
+        workload_score = w_work * (1.0 - workload / max_workload)
 
         total = spec_score + rating_score + proximity_score + workload_score
         scored.append(

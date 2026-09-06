@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseSaId } from '../../shared/utils/saId.js';
 
 const PASSWORD_MIN = 8;
 const NAME_MAX = 100;
@@ -19,7 +20,10 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email').max(EMAIL_MAX).transform(e => e.toLowerCase()),
   password: passwordSchema,
   role: z.enum(['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER']),
-  idNumber: z.string().regex(/^\d{13}$/, 'ID number must be exactly 13 digits'),
+  idNumber: z.string().regex(/^\d{13}$/, 'ID number must be exactly 13 digits').refine(
+    (val) => parseSaId(val).valid,
+    { message: 'Invalid South African ID number' }
+  ),
   phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
   companyName: z.string().trim().max(200).optional().nullable(),
   specialisations: z.array(z.string()).optional().nullable(),

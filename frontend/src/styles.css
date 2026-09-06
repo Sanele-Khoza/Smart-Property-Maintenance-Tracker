@@ -433,6 +433,42 @@ body {
   resize: vertical;
 }
 
+/* ========== AUTH FORM GLOWING BORDERS ========== */
+.auth-card .form-input,
+.auth-card .form-select,
+.auth-card .form-textarea {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    linear-gradient(100deg, var(--amber), var(--teal), var(--amber), var(--teal)) border-box;
+  background-size: 100% 100%, 300% 100%;
+  background-position: 0 0, 0% 50%;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.18), 0 0 8px rgba(0, 201, 167, 0.18);
+  animation: auth-border-glide 4s linear infinite;
+  transition: box-shadow 0.3s ease;
+}
+
+.auth-card .form-input:focus,
+.auth-card .form-select:focus,
+.auth-card .form-textarea:focus {
+  border-color: transparent;
+  box-shadow: 0 0 6px rgba(0, 255, 65, 0.45), 0 0 6px rgba(0, 201, 167, 0.45),
+    0 0 14px rgba(0, 255, 65, 0.25), 0 0 14px rgba(0, 201, 167, 0.25);
+}
+
+@keyframes auth-border-glide {
+  0%   { background-position: 0 0, 0% 50%; }
+  100% { background-position: 0 0, 300% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-card .form-input,
+  .auth-card .form-select,
+  .auth-card .form-textarea {
+    animation: none;
+  }
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr;

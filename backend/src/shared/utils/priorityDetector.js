@@ -23,6 +23,8 @@ const EMERGENCY_KEYWORDS = [
   'fire', 'smoke', 'electrical spark', 'electrical fault', 'live wire',
   'sewage overflow', 'raw sewage', 'structural collapse', 'ceiling collapse',
   'collapse', 'faulty wiring', 'scorched', 'burns', 'burning',
+  'exposed wires', 'exposed wiring', 'exposed electrical wires', 'sparking wires',
+  'spark wires', 'sparking', 'open wires', 'loose wires',
 ];
 
 const HIGH_KEYWORDS = [
@@ -30,6 +32,8 @@ const HIGH_KEYWORDS = [
   'major leak', 'pipe burst', 'no water', 'no power', 'power outage', 'no electricity',
   'fridge broken', 'spoilt food', 'broken window', 'severe leak', 'heavy leak',
   'leaking ceiling', 'dangerous', 'unsafe', 'shock', 'electrical shock',
+  'electrical wire', 'electrical wires', 'unsafe wiring', 'electrical hazard',
+  'electrical danger', 'wiring hazard',
 ];
 
 const MEDIUM_KEYWORDS = [

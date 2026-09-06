@@ -7,6 +7,7 @@ import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendMail } from '../../shared/adapters/mailAdapter.js';
 import { sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
+import { ageFromId } from '../../shared/utils/saId.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
@@ -53,9 +54,10 @@ async function register({ name, surname, email, password, role, phone, idNumber,
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const status = role === 'SYSTEM_ADMIN' ? 'ACTIVE' : 'PENDING';
   const approved = true;
+  const age = ageFromId(idNumber);
 
   const user = await repo.create({
-    name, surname, email, phone, idNumber, passwordHash, role, status, approved,
+    name, surname, email, phone, idNumber, age, passwordHash, role, status, approved,
   });
 
   if (role === 'SERVICE_PROVIDER') {

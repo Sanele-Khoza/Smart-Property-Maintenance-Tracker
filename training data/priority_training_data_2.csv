@@ -1,0 +1,201 @@
+text, ,category
+The staircase has completely given way while tenants were using it.,Emergency,structural
+Ants spotted repeatedly in unit 99 kitchen.,Medium ,pest
+Persistent faint gas smell reported in unit 106.,High ,gas
+Ants spotted repeatedly in unit 47 kitchen.,Medium  ,pest
+"The garage door doesn't close all the way, minor security concern.",Medium  ,security
+"The bathroom exhaust fan isn't working, causing minor mold buildup.",Medium  ,mold
+"The parking line paint is fading, purely cosmetic.",Low  ,maintenance_minor
+Ants spotted repeatedly in unit 79 kitchen.,Medium  ,pest
+Flames are spreading fast toward the exit stairwell.,Emergency,fire
+Loose handrail reported near unit 51 stairwell.,Medium ,structural
+There's a small water stain that appears to be slowly growing on the ceiling.,Medium  ,water_leak
+Exposed live wiring is sparking in unit 101.,Emergency,electrical
+"Active fire reported in unit 93, people still inside.",Emergency,fire
+There's a musty smell in the closet that might indicate early mold.,Medium ,mold
+A gas stove burner won't fully shut off.,High  ,gas
+Heavy mold growth reported in unit 2 bedroom.,High  ,mold
+Minor paint peeling near unit 108 window sill.,Low  ,maintenance_minor
+A slightly raised sidewalk slab could be a tripping hazard.,Medium  ,trip_hazard
+"Toxic fumes are filling the stairwell, evacuate immediately.",Emergency,chemical
+"Active fire reported in unit 57, people still inside.",Emergency,fire
+"A gas leak has been confirmed in unit 81, immediate danger.",Emergency,gas
+"One outdoor tile has a small chip, cosmetic only.",Low  ,maintenance_minor
+Broken stair railing reported near unit 82.,High  ,structural
+The carpet on the stairs is fraying and could catch a shoe.,Medium  ,trip_hazard
+Ants spotted repeatedly in unit 83 kitchen.,Medium  ,pest
+A minor scuff mark is visible on the hallway wall.,Low  ,maintenance_minor
+"Squeaky cabinet hinge reported in unit 52, no safety issue.",Low  ,maintenance_minor
+The building's fire alarm is going off with visible smoke on multiple floors.,Emergency,fire
+A gas leak is hissing loudly from the stove connection.,Emergency,gas
+Slightly loose doorbell button at unit 40.,Low  ,maintenance_minor
+"Scorched outlet found in unit 42, warm to the touch.",High  ,electrical
+Exposed live wiring is sparking in unit 105.,Emergency,electrical
+Water is flooding rapidly and a person is trapped in the basement.,Emergency,water_leak
+Ants spotted repeatedly in unit 107 kitchen.,Medium  ,pest
+The electrical panel is on fire.,Emergency,electrical
+"Structural collapse in progress in unit 49, occupants trapped.",Emergency,structural
+"A window screen has a small tear, no structural issue.",Low  ,maintenance_minor
+Heavy mold growth reported in unit 114 bedroom.,High  ,mold
+There's minor paint peeling near a window sill.,Low  ,maintenance_minor
+"Flickering hallway light near unit 63, dim at night.",Medium  ,trip_hazard
+"Scorched outlet found in unit 6, warm to the touch.",High  ,electrical
+An outdoor light near the walkway is flickering intermittently.,Medium  ,trip_hazard
+"A gas leak has been confirmed in unit 21, immediate danger.",Emergency,gas
+The elevator makes a grinding noise and shakes between floors.,High  ,structural
+The stair railing is broken and could cause a fall.,High  ,structural
+"Scorched outlet found in unit 26, warm to the touch.",High  ,electrical
+"A gas leak has been confirmed in unit 5, immediate danger.",Emergency,gas
+A balcony has collapsed while people were standing on it.,Emergency,structural
+Small water stain slowly spreading on unit 27 ceiling.,Medium  ,water_leak
+A ceiling tile is slightly discolored but dry and stable.,Low  ,maintenance_minor
+A live wire fell and is touching a pool of water.,Emergency,electrical
+"Structural collapse in progress in unit 69, occupants trapped.",Emergency,structural
+The carbon monoxide alarm is going off and someone feels dizzy.,Emergency,gas
+A window doesn't lock properly on the ground floor.,Medium  ,security
+Slightly loose doorbell button at unit 76.,Low  ,maintenance_minor
+Someone has been electrocuted touching a faulty appliance.,Emergency,electrical
+Broken stair railing reported near unit 102.,High  ,structural
+"A gas leak has been confirmed in unit 33, immediate danger.",Emergency,gas
+Ants spotted repeatedly in unit 111 kitchen.,Medium  ,pest
+"Squeaky cabinet hinge reported in unit 64, no safety issue.",Low  ,maintenance_minor
+A patch of mildew has appeared in the bathroom corner.,Medium  ,mold
+"A single ant was spotted near the windowsill, isolated incident.",Low  ,pest
+A window pane is shattered and glass shards are on the floor.,High  ,structural
+Slightly loose doorbell button at unit 104.,Low  ,maintenance_minor
+Exposed live wiring is sparking in unit 37.,Emergency,electrical
+"Flickering hallway light near unit 55, dim at night.",Medium  ,trip_hazard
+"Flickering hallway light near unit 7, dim at night.",Medium  ,trip_hazard
+"Squeaky cabinet hinge reported in unit 12, no safety issue.",Low  ,maintenance_minor
+Minor paint peeling near unit 8 window sill.,Low  ,maintenance_minor
+Slightly loose doorbell button at unit 48.,Low  ,maintenance_minor
+"Structural collapse in progress in unit 13, occupants trapped.",Emergency,structural
+An elderly tenant has collapsed and is not responding.,Emergency,medical
+Slightly loose doorbell button at unit 88.,Low  ,maintenance_minor
+The garden hose has a small drip when in use.,Low  ,maintenance_minor
+"The smoke detector chirps occasionally, likely a low battery.",Medium  ,fire
+A step on the exterior staircase is cracked and unstable.,High  ,trip_hazard
+"Structural collapse in progress in unit 25, occupants trapped.",Emergency,structural
+"A gas leak has been confirmed in unit 85, immediate danger.",Emergency,gas
+A loose handrail on the interior stairs wiggles slightly.,Medium  ,structural
+The fire extinguisher in the hallway is missing.,High  ,fire
+Persistent faint gas smell reported in unit 14.,High  ,gas
+Ants spotted repeatedly in unit 31 kitchen.,Medium  ,pest
+Slightly loose doorbell button at unit 20.,Low  ,maintenance_minor
+The intercom buzzer at the entrance is not working reliably.,Medium  ,security
+Ants spotted repeatedly in unit 115 kitchen.,Medium  ,pest
+"Squeaky cabinet hinge reported in unit 68, no safety issue.",Low  ,maintenance_minor
+Slightly loose doorbell button at unit 56.,Low  ,maintenance_minor
+Ants have been spotted near the kitchen a few times this week.,Medium  ,pest
+A large puddle of water is forming near an electrical outlet.,High  ,water_leak
+An intruder is inside the unit right now and the tenant is scared for their safety.,Emergency,security
+A closet shelf is a little wobbly but not overloaded.,Low  ,maintenance_minor
+Broken stair railing reported near unit 30.,High  ,structural
+"Squeaky cabinet hinge reported in unit 100, no safety issue.",Low  ,maintenance_minor
+Black mold has been found near the air vents.,High  ,mold
+"Structural collapse in progress in unit 61, occupants trapped.",Emergency,structural
+"Squeaky cabinet hinge reported in unit 32, no safety issue.",Low  ,maintenance_minor
+A light switch cover plate is slightly cracked but wiring is intact.,Low  ,maintenance_minor
+"Active fire reported in unit 77, people still inside.",Emergency,fire
+Persistent faint gas smell reported in unit 118.,High  ,gas
+Broken stair railing reported near unit 50.,High  ,structural
+Small water stain slowly spreading on unit 35 ceiling.,Medium  ,water_leak
+"Flickering hallway light near unit 39, dim at night.",Medium  ,trip_hazard
+Exposed live wiring is sparking in unit 97.,Emergency,electrical
+"Flickering hallway light near unit 11, dim at night.",Medium  ,trip_hazard
+Someone is trapped inside a stuck elevator with no ventilation.,Emergency,structural
+Slightly loose doorbell button at unit 4.,Low  ,maintenance_minor
+Broken stair railing reported near unit 62.,High  ,structural
+"Squeaky cabinet hinge reported in unit 36, no safety issue.",Low  ,maintenance_minor
+"Flickering hallway light near unit 19, dim at night.",Medium  ,trip_hazard
+"Active fire reported in unit 113, people still inside.",Emergency,fire
+"There's a faint musty smell in a rarely used storage room, no visible mold.",Low  ,maintenance_minor
+Heavy mold growth reported in unit 54 bedroom.,High  ,mold
+Slightly loose doorbell button at unit 92.,Low  ,maintenance_minor
+Heavy mold growth reported in unit 110 bedroom.,High  ,mold
+"A gas leak has been confirmed in unit 109, immediate danger.",Emergency,gas
+"A gas leak has been confirmed in unit 73, immediate danger.",Emergency,gas
+There is an active fire in the kitchen right now.,Emergency,fire
+A cabinet drawer sticks slightly when opening.,Low  ,maintenance_minor
+Exposed wiring is sparking directly above a child's crib.,Emergency,electrical
+Slightly loose doorbell button at unit 60.,Low  ,maintenance_minor
+"Squeaky cabinet hinge reported in unit 28, no safety issue.",Low  ,maintenance_minor
+"The dryer vent seems to be clogged, minor fire risk over time.",Medium  ,fire
+The balcony railing is loose and wobbles when leaned on.,High  ,structural
+Small water stain slowly spreading on unit 103 ceiling.,Medium  ,water_leak
+"The gate to the pool area doesn't lock, children could wander in unsupervised.",High  ,security
+"A gas leak has been confirmed in unit 17, immediate danger.",Emergency,gas
+Broken stair railing reported near unit 74.,High  ,structural
+There is standing water on the stairs creating a slip hazard.,High  ,trip_hazard
+Loose handrail reported near unit 119 stairwell.,Medium  ,structural
+"Active fire reported in unit 1, people still inside.",Emergency,fire
+"Scorched outlet found in unit 86, warm to the touch.",High  ,electrical
+Minor paint peeling near unit 44 window sill.,Low  ,maintenance_minor
+"A gas leak has been confirmed in unit 41, immediate danger.",Emergency,gas
+Minor paint peeling near unit 112 window sill.,Low  ,maintenance_minor
+Mold is spreading heavily across the bedroom ceiling.,High  ,mold
+The smoke detector battery is dead and the unit has no working alarm.,High  ,fire
+Small water stain slowly spreading on unit 43 ceiling.,Medium  ,water_leak
+"Flickering hallway light near unit 71, dim at night.",Medium  ,trip_hazard
+Heavy mold growth reported in unit 10 bedroom.,High  ,mold
+"A door hinge squeaks but functions normally, no safety issue.",Low  ,maintenance_minor
+Persistent faint gas smell reported in unit 70.,High  ,gas
+Persistent faint gas smell reported in unit 18.,High  ,gas
+Minor paint peeling near unit 96 window sill.,Low  ,maintenance_minor
+Sewage water is flooding the unit and a child is in the room.,Emergency,water_leak
+The ceiling has collapsed and someone is trapped underneath.,Emergency,structural
+"Flickering hallway light near unit 15, dim at night.",Medium  ,trip_hazard
+There is a faint but persistent gas smell near the water heater.,High  ,gas
+Loose handrail reported near unit 59 stairwell.,Medium  ,structural
+"Active fire reported in unit 117, people still inside.",Emergency,fire
+Loose handrail reported near unit 67 stairwell.,Medium  ,structural
+There are exposed live wires sparking in the living room.,Emergency,electrical
+Loose handrail reported near unit 87 stairwell.,Medium  ,structural
+"Scorched outlet found in unit 94, warm to the touch.",High  ,electrical
+Loose handrail reported near unit 75 stairwell.,Medium  ,structural
+"A gas leak has been confirmed in unit 9, immediate danger.",Emergency,gas
+A wall socket is scorched and warm to the touch.,High  ,electrical
+There's a live wire hanging low in the parking garage.,High  ,electrical
+Broken stair railing reported near unit 34.,High  ,structural
+A cabinet door hinge is broken and hanging loosely at head height.,Medium  ,structural
+"A gas explosion risk is imminent, strong gas smell near the boiler room.",Emergency,gas
+A ceiling fan wobbles noticeably when running at high speed.,Medium  ,structural
+A downed power line is sparking in the parking lot where people walk.,Emergency,electrical
+Ants spotted repeatedly in unit 95 kitchen.,Medium  ,pest
+Slightly loose doorbell button at unit 84.,Low  ,maintenance_minor
+"Structural collapse in progress in unit 45, occupants trapped.",Emergency,structural
+Exposed wiring is visible in a closet that children can access.,High  ,electrical
+Ants spotted repeatedly in unit 91 kitchen.,Medium  ,pest
+Slightly loose doorbell button at unit 24.,Low  ,maintenance_minor
+"Flickering hallway light near unit 23, dim at night.",Medium  ,trip_hazard
+Heavy mold growth reported in unit 22 bedroom.,High  ,mold
+"Structural collapse in progress in unit 65, occupants trapped.",Emergency,structural
+Broken stair railing reported near unit 38.,High  ,structural
+There is a chemical spill and people are struggling to breathe.,Emergency,chemical
+"Structural collapse in progress in unit 89, occupants trapped.",Emergency,structural
+"Squeaky cabinet hinge reported in unit 80, no safety issue.",Low  ,maintenance_minor
+Exposed live wiring is sparking in unit 53.,Emergency,electrical
+"Scorched outlet found in unit 98, warm to the touch.",High  ,electrical
+There's a strong chemical odor coming from the laundry room.,High  ,chemical
+Ants spotted repeatedly in unit 3 kitchen.,Medium  ,pest
+Heavy mold growth reported in unit 66 bedroom.,High  ,mold
+Persistent faint gas smell reported in unit 78.,High  ,gas
+"Squeaky cabinet hinge reported in unit 16, no safety issue.",Low  ,maintenance_minor
+Persistent faint gas smell reported in unit 58.,High  ,gas
+Exposed live wiring is sparking in unit 29.,Emergency,electrical
+"The main entrance door lock is broken, security risk overnight.",High  ,security
+"I smell gas strongly throughout the apartment, it's an emergency.",Emergency,gas
+The mailbox key is a little stiff to turn.,Low  ,maintenance_minor
+The doorbell button feels a bit loose but still works.,Low  ,maintenance_minor
+A loose floor tile is starting to lift near the entrance.,Medium  ,trip_hazard
+Slightly loose doorbell button at unit 72.,Low  ,maintenance_minor
+Broken stair railing reported near unit 46.,High  ,structural
+"Smoke is filling the hallway, people cannot breathe.",Emergency,fire
+Slightly loose doorbell button at unit 116.,Low  ,maintenance_minor
+Broken stair railing reported near unit 90.,High  ,structural
+"Structural collapse in progress in unit 121, occupants trapped.",Emergency,structural
+Slightly loose doorbell button at unit 120.,Low  ,maintenance_minor
+"The hallway light has been out for a few days, making it dark at night.",Medium  ,trip_hazard
+A tree has fallen through the roof onto a bed where someone was sleeping.,Emergency,structural
+Wasps have built a nest right next to the main walkway.,High  ,pest
+There's a small gas smell only noticeable right next to the stove.,Medium  ,gas

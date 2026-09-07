@@ -24,6 +24,7 @@ import SystemHealth from '../admin/SystemHealth';
 import Technicians from '../admin/Technicians';
 import Tenants from '../admin/Tenants';
 import RatingsList from '../../components/ratings/RatingsList';
+import ChatAssistant from '../../components/ChatAssistant';
 
 const SystemAdminDashboard = ({ activePage }) => {
   const [stats, setStats] = useState(getStats());
@@ -312,6 +313,8 @@ const SystemAdminDashboard = ({ activePage }) => {
         return <Tenants />;
       case 'Ratings':
         return <RatingsList title="All Ratings" subtitle="Every individual rating and comment across the system." />;
+      case 'AI Assistant':
+        return <ChatAssistant title="AI Assistant" subtitle="Get answers on reporting issues, tracking tickets, and using SPMT." />;
       default:
         return <Overview />;
     }

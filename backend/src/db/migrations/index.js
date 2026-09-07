@@ -34,6 +34,7 @@ async function run(query) {
     { name: '028_ai_service', file: '028_ai_service.js' },
     { name: '029_auto_assign_seconds', file: '029_auto_assign_seconds.js' },
     { name: '030_ai_priority', file: '030_ai_priority.js' },
+    { name: '031_br001_occupant_unique', file: '031_br001_occupant_unique.js' },
   ];
 
   await query(`

@@ -183,10 +183,17 @@ const Property = ({ refreshData, pmName }) => {
             <select className="form-select" value={tenantAssign.unitId}
               onChange={e => setTenantAssign(f => ({ ...f, unitId: e.target.value }))}>
               <option value="">— Select unit —</option>
-              {units.filter(u => u.status === 'VACANT').map(u => (
-                <option key={u.unitId} value={u.unitId}>{u.propertyName} - Unit {u.unitNumber}</option>
+              {units.map(u => (
+                <option key={u.unitId} value={u.unitId} disabled={u.status === 'OCCUPIED'}>
+                  {u.propertyName} - Unit {u.unitNumber} {u.status === 'OCCUPIED' ? '(Occupied)' : ''}
+                </option>
               ))}
             </select>
+            {units.some(u => u.status === 'OCCUPIED') && (
+              <p style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
+                Units marked "(Occupied)" are already allocated and cannot be selected.
+              </p>
+            )}
           </div>
 
           {!useManualEntry ? (
@@ -230,7 +237,7 @@ const Property = ({ refreshData, pmName }) => {
             </div>
           )}
 
-          <button className="btn btn-teal" onClick={handleAssignTenant} disabled={!tenantAssign.unitId || !tenantAssign.tenantName}>Assign Tenant</button>
+          <button className="btn btn-teal" onClick={handleAssignTenant} disabled={!tenantAssign.unitId || !tenantAssign.tenantName || units.some(u => u.unitId === tenantAssign.unitId && u.status === 'OCCUPIED')}>Assign Tenant</button>
         </div>
       </div>
 

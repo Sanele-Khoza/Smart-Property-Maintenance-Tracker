@@ -45,7 +45,17 @@ async function create(data) {
 }
 
 async function update(id, data) {
-  await repo.findById(id);
+  const existing = await repo.findById(id);
+  if (!existing) throw AppError.notFound('Unit not found');
+
+  /* BR-001: block direct occupant/status manipulation via update */
+  if (data.occupantId || data.occupant_id) {
+    throw AppError.badRequest('Cannot set occupant directly. Use the assign endpoint.');
+  }
+  if (data.status === 'Occupied') {
+    throw AppError.badRequest('Cannot set status to Occupied directly. Use the assign endpoint.');
+  }
+
   const unit = await repo.update(id, data);
   return { success: true, data: { unit }, message: 'Unit updated' };
 }

@@ -197,7 +197,7 @@ export const assignTenantToUnit = async (unitId, tenantName) => {
     }
     return { success: false, error: result.error || 'Failed to assign tenant' };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: err.message, statusCode: err.status };
   }
 };
 

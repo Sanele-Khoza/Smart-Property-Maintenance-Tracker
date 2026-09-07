@@ -57,6 +57,11 @@ const config = {
     baseUrl: process.env.PYTHON_AI_URL || "http://127.0.0.1:8001",
     timeoutMs: parseInt(process.env.PYTHON_AI_TIMEOUT_MS, 10) || 4000,
   },
+  chatbot: {
+    enabled: process.env.CHATBOT_ENABLED === "true",
+    baseUrl: process.env.CHATBOT_URL || "http://127.0.0.1:8090",
+    timeoutMs: parseInt(process.env.CHATBOT_TIMEOUT_MS, 10) || 4000,
+  },
   aws: {
     enabled: process.env.AWS_ENABLED === "true",
     region: process.env.AWS_REGION || "af-south-1",

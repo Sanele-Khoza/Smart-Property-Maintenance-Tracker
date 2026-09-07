@@ -17,6 +17,7 @@ import Messages from '../provider/Messages';
 import WorkHistory from '../provider/WorkHistory';
 import Reports from '../provider/Reports';
 import RatingsList from '../../components/ratings/RatingsList';
+import ChatAssistant from '../../components/ChatAssistant';
 
 const ServiceProviderDashboard = ({ activePage }) => {
   const [tickets, refresh] = useTickets();
@@ -271,6 +272,8 @@ const ServiceProviderDashboard = ({ activePage }) => {
         return <Reports />;
       case 'My Ratings':
         return <RatingsList title="My Ratings" subtitle="Every individual rating and comment you have received." />;
+      case 'AI Assistant':
+        return <ChatAssistant title="AI Assistant" subtitle="Get answers on reporting issues, tracking tickets, and using SPMT." />;
       default:
         return <Overview />;
     }

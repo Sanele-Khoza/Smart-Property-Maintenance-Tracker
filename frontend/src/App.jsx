@@ -18,24 +18,24 @@ const adminNavItems = [
   'Categories', 'Reports', 'Audit Logs', 'Activity',
   'Notifications', 'Messages', 'Settings', 'Backup',
   'Analytics', 'Help', 'Roles', 'System Health',
-  'Technicians', 'Tenants', 'Ratings',
+  'Technicians', 'Tenants', 'Ratings', 'AI Assistant',
 ];
 
 const managerNavItems = [
   'Overview', 'Properties', 'Units', 'Tenants',
   'Tickets', 'AI Review', 'Technicians', 'Scheduling', 'Reports',
-  'Ratings',
+  'Ratings', 'AI Assistant',
 ];
 
 const tenantNavItems = [
   'Overview', 'Create Ticket', 'Profile', 'My Property', 'My Unit',
-  'Ticket Tracking', 'Notification', 'My Ratings',
+  'Ticket Tracking', 'Notification', 'My Ratings', 'AI Assistant',
 ];
 
 const providerNavItems = [
   'Overview', 'Profile', 'My Jobs', 'Job Detail',
   'Schedule', 'Emergency', 'Notifications', 'Messages',
-  'Work History', 'My Performance', 'My Ratings',
+  'Work History', 'My Performance', 'My Ratings', 'AI Assistant',
 ];
 
 function App() {

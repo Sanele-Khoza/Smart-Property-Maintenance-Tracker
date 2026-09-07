@@ -24,6 +24,13 @@ const registerSchema = z.object({
   companyName: z.string().trim().max(200).optional().nullable(),
   specialisations: z.array(z.string()).optional().nullable(),
 });
+const updateProfileSchema = z.object({
+  name: z.string().trim().min(1).max(NAME_MAX).optional(),
+  surname: z.string().trim().min(1).max(SURNAME_MAX).optional(),
+  email: z.string().email('Invalid email').max(EMAIL_MAX).transform(e => e.toLowerCase()).optional(),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits').optional(),
+  idNumber: z.string().regex(/^\d{13}$/, 'ID number must be exactly 13 digits').optional(),
+});
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email').transform(e => e.toLowerCase()),
@@ -70,4 +77,5 @@ export {
   deactivateAccountSchema,
   refreshTokenSchema,
   resendVerificationSchema,
+  updateProfileSchema
 };

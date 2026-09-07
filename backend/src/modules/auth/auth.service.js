@@ -6,6 +6,7 @@ import AppError from '../../shared/errors/AppError.js';
 import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendMail } from '../../shared/adapters/mailAdapter.js';
+import { sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 64;
@@ -40,6 +41,7 @@ function buildUserPayload(user) {
     email: user.email,
     role: user.role,
     phone: user.phone,
+    idNumber: user.id_number,
     status: user.status,
     approved: user.approved,
   };
@@ -102,7 +104,6 @@ async function register({ name, surname, email, password, role, phone, idNumber,
       console.log(`  Tenant: ${email}`);
       console.log(`══════════════════════════════════════════════\n`);
     });
-
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 
   return {

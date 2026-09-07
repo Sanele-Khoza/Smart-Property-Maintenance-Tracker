@@ -31,11 +31,6 @@ const Tenants = () => {
   const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };
   const refresh = () => window.location.reload();
 
-  const pendingApprovals = allUsers.filter(u =>
-    (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
-    String(u.status).toUpperCase() === 'PENDING'
-  );
-
   const tenantData = useMemo(() => {
     const map = {};
     units.filter(u => u.status === 'OCCUPIED' && u.tenantName).forEach(u => {
@@ -90,31 +85,9 @@ const Tenants = () => {
 
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 
-  const handleApprove = async (userId) => {
-    const r = await approveManager(userId);
-    if (r.success) { showAlert(`Account approved.`, 'success'); refresh(); }
-    else showAlert(r.error, 'error');
-  };
-
   return (
     <div>
-      {pendingApprovals.length > 0 && (
-        <div className="card" style={{ borderLeft: '3px solid var(--amber)' }}>
-          <div className="card-title"><span><FaUserPlus /> Pending Approvals <span className="req-ref">REQ-004</span></span><span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600 }}>{pendingApprovals.length} pending</span></div>
-          <table className="data-table" style={{ fontSize: 12 }}>
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-            <tbody>{pendingApprovals.map(u => (
-              <tr key={u.id}>
-                <td>{u.name} {u.surname}</td>
-                <td>{u.email}</td>
-                <td><span className="badge badge-info">{u.role}</span></td>
-                <td><button className="btn btn-teal btn-sm" onClick={() => handleApprove(u.id)}><FaCheck /> Approve</button></td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-      )}
-
+     
       <div className="card">
         <div className="card-title"><span><FaUsers /> My Tenants</span></div>
         <Alert msg={alert.msg} type={alert.type} />

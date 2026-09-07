@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaLock, FaBuilding, FaStar, FaCheckCircle, FaExclamationCircle, FaMapMarkerAlt, FaClock, FaToolbox, FaToggleOn, FaToggleOff, FaIdCard, FaBriefcase, FaWrench } from 'react-icons/fa';
-import { getSession, getUsers, updateUser } from '../../data/authStore';
+import { getSession, getUsers, updateUser, changePassword,updateProfile } from '../../data/authStore';
 import { getTechnicians, updateTechnicianStatus, updateTechnician } from '../../data/store';
 import { getMyTechnician, updateMyTechnician } from '../../data/technicianStore';
 
@@ -51,7 +51,7 @@ const Profile = () => {
   useEffect(() => {
     if (session) {
       setUser(session);
-      setForm({ name: session.name || '', surname: session.surname || '', email: session.email || '', phone: session.phone || '' });
+      setForm({ name: session.name || '', surname: session.surname || '', email: session.email || '', phone: session.phone || '', idNumber: session.idNumber || '' });
     }
     refreshTech();
   }, []);
@@ -67,13 +67,14 @@ const Profile = () => {
     }));
   };
 
-  const handleSaveProfile = async () => {
-    const r = await updateUser(session.id, {
+    const handleSaveProfile = async () => {
+    const r = await updateProfile({
       name: form.name.trim(), surname: form.surname.trim(),
       email: form.email.trim(), phone: form.phone.trim(),
+      idNumber: (form.idNumber || '').trim(),
     });
     if (r.success) {
-      const updated = getUsers().find(u => u.id === session.id);
+      const updated = getSession();
       setUser(updated);
       showMsg('Profile updated successfully.', 'success');
       setEditing(false);
@@ -104,15 +105,12 @@ const Profile = () => {
     }
   };
 
-  const handlePasswordChange = async () => {
+    const handlePasswordChange = async () => {
     if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
     if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
     if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
-    const users = getUsers();
-    const u = users.find(x => x.id === session.id);
-    if (!u || u.password !== passForm.current) { showMsg('Current password is incorrect.', 'error'); return; }
-    const r = await updateUser(session.id, { password: passForm.newPass });
-    if (r.success) { showMsg('Password changed successfully.', 'success'); setPassForm({ current: '', newPass: '', confirm: '' }); }
+    const r = await changePassword(passForm.current, passForm.newPass);
+    if (r.success) { showMsg('Password changed successfully. Please log in again.', 'success'); setPassForm({ current: '', newPass: '', confirm: '' }); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -222,7 +220,7 @@ const Profile = () => {
             </div>
             <div className="form-group">
               <label className="form-label"><FaIdCard /> ID Number <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>(masked — POPIA)</span></label>
-              <input className="form-input" value={maskIdNumber(user.idNumber)} disabled style={{ opacity: 0.8 }} />
+              <input className="form-input" value={form.idNumber || ''} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} disabled={!editing} />
             </div>
             {editing ? (
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

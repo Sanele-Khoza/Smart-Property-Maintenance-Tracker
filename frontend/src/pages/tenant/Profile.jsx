@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaIdCard, FaLock, FaBell, FaSave, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import { getSession, getUsers, updateUser } from '../../data/authStore';
+import { getSession, getUsers, updateUser, updateProfile, changePassword } from '../../data/authStore';
 
 const maskIdNumber = (idNumber) => {
   if (!idNumber) return '—';
@@ -13,29 +13,32 @@ const Profile = () => {
   const session = getSession();
   const [user, setUser] = useState(session);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', surname: '', email: '', phone: '', preferredNotificationChannel: 'EMAIL' });
+  const [form, setForm] = useState({ name: '', surname: '', email: '', phone: '', idNumber: '', preferredNotificationChannel: 'EMAIL' });
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' });
   const [msg, setMsg] = useState({ text: '', type: '' });
 
   useEffect(() => {
-    if (user) {
-      setForm({ name: user.name || '', surname: user.surname || '', email: user.email || '', phone: user.phone || '', preferredNotificationChannel: user.preferredNotificationChannel || 'EMAIL' });
-    }
-  }, [user]);
+  if (user) {
+    setForm({ name: user.name || '', surname: user.surname || '', email: user.email || '', phone: user.phone || '', idNumber: user.idNumber || '', preferredNotificationChannel: user.preferredNotificationChannel || 'EMAIL' });
+  }
+}, [user]);
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
   const handleSave = async () => {
-    const r = await updateUser(user.id, {
-      name: form.name.trim(),
-      surname: form.surname.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      preferredNotificationChannel: form.preferredNotificationChannel,
-    });
+  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { showMsg('Please enter a valid email address.', 'error'); return; }
+  if (!/^\d{10}$/.test(form.phone.trim())) { showMsg('Phone number must be exactly 10 digits.', 'error'); return; }
+  if (!/^\d{13}$/.test(form.idNumber.trim())) { showMsg('ID number must be exactly 13 digits.', 'error'); return; }
+  const r = await updateProfile({
+    name: form.name.trim(),
+    surname: form.surname.trim(),
+    email: form.email.trim(),
+    phone: form.phone.trim(),
+    idNumber: form.idNumber.trim(),
+  });
     if (r.success) {
-      const updated = getUsers().find(u => u.id === user.id);
-      setUser(updated);
+    const updated = getSession();
+    setUser(updated);
       showMsg('Profile updated successfully.', 'success');
       setEditing(false);
     } else {
@@ -44,20 +47,17 @@ const Profile = () => {
   };
 
   const handlePasswordChange = async () => {
-    if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
-    if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
-    if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
-    const users = getUsers();
-    const u = users.find(x => x.id === user.id);
-    if (!u || u.password !== passForm.current) { showMsg('Current password is incorrect.', 'error'); return; }
-    const r = await updateUser(user.id, { password: passForm.newPass });
-    if (r.success) {
-      showMsg('Password changed successfully.', 'success');
-      setPassForm({ current: '', newPass: '', confirm: '' });
-    } else {
-      showMsg(r.error, 'error');
-    }
-  };
+  if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
+  if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
+  if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
+  const r = await changePassword(passForm.current, passForm.newPass);
+  if (r.success) {
+    showMsg('Password changed successfully. Please log in again.', 'success');
+    setPassForm({ current: '', newPass: '', confirm: '' });
+  } else {
+    showMsg(r.error, 'error');
+  }
+};
 
   if (!user) return <div className="card"><div className="card-title">Profile</div><p>Unable to load profile.</p></div>;
 
@@ -94,7 +94,13 @@ const Profile = () => {
           </div>
           <div className="form-group">
             <label className="form-label"><FaIdCard /> ID Number <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>(masked — POPIA)</span></label>
-            <input className="form-input" value={maskIdNumber(user.idNumber)} disabled style={{ opacity: 0.8 }} />
+           <input
+                  className="form-input"
+                  name="idNumber"
+                  value={form.idNumber || ''}
+                  onChange={(e) => setForm({ ...form, idNumber: e.target.value })}
+                  disabled={!editing}
+                  />
           </div>
           {editing ? (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

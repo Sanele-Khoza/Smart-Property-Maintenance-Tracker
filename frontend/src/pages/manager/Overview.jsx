@@ -1,7 +1,9 @@
-import React from 'react';
-import { FaBuilding, FaLayerGroup, FaFolderOpen, FaBrain, FaHistory, FaWrench, FaBolt, FaRobot, FaUserCog, FaChartBar } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaBuilding, FaLayerGroup, FaFolderOpen, FaBrain, FaHistory, FaWrench, FaBolt, FaRobot, FaUserCog, FaChartBar, FaUserPlus, FaCheck } from 'react-icons/fa';
 import { getTickets, getProperties, getUnits, getTechnicians, getAuditLogs } from '../../data/store';
+import { getUsers, approveManager, refreshUsers } from '../../data/authStore';
 import StatusBadge from '../../components/common/StatusBadge';
+import Alert from '../../components/common/Alert';
 
 const pulseKeyframes = `
 @keyframes pulse {
@@ -14,6 +16,30 @@ const Overview = () => {
   const tickets = getTickets();
   const auditLogs = getAuditLogs();
   const recentLogs = auditLogs.slice(-4).reverse();
+  const [allUsers, setAllUsers] = useState(() => getUsers());
+  const [alert, setAlert] = useState({ msg: '', type: '' });
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncUsers = () => refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    syncUsers();
+    const onUsersUpdated = () => { if (!cancelled) setAllUsers(getUsers()); };
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
+  }, []);
+
+  const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };
+
+  const pendingApprovals = allUsers.filter(u =>
+    (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
+    String(u.status).toUpperCase() === 'PENDING'
+  );
+
+  const handleApprove = async (userId) => {
+    const r = await approveManager(userId);
+    if (r.success) { showAlert('Account approved.', 'success'); window.location.reload(); }
+    else showAlert(r.error, 'error');
+  };
 
   const openTickets = tickets.filter(t => t.status === 'New');
   const needsAI = tickets.filter(t => t.conflictDetected || t.manualReviewRequired);
@@ -29,6 +55,25 @@ const Overview = () => {
         <h2>Property Manager Dashboard <FaBuilding style={{ marginLeft: 8 }} /></h2>
         <p>Monitor your portfolio and manage maintenance workflows. <span className="req-ref">SRS §2.3 / REQ-009</span></p>
       </div>
+
+      <Alert msg={alert.msg} type={alert.type} />
+
+      {pendingApprovals.length > 0 && (
+        <div className="card" style={{ borderLeft: '3px solid var(--amber)' }}>
+          <div className="card-title"><span><FaUserPlus /> Pending Approvals <span className="req-ref">REQ-004</span></span><span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600 }}>{pendingApprovals.length} pending</span></div>
+          <table className="data-table" style={{ fontSize: 12 }}>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+            <tbody>{pendingApprovals.map(u => (
+              <tr key={u.id}>
+                <td>{u.name} {u.surname}</td>
+                <td>{u.email}</td>
+                <td><span className="badge badge-info">{u.role}</span></td>
+                <td><button className="btn btn-teal btn-sm" onClick={() => handleApprove(u.id)}><FaCheck /> Approve</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
 
       <div className="stat-grid">
         <div className="stat-card">

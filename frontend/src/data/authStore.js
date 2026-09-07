@@ -57,6 +57,7 @@ function normalizeUser(u) {
     email: u.email,
     role: u.role,
     phone: u.phone || '',
+    idNumber: u.id_number || u.idNumber || '',
     status,
     account_status: status,
     approved: u.approved !== undefined ? u.approved : true,
@@ -247,6 +248,41 @@ export const updateUser = async (userId, updates) => {
       return { success: true, data: updated };
     }
     return { success: false, error: result.error || 'Failed to update' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+
+export const updateProfile = async (updates) => {
+  try {
+    const result = await api('/profile', {
+      method: 'PUT',
+      body: updates,
+    });
+    if (result.success) {
+      const updated = normalizeUser(result.data?.user || result.data);
+      const session = getSession();
+      if (session) {
+        const merged = { ...session, ...updated };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
+      }
+      return { success: true, data: updated };
+    }
+    return { success: false, error: result.error || 'Failed to update' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const result = await api('/auth/change-password', {
+      method: 'PUT',
+      body: { currentPassword, newPassword },
+    });
+    if (result.success) return { success: true, message: result.message };
+    return { success: false, error: result.error || 'Failed to change password' };
   } catch (err) {
     return { success: false, error: err.message };
   }

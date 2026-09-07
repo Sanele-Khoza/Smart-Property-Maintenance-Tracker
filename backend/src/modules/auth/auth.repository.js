@@ -1,6 +1,6 @@
 import { query } from '../../db/connection.js';
 
-const SELECT_PROFILE = 'id, name, surname, email, role, phone, status, approved, approved_at, last_login, created_at';
+const SELECT_PROFILE = 'id, name, surname, email, role, phone, id_number, status, approved, approved_at, last_login, created_at';
 
 const findByEmail = async (email) => {
   const result = await query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);

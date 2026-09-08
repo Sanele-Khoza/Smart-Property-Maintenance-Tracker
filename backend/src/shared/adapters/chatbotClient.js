@@ -35,7 +35,7 @@ async function chatbotFetch(path, options = {}, payload) {
 }
 
 /** @returns {Promise<{success, data, error?}>} */
-async function ask(message) {
+async function ask(message, role) {
   if (!config.chatbot.enabled) {
     return { success: false, error: 'AI Assistant is not enabled.' };
   }
@@ -44,7 +44,7 @@ async function ask(message) {
     return { success: false, error: 'Message is required.' };
   }
   try {
-    const json = await chatbotFetch('/api/chat', { method: 'POST' }, { message: text });
+    const json = await chatbotFetch('/api/chat', { method: 'POST' }, { message: text, role: role || null });
     if (!json?.success) {
       return { success: false, error: json?.error || 'Chatbot returned an error.' };
     }

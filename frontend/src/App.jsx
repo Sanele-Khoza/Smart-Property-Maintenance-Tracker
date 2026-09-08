@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getSession, logoutUser, refreshUsers, connectRealtime } from './data/authStore';
+import { getSession, saveSession, logoutUser, refreshUsers, connectRealtime } from './data/authStore';
 import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
 import { setLogoutHandler, api, getToken } from './api/client';
@@ -12,30 +12,31 @@ import TenantDashboard from './pages/dashboard/TenantDashboard';
 import PropertyManagerDashboard from './pages/dashboard/PropertyManagerDashboard';
 import ServiceProviderDashboard from './pages/dashboard/ServiceProviderDashboard';
 import SystemAdminDashboard from './pages/dashboard/SystemAdminDashboard';
+import AiAssistantWidget from './components/AiAssistantWidget';
 
 const adminNavItems = [
   'Overview', 'Users', 'Properties', 'Units', 'Tickets',
   'Categories', 'Reports', 'Audit Logs', 'Activity',
   'Notifications', 'Messages', 'Settings', 'Backup',
   'Analytics', 'Help', 'Roles', 'System Health',
-  'Technicians', 'Tenants', 'Ratings', 'AI Assistant',
+  'Technicians', 'Tenants', 'Ratings',
 ];
 
 const managerNavItems = [
   'Overview', 'Properties', 'Units', 'Tenants',
   'Tickets', 'AI Review', 'Technicians', 'Scheduling', 'Reports',
-  'Ratings', 'AI Assistant',
+  'Ratings',
 ];
 
 const tenantNavItems = [
   'Overview', 'Create Ticket', 'Profile', 'My Property', 'My Unit',
-  'Ticket Tracking', 'Notification', 'My Ratings', 'AI Assistant',
+  'Ticket Tracking', 'Notification', 'My Ratings',
 ];
 
 const providerNavItems = [
   'Overview', 'Profile', 'My Jobs', 'Job Detail',
   'Schedule', 'Emergency', 'Notifications', 'Messages',
-  'Work History', 'My Performance', 'My Ratings', 'AI Assistant',
+  'Work History', 'My Performance', 'My Ratings',
 ];
 
 function App() {
@@ -125,6 +126,10 @@ function App() {
             return;
           }
           setUser(session);
+          const fresh = result.data?.user;
+          if (fresh && (fresh.idNumber !== undefined || fresh.email)) {
+            saveSession({ ...session, ...fresh });
+          }
           await syncPropertiesAndUnits();
           await syncTechnicians();
           await refreshTickets();
@@ -251,6 +256,7 @@ function App() {
           {renderDashboard()}
         </div>
       </div>
+      <AiAssistantWidget />
     </>
   );
 }

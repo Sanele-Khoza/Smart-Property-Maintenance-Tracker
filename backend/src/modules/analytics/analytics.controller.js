@@ -29,4 +29,11 @@ const priorityDistribution = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-export { overview, ticketTrends, slaCompliance, priorityDistribution };
+const dashboard = async (req, res, next) => {
+  try {
+    const result = await service.dashboard();
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+export { overview, ticketTrends, slaCompliance, priorityDistribution, dashboard };

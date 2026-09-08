@@ -9,7 +9,6 @@ import MyUnit from '../tenant/MyUnit';
 import TicketTracking from '../tenant/TicketTracking';
 import Notification from '../tenant/Notification';
 import RatingsList from '../../components/ratings/RatingsList';
-import ChatAssistant from '../../components/ChatAssistant';
 
 const STATUS_COLORS = { New: '#00c9a7', Assigned: '#3498db', 'In Progress': '#f39c12', Completed: '#2ecc71', Closed: '#27ae60', 'Tenant Confirmed': '#1abc9c' };
 
@@ -108,8 +107,6 @@ const TenantDashboard = ({ currentUser, activePage }) => {
         return <Notification />;
       case 'My Ratings':
         return <RatingsList title="My Ratings" subtitle="The ratings and comments you have submitted." />;
-      case 'AI Assistant':
-        return <ChatAssistant title="AI Assistant" subtitle="Get answers on reporting issues, tracking tickets, and using SPMT." />;
       default:
         return <Overview />;
     }

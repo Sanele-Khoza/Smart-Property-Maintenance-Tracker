@@ -19,7 +19,7 @@ SPMT requires an internet connection to submit tickets and view updates. If you 
 
 ---
 
-## 2. Getting Started — Account & Login
+## 2. Getting Started — Account & Login [TENANT]
 
 **Q: How do I create an account?**
 Open the app and select "Register." Enter your name, surname, email, phone number, and a password. Submit the form. Once your account is created, a property manager needs to approve you before you can log in — this is because tenants must be linked to a specific unit before they can use the app.
@@ -62,7 +62,7 @@ SPMT works best on modern browsers like Google Chrome, Mozilla Firefox, Microsof
 
 ---
 
-## 3. Creating a Ticket (Reporting a Problem)
+## 3. Creating a Ticket (Reporting a Problem) [TENANT]
 
 **Q: How do I create a ticket?**
 1. Log in to the app.
@@ -126,7 +126,7 @@ You can still submit the ticket with just a description. The system will classif
 
 ---
 
-## 4. Tracking Your Ticket
+## 4. Tracking Your Ticket [TENANT]
 
 **Q: How do I check the status of a ticket I submitted?**
 Go to your ticket list/dashboard — every ticket you've submitted is listed there with its current status.
@@ -176,7 +176,7 @@ Each ticket has an Audit Trail section on its detail page. This shows a timeline
 
 ---
 
-## 5. Service Providers
+## 5. Service Providers [TENANT]
 
 **Q: How does the system pick which provider fixes my problem?**
 The system ranks available providers by three things: their rating from other tenants, how close they are to your property, and how busy they currently are. It automatically recommends the best match — you don't need to search for or choose a provider yourself.
@@ -204,7 +204,7 @@ This depends on your property's policies. Discuss access arrangements with your 
 
 ---
 
-## 6. After the Work Is Done
+## 6. After the Work Is Done [TENANT]
 
 **Q: How do I rate a service provider?**
 Once your ticket is marked "Closed," go to that ticket and you'll be able to leave a rating (1 to 5 stars) and an optional comment. Ratings help future tenants and also affect how often that provider gets matched to new jobs.
@@ -229,7 +229,7 @@ Once you confirm the work is done ("Tenant Confirmed"), the ticket moves to "Clo
 
 ---
 
-## 7. Notifications
+## 7. Notifications [TENANT]
 
 **Q: How will I know when something happens with my ticket?**
 You'll receive notifications for major events — when your ticket is assigned, when work starts, when it's marked complete, and if it's ever escalated. Check your notification preferences in your profile settings to control how you're notified.
@@ -335,7 +335,7 @@ Try updating your browser to the latest version. If that doesn't work, try a dif
 
 ---
 
-## 11. Property & Unit Information
+## 11. Property & Unit Information [TENANT]
 
 **Q: How do I see which property and unit I'm assigned to?**
 Go to your "My Property" or "My Unit" page from the tenant dashboard. This shows the property name, address, and your unit number.
@@ -420,4 +420,127 @@ Ask this chatbot first — it covers a wide range of topics. If you still need h
 
 ---
 
-*End of document. This guide reflects the tenant-facing features of the SPMT platform and should be updated as new features are added or existing ones change.*
+## 15. Property Manager Guide [PROPERTY_MANAGER]
+
+**Q: How do I approve a new tenant account?**
+Open the Tenants page from your sidebar. Any tenant in "Pending" status appears there in a list. Select the tenant and choose to approve them, then link them to the correct property and unit. Until they are approved and linked, they cannot log in or submit tickets.
+
+**Q: How do I assign a ticket to a service provider?**
+Go to the Tickets page and open the ticket you want to assign. Use the assignment panel to pick a service provider. You can also let the system auto-assign based on rating, proximity, and current workload. Once assigned, the provider is notified and can accept or decline.
+
+**Q: How does the AI review workflow work?**
+Tickets with a conflict between the description and photo, or a low-confidence classification, go into manual review. Open the AI Review page to see these tickets, review the AI's labels and confidence, correct the classification if needed, and then assign the ticket. This is a safety check, not a fault on your part.
+
+**Q: How do I escalate a ticket?**
+Open the ticket and use the escalation option. Escalation flags the ticket for special attention — useful when it is overdue, involves a safety concern, or the provider ran into something unexpected. The ticket is given a higher priority and highlighted across dashboards.
+
+**Q: How do I run a reports or performance report?**
+Open the Reports page. You can filter by date range, property, category, and provider. The page shows SLA compliance, resolution times, priority breakdowns, and provider performance, and you can export the data. Use these reports to spot overdue or frequently-breached priorities.
+
+**Q: How do I add or edit a service provider/technician?**
+Open the Technicians page. You can add a new provider by selecting a registered service-provider account and linking them, edit their specialties, and adjust their status. Providers must be active to receive assignments.
+
+**Q: What can I do about an SLA breach?**
+When a ticket breaches its SLA deadline it is flagged automatically and you are notified. Open the ticket, review why it is overdue, and take action — reassign the provider, escalate the ticket, or extend the SLA deadline in exceptional circumstances such as parts on order.
+
+**Q: How do I manage properties and units?**
+Use the Properties and Units pages to add, edit, or deactivate properties and their units. Tenants are linked to units, so make sure a tenant's unit assignment is correct when you approve them.
+
+**Q: How do I review a provider's completed work?**
+When a provider marks a job complete, it appears in your ticket list ready for review. Confirm the work was done properly before closing the ticket, and address any tenant complaints by reopening or arranging for a redo.
+
+**Q: What is the difference between completing and closing a ticket?**
+"Completed" means the provider has finished the work. "Closed" means you (or the tenant) have confirmed the work is done. Only after closure can a rating be submitted. If the tenant isn't satisfied, keep the ticket open and escalate.
+
+**Q: Can I edit a ticket after it has been assigned?**
+Yes, property managers can edit ticket details even after assignment. Changing details mid-repair can cause confusion, so review any tenant edit requests and make the changes when appropriate. You can also postpone tickets with a reason.
+
+**Q: How do I handle a tenant who reports the same problem repeatedly?**
+Check whether the tenant is submitting duplicate tickets for the same issue. Ask them to update the original ticket instead, or combine duplicates using the duplicate-group tools. If a resolved problem has come back, the tenant can reopen the original ticket with a reason.
+
+**Q: How do I notify tenants about scheduled work?**
+Use the Messages section to broadcast an announcement, or send a direct message to a tenant. Ticket status changes trigger automatic notifications, so tenants are kept informed without extra work on your side.
+
+**Q: Who else can see the property manager's dashboards and reports?**
+Your property data and reports are visible to system administrators as well. Tenants and service providers can only see their own tickets and relevant assignments — they do not see your management dashboards.
+
+---
+
+## 16. Service Provider Guide [SERVICE_PROVIDER]
+
+**Q: How do I view and accept jobs assigned to me?**
+Open My Jobs from your sidebar. Jobs assigned to you appear there with their status and details. Use the accept action to confirm you will do the job — you can also decline if you genuinely cannot, though declining often triggers a re-assignment notification to the property manager.
+
+**Q: How do I update the status of a job?**
+You can move a job through Accepted, In Progress, Waiting for Parts, and Completed. Use the Job Detail page for the job and select the new status. When you start a job, mark it In Progress; when finished, submit completion with any notes.
+
+**Q: What should I do when I need parts or materials?**
+Set the job to "Waiting for Parts". This tells the tenant and property manager you are ready to continue as soon as the parts arrive, and the system tracks this status automatically. You do not need to keep the ticket open for anything else.
+
+**Q: How do I handle an emergency job?**
+Emergency jobs are flagged at the top of your dashboard and appear on the Emergency page. They take priority over everything else. Respond as quickly as possible and follow the safety guidance on the ticket. If the situation is life-threatening, tell the tenant to contact emergency services directly.
+
+**Q: How do I leave a message for the tenant when I accept a job?**
+When accepting a job you can add a note. This note is shown to the tenant in the "Message from provider" section of the ticket details, e.g., an estimated arrival time. You can also coordinate access times this way.
+
+**Q: How is my performance tracked?**
+The My Performance page shows your rating, completed jobs, and response times. Your rating comes from tenant ratings after a ticket is closed, and it directly affects how often the system matches you to new jobs — higher-rated providers get matched more often.
+
+**Q: Can I schedule my own jobs?**
+The Schedule page shows your upcoming work. Scheduling is largely managed by the system and property manager based on urgency, but you can view your workload and upcoming visits to plan your day.
+
+**Q: How do I handle a ticket I cannot complete?**
+If you cannot complete a job, inform the property manager so they can re-assign or escalate it. Do not leave a job stuck in a partial status — keep the ticket moving so SLA deadlines are not breached.
+
+**Q: What should I do if the tenant reports the work was not done properly?**
+If a job is reopened or the tenant is unsatisfied, coordinate with the property manager to arrange a redo. Your rating reflects the final outcome, so completing jobs properly the first time protects your performance score.
+
+**Q: How do I know where the property is located?**
+The ticket details include the property and unit information. Some tickets may include GPS location of the provider or property to help you navigate. Follow any access instructions in the ticket or arrange a time with the tenant through the property manager.
+
+---
+
+## 17. System Administrator Guide [SYSTEM_ADMIN]
+
+**Q: How do I manage users and accounts?**
+Open the Users page. You can view, suspend, deactivate, or permanently delete user accounts, change roles, search by name or email, and see each account's status and activity. Use the filter and search tools for large lists.
+
+**Q: How do I approve a service provider?**
+A service provider account starts in a pending state after registration. From the Users page, find the pending provider and approve them. Only approved providers appear on the Technicians list and are eligible to receive assignments.
+
+**Q: How do I manage system settings?**
+Open the Settings page. There you can configure AI confidence thresholds, SLA minutes per priority, notification templates, and system-wide preferences. Changes apply immediately across the app.
+
+**Q: How do I create a backup?**
+Open the Backup page and select Create Backup. The system exports the current database contents (users, properties, units, tickets, audit logs) to a downloadable file. You can also restore from a previous backup or download a data export.
+
+**Q: How do I check system health?**
+Open the System Health page. It shows the status of backend services, authentication, database connectivity, and connected adapters like the AI classifier and chatbot. Any failing service appears in red so you can act quickly.
+
+**Q: How do I view activity and audit logs?**
+Open Audit Logs to see a full, timestamped history of actions across the system — who did what and when. The Activity page shows recent events on the dashboard. These logs help with compliance and debugging.
+
+**Q: How do I configure roles and permissions?**
+Open the Roles page. You can view each role's permissions and edit which permissions a role has by toggling them. Role changes affect what users can see and do throughout the app.
+
+**Q: How do I manage notifications and messages globally?**
+Open the Notifications page to see delivery statuses and templates, and the Messages page for in-app messaging. You can also view logs about messages and understand delivery chains from there.
+
+**Q: How do I handle an SLA breach across the platform?**
+Open the Reports or Analytics dashboard to see SLA compliance across all priorities. If breaches spike, review the affected properties and providers, and use the overview to see open vs completed tickets and where workloads are heavy.
+
+**Q: How do I integrate or check the AI services?**
+System Health shows the AI classifier and chatbot. If the chatbot is offline, restart it from the ai-chatbot folder (`python server.py`). If the Python AI service is down, start it with the standard uvicorn command for the AI service. Re-run health checks after restarting.
+
+**Q: Who can approve tenant accounts?**
+Property managers approve and link tenant accounts to units. As a system administrator you can also approve accounts if needed. Once approved and linked, tenants can log in and submit tickets.
+
+**Q: Can I change a user's role?**
+Yes — from the Users page you can change a user's role (e.g., a tenant to a property manager). Role changes immediately affect their access and dashboard. Only grant elevated roles (administrator) to trusted users.
+
+**Q: What happens when I deactivate a user account?**
+The user is logged out immediately and can no longer log in or take actions. Their data and ticket history are retained. Suspension is a temporary state that can be reversed; deactivation is a longer-term action.
+
+---
+
+*End of document. This guide reflects the tenant-facing and role-specific features of the SPMT platform and should be updated as new features are added or existing ones change.*

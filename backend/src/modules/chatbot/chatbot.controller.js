@@ -3,7 +3,8 @@ import * as chatbotClient from '../../shared/adapters/chatbotClient.js';
 const chat = async (req, res, next) => {
   try {
     const { message } = req.validatedBody || req.body || {};
-    const result = await chatbotClient.ask(message);
+    const role = req.user?.role || null;
+    const result = await chatbotClient.ask(message, role);
     if (!result.success) {
       return res.status(503).json({ success: false, error: result.error });
     }

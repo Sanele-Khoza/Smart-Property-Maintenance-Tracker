@@ -3,19 +3,55 @@ import { FaRobot, FaPaperPlane, FaSpinner } from 'react-icons/fa';
 import Alert from '../components/common/Alert';
 import { sendChatMessage, getChatbotHealth } from '../data/chatbotStore';
 
-const SUGGESTIONS = [
-  'How do I create a ticket?',
-  'What does each ticket status mean?',
-  'Why can\'t I log in after registering?',
-  'How is an emergency detected?',
-  'How do I rate a service provider?',
-  'Is my personal information safe?',
-];
+const SUGGESTIONS = {
+  TENANT: [
+    'How do I create a ticket?',
+    'What does each ticket status mean?',
+    'Why can\'t I log in after registering?',
+    'How is an emergency detected?',
+    'How do I rate a service provider?',
+    'Is my personal information safe?',
+  ],
+  PROPERTY_MANAGER: [
+    'How do I approve a new tenant?',
+    'How do I assign a ticket to a provider?',
+    'How does the AI review workflow work?',
+    'How do I escalate a ticket?',
+    'How do I run a reports?',
+    'How do I handle an SLA breach?',
+  ],
+  SERVICE_PROVIDER: [
+    'How do I accept a job?',
+    'How do I update a job status?',
+    'What should I do when I need parts?',
+    'How do I handle an emergency job?',
+    'How is my performance tracked?',
+  ],
+  SYSTEM_ADMIN: [
+    'How do I manage users?',
+    'How do I approve a service provider?',
+    'How do I create a backup?',
+    'How do I check system health?',
+    'How do I configure roles and permissions?',
+    'How do I view audit logs?',
+  ],
+};
 
-const ChatAssistant = ({ title = 'AI Assistant', subtitle = 'Ask anything about reporting issues, tracking tickets, or using SPMT.' }) => {
+const DEFAULT_SUGGESTIONS = SUGGESTIONS.TENANT;
+
+const getRole = () => {
+  try {
+    const session = JSON.parse(localStorage.getItem('spmt_session') || 'null');
+    return session?.role || null;
+  } catch {
+    return null;
+  }
+};
+
+const ChatAssistant = ({ title = 'AI Assistant', subtitle = 'Ask anything about reporting issues, tracking tickets, or using SPMT.', onClose, compact = false }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [suggestions, setSuggestions] = useState(SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState(SUGGESTIONS[getRole()] || DEFAULT_SUGGESTIONS);
   const [busy, setBusy] = useState(false);
   const [alert, setAlert] = useState({ msg: '', type: '' });
   const [online, setOnline] = useState(null);
@@ -57,13 +93,24 @@ const ChatAssistant = ({ title = 'AI Assistant', subtitle = 'Ask anything about 
   const onSubmit = (e) => { e.preventDefault(); ask(input); };
 
   return (
-    <div className="card">
+    <div className="card ai-chat-card">
       <div className="card-title">
-        <span><FaRobot /> {title} <span className="req-ref">AI Chatbot</span></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="robot-avatar"><FaRobot /> <span className="robot-badge" /></span>
+          <span>
+            {title} <span className="req-ref">AI Chatbot</span>
+            <div className="robot-tagline">your flirty robot buddy &bull; body glows green, blue &amp; red &bull; a little smelly</div>
+          </span>
+        </span>
+        {onClose && (
+          <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        )}
         <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, color: online === false ? 'var(--danger)' : 'var(--teal)' }}>
           {online === null && <><FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> Checking…</>}
-          {online === true && '● AI Assistant online'}
-          {online === false && '● AI Assistant offline'}
+          {online === true && '● online and glowing for you'}
+          {online === false && '● offline (broken heart ... and maybe a broken pipe)'}
         </span>
       </div>
       <Alert msg={alert.msg} type={alert.type} />
@@ -74,14 +121,17 @@ const ChatAssistant = ({ title = 'AI Assistant', subtitle = 'Ask anything about 
         style={{
           display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto',
           padding: 14, background: 'var(--surface2)', borderRadius: 8,
-          border: '1px solid var(--border)', minHeight: 380, maxHeight: 'calc(100vh - 340px)',
+          border: '1px solid var(--border)', minHeight: compact ? 260 : 380,
+          maxHeight: compact ? 'calc(100vh - 300px)' : 'calc(100vh - 340px)',
         }}
       >
         {messages.length === 0 && (
-          <div style={{ color: 'var(--text-dim)', fontSize: 13, lineHeight: 1.7 }}>
-            Hello! I'm the SPMT assistant.
-            Ask me anything about reporting a maintenance issue, tracking your ticket,
-            or using the app. Try one of the suggestions below.
+          <div className="robot-hello">
+            Well, hello there, gorgeous. I'm your favorite little robot — a bit rusty,
+            a bit smelly, but here to fix your pipes and steal your heart. Ask me anything
+            about tickets, maintenance, or just how your day is going.
+            One rule, though: only green, blue and red light comes out of me, so don't
+            expect any orange love notes.
           </div>
         )}
         {messages.map((m, i) => (
@@ -104,8 +154,19 @@ const ChatAssistant = ({ title = 'AI Assistant', subtitle = 'Ask anything about 
           </div>
         ))}
         {busy && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-dim)', fontSize: 12 }}>
-            <FaSpinner style={{ animation: 'spin 1s linear infinite', color: 'var(--teal)' }} /> Retrieving info...
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div className="ai-thinking-bubble">
+              <FaSpinner style={{ animation: 'spin 1s linear infinite', color: 'var(--teal)', flexShrink: 0 }} />
+              <span>
+                <span style={{ fontWeight: 600 }}>Thinking…</span>
+                <span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 11 }}>
+                  Getting information
+                  {[0, 1, 2].map(i => (
+                    <span key={i} className="ai-dot" style={{ animationDelay: `${i * 0.25}s` }}>.</span>
+                  ))}
+                </span>
+              </span>
+            </div>
           </div>
         )}
       </div>

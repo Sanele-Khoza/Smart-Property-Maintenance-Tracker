@@ -44,6 +44,7 @@ function buildUserPayload(user) {
     phone: user.phone,
     status: user.status,
     approved: user.approved,
+    idNumber: user.id_number,
   };
 }
 

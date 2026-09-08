@@ -454,9 +454,11 @@ export const refreshTickets = async () => {
       store.tickets = result.data.tickets.map(mapTicket);
       saveToLocalStorage();
       notifyTicketsUpdated();
+    } else {
+      console.warn('refreshTickets: API returned no tickets', result?.error || '(no error field)', result?.data || {});
     }
   } catch (err) {
-    console.warn('refreshTickets failed:', err.message);
+    console.error('refreshTickets failed:', err);
   }
   return getStore().tickets;
 };

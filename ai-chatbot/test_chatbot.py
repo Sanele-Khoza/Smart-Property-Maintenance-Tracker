@@ -70,5 +70,45 @@ class TestChatbot(unittest.TestCase):
         self.assertIn("Safety", self.bot.topics)
 
 
+class TestRoleScoping(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.bot = TenantChatbot(KB)
+
+    def test_role_topics_filtered(self):
+        topics = self.bot.topics_for("PROPERTY_MANAGER")
+        self.assertIn("Property Manager Guide", topics)
+        self.assertNotIn("Creating a Ticket (Reporting a Problem)", topics)
+
+    def test_tenant_topics_relevant(self):
+        topics = self.bot.topics_for("TENANT")
+        self.assertIn("Creating a Ticket (Reporting a Problem)", topics)
+        self.assertNotIn("System Administrator Guide", topics)
+
+    def test_manager_question_answered(self):
+        reply = self.bot.reply("how do I approve a new tenant account?", "PROPERTY_MANAGER")
+        self.assertTrue(reply["confident"])
+        self.assertIn("approve", reply["answer"].lower())
+
+    def test_provider_question_answered(self):
+        reply = self.bot.reply("how do I update the status of my job?", "SERVICE_PROVIDER")
+        self.assertTrue(reply["confident"])
+        self.assertIn("status", reply["answer"].lower())
+
+    def test_admin_question_answered(self):
+        reply = self.bot.reply("how do I manage users?", "SYSTEM_ADMIN")
+        self.assertTrue(reply["confident"])
+        self.assertIn("Users", reply["answer"])
+
+    def test_role_greeting(self):
+        reply = self.bot.reply("hi", "SERVICE_PROVIDER")
+        self.assertEqual(reply["source"], "greeting")
+        self.assertIn("jobs", reply["answer"].lower())
+
+    def test_unscoped_role_falls_back_to_all(self):
+        topics = self.bot.topics_for("UNKNOWN_ROLE")
+        self.assertGreaterEqual(len(topics), 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

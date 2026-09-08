@@ -65,6 +65,7 @@ def build_handler(chatbot: TenantChatbot) -> type[BaseHTTPRequestHandler]:
                 raw = self.rfile.read(length) if length else b"{}"
                 data = json.loads(raw.decode("utf-8")) if raw else {}
                 message = data.get("message") or data.get("question") or ""
+                role = data.get("role") or None
             except (json.JSONDecodeError, UnicodeDecodeError):
                 self._send_json({"error": "Invalid JSON body"}, status=400)
                 return
@@ -73,8 +74,9 @@ def build_handler(chatbot: TenantChatbot) -> type[BaseHTTPRequestHandler]:
                 self._send_json({"error": "Missing 'message' field"}, status=400)
                 return
 
-            reply = chatbot.reply(message)
+            reply = chatbot.reply(message, role)
             reply["asked"] = message.strip()
+            reply["role"] = role or None
             self._send_json({"success": True, "data": reply})
 
     return ChatHandler

@@ -18,7 +18,6 @@ import Scheduling from '../manager/Scheduling';
 import Reports from '../manager/Reports';
 import AIReview from '../manager/AIReview';
 import RatingsList from '../../components/ratings/RatingsList';
-import ChatAssistant from '../../components/ChatAssistant';
 
 const PropertyManagerDashboard = ({ activePage }) => {
   const session = getSession();
@@ -290,10 +289,8 @@ const PropertyManagerDashboard = ({ activePage }) => {
         return <Scheduling />;
       case 'Reports':
         return <Reports />;
-      case 'Ratings':
-        return <RatingsList title="Ratings" subtitle="Individual ratings and comments for your managed properties." />;
-      case 'AI Assistant':
-        return <ChatAssistant title="AI Assistant" subtitle="Get answers on reporting issues, tracking tickets, and using SPMT." />;
+case 'Ratings':
+        return <RatingsList title="All Ratings" subtitle="The ratings and comments across the system." />;
       default:
         return <Overview />;
     }

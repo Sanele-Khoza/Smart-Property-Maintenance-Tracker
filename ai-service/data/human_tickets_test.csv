@@ -1,0 +1,42 @@
+text,category
+"hi, the kitchen sink is dripping all night long and keeping me awake, please fix asap",Plumbing
+"Toilet blocked again, the plunger is not helping and the water is rising, plz help!",Plumbing
+"no hot water in flat 14 since yesterday, only cold water coming out of every tap",Plumbing
+"the shower drains really slowly, water pools round my feet every single morning",Plumbing
+"There is a leak under the bathroom sink, the cabinet is soaked through and starting to smell",Plumbing
+"Water everywhere in the passage this morning, I think a pipe burst upstairs",Plumbing
+"Power keeps tripping whenever i switch on the kettle in the kitchen",Electrical
+"None of the sockets in the lounge are working and the bedroom light keeps flickering",Electrical
+"There is a buzzing sound coming from the fuse box and it smells a bit weird",Electrical
+"No electricity in unit 5, but the neighbours all have lights so it's not a power cut",Electrical
+"The plug next to my bed sparks when I put my phone charger in, scared to use it",Electrical
+"Aircon is not blowing cold air anymore, just warm air, and it makes a rattling noise",HVAC
+"Heater in the bedroom blows cold air now and the house was freezing last night",HVAC
+"Thermostat is stuck on 30 and I can't change the temperature at all",HVAC
+"Fridge is not cold enough, the milk goes off after a day",Appliances
+"The washing machine shakes a lot and leaks water onto the floor during the spin cycle",Appliances
+"Oven doesn't heat up properly, the food stays raw in the middle",Appliances
+"Dishwasher stopped halfway through and there is still water sitting inside",Appliances
+"The crack on the bedroom wall is getting bigger, worried it might be serious",Structural
+"The kitchen window won't close properly and a draft comes through at night",Structural
+"The bathroom ceiling has a brown stain and it is starting to sag",Structural
+"The front door is stuck and I can't open it from the inside",Structural
+"Gate remote got new batteries but the gate still won't open",Security
+"The security camera outside has been offline since Friday",Security
+"Front door lock is broken, the key turns but the door won't unlock",Security
+"The alarm went off in the middle of the night for no reason and woke everyone up",Security
+"The grass is really overgrown now, the yard is starting to look untidy",Landscaping
+"Sprinkler is broken, water shoots everywhere except on the lawn",Landscaping
+"A fence panel in the garden is loose and might blow over in the wind",Landscaping
+"Saw a rat in the kitchen last night, need someone to come urgently",Pest Control
+"Ants are everywhere in the kitchen since the rain started",Pest Control
+"Cockroaches in the bathroom again, mostly at night when I switch the light on",Pest Control
+"Mouse somehow got into the aircon vent in the bedroom, I can hear it scratching at night",Pest Control
+"There is water dripping from the light fitting in the ceiling every time it rains, worried about an electric shock",Structural
+"The aircon unit is dripping water onto the floor and the carpet is soaked",HVAC
+"The washing machine hose is leaking water all over the laundry room floor",Appliances
+"Mold is growing in the corner of the bathroom and the wall feels damp",Structural
+"Can I get the wifi password again, I lost it in the email",Other
+"Who do I contact about reserving one of the parking slots?",Other
+"my sink is leakin and im puring water everywhere pls send someone soon",Plumbing
+"light in the garage not workin, tried to change globe but it still wont turn on",Electrical

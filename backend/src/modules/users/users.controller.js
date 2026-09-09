@@ -1,5 +1,6 @@
 import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
+import { parseSaId } from '../../shared/utils/saId.js';
 import { notifyUserStatusChange } from '../../shared/utils/notifyUser.js';
 
 function getIp(req) {
@@ -140,6 +141,39 @@ const unlockUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const SELF_PROFILE_FIELDS = [
+  ['name', 'name'],
+  ['surname', 'surname'],
+  ['email', 'email'],
+  ['phone', 'phone'],
+  ['idNumber', 'id_number'],
+];
+
+const updateSelfProfile = async (req, res, next) => {
+  try {
+    if (req.body.idNumber !== undefined) {
+      if (req.body.idNumber === '' || req.body.idNumber === null) {
+        delete req.body.idNumber;
+      } else {
+        const parsed = parseSaId(String(req.body.idNumber));
+        if (!parsed.valid) throw AppError.badRequest(parsed.reason || 'Invalid South African ID number');
+      }
+    }
+    const updates = [];
+    const params = [];
+    let idx = 1;
+    for (const [field, column] of SELF_PROFILE_FIELDS) {
+      if (req.body[field] !== undefined) { updates.push(`${column} = $${idx++}`); params.push(req.body[field]); }
+    }
+    if (updates.length === 0) throw AppError.badRequest('No fields to update');
+    params.push(req.user.id);
+    await query(`UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${idx}`, params);
+    const result = await query('SELECT id, name, surname, email, phone, role, status, id_number AS "idNumber" FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) throw AppError.notFound('User not found');
+    res.json({ success: true, data: { user: result.rows[0] }, error: null, meta: { timestamp: new Date().toISOString() } });
+  } catch (err) { next(err); }
+};
+
 const updateUser = async (req, res, next) => {
   try {
     const fields = ['name', 'surname', 'email', 'phone', 'role'];
@@ -170,4 +204,4 @@ const updateUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-export { getUsers, getPendingUsers, approveUser, deactivateUser, reactivateUser, changeRole, unlockUser, updateUser };
+export { getUsers, getPendingUsers, approveUser, deactivateUser, reactivateUser, changeRole, unlockUser, updateUser, updateSelfProfile };

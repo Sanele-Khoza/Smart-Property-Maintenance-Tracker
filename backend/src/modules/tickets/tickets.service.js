@@ -11,8 +11,7 @@ import { classify } from '../../shared/utils/aiClassifier.js';
 import { checkTicketSla, loadSlaConfig } from '../../shared/utils/slaChecker.js';
 import { scoreProviders } from '../../shared/utils/routingScore.js';
 import { sendToUser } from '../../shared/utils/sse.js';
-import { classifyText } from '../../shared/adapters/comprehendAdapter.js';
-import { classifyText as pythonClassifyText } from '../../shared/adapters/pythonAiClient.js';
+import classifyTextWithFallback from '../../shared/utils/classifyWithFallback.js';
 import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAdapter.js';
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
@@ -183,9 +182,9 @@ async function runAiPipeline(ticketId) {
   let textResult = { category: null, confidence: 0, service: 'none' };
   let awsTextAvailable = false;
   if (ticket.description) {
-    textResult = await (config.pythonAi?.enabled ? pythonClassifyText : classifyText)(ticket.description);
+    textResult = await classifyTextWithFallback(ticket.description);
     awsTextAvailable = textResult.service === 'COMPREHEND' || textResult.service === 'PYTHON_SKLEARN';
-    await logSingleInference(ticketId, textResult.service, textResult);
+    await logSingleInference(ticketId, textResult.service, { ...textResult, source: textResult.source });
   }
 
   let visualResult = { category: null, confidence: 0, service: 'none', visualEmergency: false, labels: [] };

@@ -66,7 +66,7 @@ const VerifyEmailPage = ({ token, onVerified, registeredEmail }) => {
               Email verified successfully!
             </div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 20 }}>
-              Your account is now pending approval from your Property Manager or System Administrator.
+              Your email has been verified and your account is now active. You can log in.
             </div>
             <button className="btn btn-primary" onClick={onVerified}>Go to Login</button>
           </div>

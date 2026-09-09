@@ -61,6 +61,7 @@ import realtimeRoutes from './modules/realtime/realtime.routes.js';
 import notificationPreferencesRoutes from './modules/notification-preferences/notification-preferences.routes.js';
 import aiRoutes from './modules/ai/ai.routes.js';
 import routingRoutes from './modules/routing/routing.routes.js';
+import chatbotRoutes from './modules/chatbot/chatbot.routes.js';
 
 /* Ratings Feature */
 import ratingsRoutes from './modules/ratings/ratings.routes.js';
@@ -167,6 +168,7 @@ app.use('/api/realtime', realtimeRoutes);
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/routing', routingRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 /* ratings feature routes */
 app.use('/api/ratings', ratingsRoutes);

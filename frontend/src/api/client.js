@@ -66,7 +66,8 @@ async function tryRefresh() {
 }
 
 export async function api(endpoint, options = {}) {
-  const { body, method, headers: extraHeaders, formData, skipAuthRetry, ...rest } = options;
+  const { body, method, headers: extraHeaders, formData, skipAuthRetry, timeout, ...rest } = options;
+  const timeoutMs = timeout ?? DEFAULT_TIMEOUT_MS;
   const token = getToken();
   const headers = { ...extraHeaders };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -80,7 +81,7 @@ export async function api(endpoint, options = {}) {
       body: formData || (body ? JSON.stringify(body) : undefined),
       cache: 'no-store',
       ...rest,
-    });
+    }, timeoutMs);
   } catch (err) {
     if (err.name === 'AbortError') {
       throw new Error('Request timed out — the server is taking too long to respond.');
@@ -99,7 +100,7 @@ export async function api(endpoint, options = {}) {
         body: formData || (body ? JSON.stringify(body) : undefined),
         cache: 'no-store',
         ...rest,
-      });
+      }, timeoutMs);
     } else {
       clearTokens();
       if (onLogout) onLogout();

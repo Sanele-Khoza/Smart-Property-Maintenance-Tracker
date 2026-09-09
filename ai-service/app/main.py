@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.classifier import predict
 from app.provider_matcher import score_providers, CATEGORIES
+from app.emergency_detector import detect_priority, PRIORITY_ORDER
 
 app = FastAPI(title="SPMT AI Service", version="1.0.0")
 
@@ -44,11 +45,14 @@ class ClassifyAssignRequest(ClassifyRequest):
 @app.get("/health")
 def health():
     from app.classifier import _load_model
+    from app.emergency_detector import _load_priority_model
 
     return {
         "status": "ok",
         "model_loaded": _load_model() is not None,
+        "priority_model_loaded": _load_priority_model() is not None,
         "categories": CATEGORIES,
+        "priorities": sorted(PRIORITY_ORDER, key=PRIORITY_ORDER.get),
     }
 
 
@@ -62,6 +66,7 @@ def classify(req: ClassifyRequest):
             status_code=422,
             detail="Could not confidently classify ticket category.",
         )
+    result["priority"] = detect_priority(req.text)
     return {"success": True, "data": result}
 
 
@@ -79,6 +84,7 @@ def auto_assign(req: AssignRequest):
         top_n=req.top_n,
         ticket_lat=req.ticket_lat,
         ticket_lng=req.ticket_lng,
+        priority=req.priority,
     )
     return {
         "success": True,
@@ -87,6 +93,7 @@ def auto_assign(req: AssignRequest):
             "creator": "sklearn",
             "matches": top,
             "provider_count": len(req.providers),
+            "priority": req.priority,
         },
     }
 
@@ -95,6 +102,8 @@ def auto_assign(req: AssignRequest):
 def classify_assign(req: ClassifyAssignRequest):
     classification = predict(req.text)
     category = classification["category"]
+    priority_result = detect_priority(req.text)
+    priority = priority_result["priority"]
     top = score_providers(
         req.providers,
         category=category,
@@ -102,11 +111,13 @@ def classify_assign(req: ClassifyAssignRequest):
         top_n=1,
         ticket_lat=req.ticket_lat,
         ticket_lng=req.ticket_lng,
+        priority=priority,
     ) if req.providers else []
     return {
         "success": True,
         "data": {
             "classification": classification,
+            "priority": priority_result,
             "review": {"category": category, "confidence": classification["confidence"]},
             "match": top[0] if top else None,
         },

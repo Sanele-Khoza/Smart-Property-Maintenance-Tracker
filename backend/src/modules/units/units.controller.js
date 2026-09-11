@@ -23,6 +23,7 @@ const getById = async (req, res, next) => {
 };
 
 const create = async (req, res, next) => { try { const result = await service.create(req.validatedBody); res.status(201).json(result); } catch (err) { next(err); } };
+const bulkCreate = async (req, res, next) => { try { const result = await service.bulkCreate(req.validatedBody); res.status(201).json(result); } catch (err) { next(err); } };
 const update = async (req, res, next) => { try { const result = await service.update(req.params.id, req.validatedBody); res.json(result); } catch (err) { next(err); } };
 const assign = async (req, res, next) => {
   try {
@@ -34,4 +35,4 @@ const assign = async (req, res, next) => {
 const vacate = async (req, res, next) => { try { const result = await service.vacate(req.params.id); res.json(result); } catch (err) { next(err); } };
 const remove = async (req, res, next) => { try { const result = await service.remove(req.params.id); res.json(result); } catch (err) { next(err); } };
 
-export { list, getById, create, update, assign, vacate, remove };
+export { list, getById, create, bulkCreate, update, assign, vacate, remove };

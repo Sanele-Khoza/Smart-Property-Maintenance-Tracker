@@ -73,11 +73,25 @@ const resolveManagerId = async (managerName, managerId) => {
   return result.rows[0]?.id || null;
 };
 
+const normalizeTypeValue = (val) => {
+  if (val === undefined || val === null) return val;
+  const key = String(val).trim().toUpperCase().replace(/[\s_-]+/g, '');
+  const map = { RESIDENTIAL: 'Residential', COMMERCIAL: 'Commercial', MIXED: 'Mixed-Use', MIXEDUSE: 'Mixed-Use' };
+  return map[key] || val;
+};
+
+const normalizeStatusValue = (val) => {
+  if (val === undefined || val === null) return val;
+  const key = String(val).trim().toUpperCase().replace(/[\s_-]+/g, '');
+  const map = { ACTIVE: 'Active', INACTIVE: 'Inactive', UNDERMAINTENANCE: 'Under Maintenance' };
+  return map[key] || val;
+};
+
 const create = async (data) => {
   const managerId = await resolveManagerId(data.managerName, data.manager_id || data.managerId);
   const result = await query(
     `INSERT INTO properties (name, type, status, address, manager_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.name, data.type || 'Residential', data.status || 'Active', data.address, managerId]
+    [data.name, normalizeTypeValue(data.type) || 'Residential', normalizeStatusValue(data.status) || 'Active', data.address, managerId]
   );
   return result.rows[0];
 };
@@ -90,6 +104,10 @@ const update = async (id, data) => {
     }
     delete payload.managerName;
   }
+  if (payload.type !== undefined) payload.type = normalizeTypeValue(payload.type);
+  if (payload.status !== undefined) payload.status = normalizeStatusValue(payload.status);
+  // Don't overwrite manager when empty string is sent from edit forms that omit it
+  if (payload.manager_id === null && !data.managerName) delete payload.manager_id;
 
   const entries = Object.entries(payload).filter(([_, v]) => v !== undefined);
   if (entries.length === 0) return findById(id);

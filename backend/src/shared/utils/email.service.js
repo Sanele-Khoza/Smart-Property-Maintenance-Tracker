@@ -11,6 +11,7 @@ import {
   unitAssignedToManager,
   propertyCreatedForManager,
   unitCreatedForManager,
+  unitsBulkCreatedForManager,
 } from './notificationTemplates.js';
 
 async function sendEmail({ to, subject, text, html }) {
@@ -228,6 +229,22 @@ async function sendUnitCreatedNotification(managerId, unit, propertyName) {
   }
 }
 
+async function sendUnitsBulkCreatedNotification(managerId, units, propertyName) {
+  try {
+    if (!units || units.length === 0) return;
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = unitsBulkCreatedForManager({
+      managerName: manager.name,
+      units,
+      propertyName,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Bulk unit created notification sent to ${manager.email} for ${units.length} units in ${propertyName}`);
+  } catch (err) {
+    logger.error(`Failed to send bulk unit created notification: ${err.message}`);
+  }
+}
 export {
   sendEmail,
   sendNotificationEmail,
@@ -238,5 +255,6 @@ export {
   sendUnitAssignedToManagerNotification,
   sendPropertyCreatedNotification,
   sendUnitCreatedNotification,
+  sendUnitsBulkCreatedNotification,
   sendNewUserRegisteredAlert,
 };

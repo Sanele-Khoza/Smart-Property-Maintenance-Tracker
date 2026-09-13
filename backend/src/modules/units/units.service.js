@@ -5,6 +5,7 @@ import {
   sendUnitAssignedToTenantNotification,
   sendUnitAssignedToManagerNotification,
   sendUnitCreatedNotification,
+  sendUnitsBulkCreatedNotification,
 } from '../../shared/utils/email.service.js';
 
 async function list(filters) {
@@ -70,6 +71,20 @@ async function bulkCreate(data) {
     if (n.length > 20) throw AppError.badRequest(`Unit number "${n}" exceeds 20 characters.`);
   }
   const { created, skipped } = await repo.bulkCreate(data, unitNumbers);
+  if (created.length > 0) {
+    (async () => {
+      try {
+        const propRow = (await query(
+          `SELECT p.manager_id, p.name FROM properties p WHERE p.id = $1`, [created[0].property_id]
+        )).rows[0];
+        if (propRow?.manager_id) {
+          sendUnitsBulkCreatedNotification(propRow.manager_id, created, propRow.name).catch(() => {});
+        }
+      } catch (e) {
+        console.error('Bulk unit created notification failed:', e.message);
+      }
+    })();
+  }
   return {
     success: true,
     data: { units: created, skipped },

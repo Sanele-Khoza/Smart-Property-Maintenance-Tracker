@@ -22,10 +22,10 @@ SPMT requires an internet connection to submit tickets and view updates. If you 
 ## 2. Getting Started — Account & Login [TENANT]
 
 **Q: How do I create an account?**
-Open the app and select "Register." Enter your name, surname, email, phone number, and a password. Submit the form. Once your account is created, a property manager needs to approve you before you can log in — this is because tenants must be linked to a specific unit before they can use the app.
+Open the app and select "Register." Enter your name, surname, email, phone number, and a password. Submit the form. Once your account is created, a system administrator needs to approve you before you can log in — after approval, your property manager links you to your unit.
 
 **Q: Why can't I log in yet after registering?**
-New tenant accounts start in a "Pending" status. A property manager has to approve your account and assign you to your unit before you can submit tickets. If it's been a while, contact your property manager directly to check on this.
+New tenant accounts start in a "Pending" status. A system administrator has to approve your account first — property managers cannot approve accounts. After approval, your property manager assigns you to your unit before you can submit tickets. If it's been a while, contact your property manager directly to check on this.
 
 **Q: I forgot my password. What do I do?**
 Use the "Forgot Password" link on the login screen. Enter your email, and you'll receive a link to reset it. This link expires after a set time, so use it soon after you receive it.
@@ -422,8 +422,8 @@ Ask this chatbot first — it covers a wide range of topics. If you still need h
 
 ## 15. Property Manager Guide [PROPERTY_MANAGER]
 
-**Q: How do I approve a new tenant account?**
-Open the Tenants page from your sidebar. Any tenant in "Pending" status appears there in a list. Select the tenant and choose to approve them, then link them to the correct property and unit. Until they are approved and linked, they cannot log in or submit tickets.
+**Q: Who approves a new tenant account?**
+Only a system administrator can approve tenant accounts, from the Users page. Property managers cannot approve accounts. Once an administrator approves the account, link the tenant to the correct property and unit from the Tenants page. Until they are approved and linked, they cannot log in or submit tickets.
 
 **Q: How do I assign a ticket to a service provider?**
 Go to the Tickets page and open the ticket you want to assign. Use the assignment panel to pick a service provider. You can also let the system auto-assign based on rating, proximity, and current workload. Once assigned, the provider is notified and can accept or decline.
@@ -444,7 +444,7 @@ Open the Technicians page. You can add a new provider by selecting a registered 
 When a ticket breaches its SLA deadline it is flagged automatically and you are notified. Open the ticket, review why it is overdue, and take action — reassign the provider, escalate the ticket, or extend the SLA deadline in exceptional circumstances such as parts on order.
 
 **Q: How do I manage properties and units?**
-Use the Properties and Units pages to add, edit, or deactivate properties and their units. Tenants are linked to units, so make sure a tenant's unit assignment is correct when you approve them.
+Use the Properties and Units pages to add, edit, or deactivate properties and their units. Tenants are linked to units, so make sure an approved tenant's unit assignment is correct.
 
 **Q: How do I review a provider's completed work?**
 When a provider marks a job complete, it appears in your ticket list ready for review. Confirm the work was done properly before closing the ticket, and address any tenant complaints by reopening or arranging for a redo.
@@ -533,7 +533,7 @@ Open the Reports or Analytics dashboard to see SLA compliance across all priorit
 System Health shows the AI classifier and chatbot. If the chatbot is offline, restart it from the ai-chatbot folder (`python server.py`). If the Python AI service is down, start it with the standard uvicorn command for the AI service. Re-run health checks after restarting.
 
 **Q: Who can approve tenant accounts?**
-Property managers approve and link tenant accounts to units. As a system administrator you can also approve accounts if needed. Once approved and linked, tenants can log in and submit tickets.
+Only system administrators approve tenant accounts, from the Users page. Property managers have no approval rights — they link already-approved tenants to units. Once approved and linked, tenants can log in and submit tickets.
 
 **Q: Can I change a user's role?**
 Yes — from the Users page you can change a user's role (e.g., a tenant to a property manager). Role changes immediately affect their access and dashboard. Only grant elevated roles (administrator) to trusted users.

@@ -13,7 +13,7 @@ const SUGGESTIONS = {
     'Is my personal information safe?',
   ],
   PROPERTY_MANAGER: [
-    'How do I approve a new tenant?',
+    'Who approves new tenant accounts?',
     'How do I assign a ticket to a provider?',
     'How does the AI review workflow work?',
     'How do I escalate a ticket?',

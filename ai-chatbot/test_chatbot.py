@@ -86,9 +86,9 @@ class TestRoleScoping(unittest.TestCase):
         self.assertNotIn("System Administrator Guide", topics)
 
     def test_manager_question_answered(self):
-        reply = self.bot.reply("how do I approve a new tenant account?", "PROPERTY_MANAGER")
+        reply = self.bot.reply("who approves new tenant accounts?", "PROPERTY_MANAGER")
         self.assertTrue(reply["confident"])
-        self.assertIn("approve", reply["answer"].lower())
+        self.assertIn("administrator", reply["answer"].lower())
 
     def test_provider_question_answered(self):
         reply = self.bot.reply("how do I update the status of my job?", "SERVICE_PROVIDER")

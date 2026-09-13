@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FaUsers, FaExclamationTriangle, FaBuilding, FaDoorOpen, FaTicketAlt, FaUserCheck, FaUserSlash, FaSearch, FaEnvelope, FaPhone, FaCheckCircle, FaTimesCircle, FaUserPlus, FaCheck } from 'react-icons/fa';
+import { FaUsers, FaBuilding, FaDoorOpen, FaTicketAlt, FaUserCheck, FaUserSlash, FaSearch, FaEnvelope, FaPhone, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { getUnits, getProperties, getTickets } from '../../data/store';
-import { getUsers, approveManager, refreshUsers } from '../../data/authStore';
+import { getUsers, refreshUsers } from '../../data/authStore';
 import { getSession } from '../../data/authStore';
-import Alert from '../../components/common/Alert';
 
 const Tenants = () => {
   const session = getSession();
@@ -15,7 +14,6 @@ const Tenants = () => {
   const [allUnits] = useState(getUnits);
   const [tickets] = useState(getTickets);
   const [allUsers, setAllUsers] = useState(() => getUsers());
-  const [alert, setAlert] = useState({ msg: '', type: '' });
   const [search, setSearch] = useState('');
   const [expandedTenant, setExpandedTenant] = useState(null);
 
@@ -27,14 +25,6 @@ const Tenants = () => {
     window.addEventListener('spmt:users-updated', onUsersUpdated);
     return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
   }, []);
-
-  const showAlert = (msg, type) => { setAlert({ msg, type }); setTimeout(() => setAlert({ msg: '', type: '' }), 5000); };
-  const refresh = () => window.location.reload();
-
-  const pendingApprovals = allUsers.filter(u =>
-    (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
-    String(u.status).toUpperCase() === 'PENDING'
-  );
 
   const tenantData = useMemo(() => {
     const map = {};
@@ -90,34 +80,10 @@ const Tenants = () => {
 
   const filtered = search ? tenantData.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase())) : tenantData;
 
-  const handleApprove = async (userId) => {
-    const r = await approveManager(userId);
-    if (r.success) { showAlert(`Account approved.`, 'success'); refresh(); }
-    else showAlert(r.error, 'error');
-  };
-
   return (
     <div>
-      {pendingApprovals.length > 0 && (
-        <div className="card" style={{ borderLeft: '3px solid var(--amber)' }}>
-          <div className="card-title"><span><FaUserPlus /> Pending Approvals <span className="req-ref">REQ-004</span></span><span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600 }}>{pendingApprovals.length} pending</span></div>
-          <table className="data-table" style={{ fontSize: 12 }}>
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-            <tbody>{pendingApprovals.map(u => (
-              <tr key={u.id}>
-                <td>{u.name} {u.surname}</td>
-                <td>{u.email}</td>
-                <td><span className="badge badge-info">{u.role}</span></td>
-                <td><button className="btn btn-teal btn-sm" onClick={() => handleApprove(u.id)}><FaCheck /> Approve</button></td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-      )}
-
       <div className="card">
         <div className="card-title"><span><FaUsers /> My Tenants</span></div>
-        <Alert msg={alert.msg} type={alert.type} />
         <div className="stat-grid">
           <div className="stat-card"><div className="stat-value"><FaUsers /> {tenantData.length}</div><div className="stat-label">Total Tenants</div></div>
           <div className="stat-card"><div className="stat-value"><FaCheckCircle style={{ color: 'var(--teal)' }} /> {tenantData.filter(t => t.canSubmitTicket).length}</div><div className="stat-label">Can Submit Tickets</div></div>

@@ -11,7 +11,7 @@ const ASSIGNING_DELAY_MS = 25000;
 const Ticket = ({ currentUser, refreshData }) => {
   const [units, setUnits] = useState(getUnits());
   const [tickets, setTickets] = useState(getTickets());
-  const [form, setForm] = useState({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
+  const [form, setForm] = useState({ unitId: '', title: '', description: '' });
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [msg, setMsg] = useState({ text: '', type: '' });
@@ -64,7 +64,7 @@ const Ticket = ({ currentUser, refreshData }) => {
       form.unitId,
       form.title,
       form.description,
-      form.priority,
+      undefined,
       images,
       userId,
       displayName,
@@ -81,7 +81,7 @@ const Ticket = ({ currentUser, refreshData }) => {
       setMsg({ text: result.error, type: 'error' });
     } else {
       setMsg({ text: `Ticket submitted successfully.`, type: 'success' });
-      setForm({ unitId: '', title: '', description: '', priority: 'MEDIUM' });
+      setForm({ unitId: '', title: '', description: '' });
       setImages([]);
       setImagePreviews([]);
       setConfirmStep(false);
@@ -135,14 +135,14 @@ const Ticket = ({ currentUser, refreshData }) => {
               {getEmergencyHint(form.description) && (
                 <div style={{ background: 'rgba(220,60,60,0.10)', border: '1px solid var(--danger)', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 12 }}>
                   <FaExclamationTriangle style={{ color: 'var(--danger)', marginRight: 4 }} />
-                  Description contains emergency keywords — ensure priority is set to <strong>Emergency</strong> if this is urgent.
+                  Description contains emergency keywords — our AI will automatically flag this ticket as an emergency.
                 </div>
               )}
               <table className="table" style={{ marginBottom: 12 }}>
                 <tbody>
                   <tr><td style={{ fontWeight: 600, width: 100 }}>Unit</td><td>{selectedUnitLabel ? `${selectedUnitLabel.propertyName} - Unit ${selectedUnitLabel.unitNumber}` : '—'}</td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Title</td><td>{form.title}</td></tr>
-                  <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className={`badge ${form.priority === 'URGENT' || form.priority === 'EMERGENCY' ? 'badge-danger' : form.priority === 'HIGH' ? 'badge-warning' : 'badge-open'}`}>{form.priority}</span></td></tr>
+                  <tr><td style={{ fontWeight: 600 }}>Priority</td><td><span className="badge badge-open">Auto-classified by AI</span></td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Description</td><td><pre style={{ background: 'var(--surface2)', padding: 8, borderRadius: 4, fontSize: 12, whiteSpace: 'pre-wrap', margin: 0 }}>{form.description}</pre></td></tr>
                   <tr><td style={{ fontWeight: 600 }}>Photos</td><td>{imagePreviews.length > 0 ? `${imagePreviews.length} photo(s) attached` : 'None'}</td></tr>
                 </tbody>
@@ -173,17 +173,6 @@ const Ticket = ({ currentUser, refreshData }) => {
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   onBlur={() => setTouched(t => ({ ...t, title: true }))} />
                 {touched.title && validationErrors.title && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--danger)', marginTop: 3 }}>{validationErrors.title}</div>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Priority</label>
-                <select className="form-select" value={form.priority}
-                  onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="EMERGENCY">Emergency</option>
-                </select>
               </div>
 
               <div className="form-group">

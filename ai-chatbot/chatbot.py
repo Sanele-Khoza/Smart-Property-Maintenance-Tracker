@@ -31,7 +31,7 @@ GREETINGS = {
 
 ROLE_GREETINGS = {
     "TENANT": "Hello, tenant! I can help you report a maintenance issue, track a ticket, rate a provider, or understand your account. What do you need?",
-    "PROPERTY_MANAGER": "Hello, manager! I can help you approve tenants, manage properties and units, assign and escalate tickets, and run reports. What do you need?",
+    "PROPERTY_MANAGER": "Hello, manager! I can help you manage properties and units, link tenants to units, assign and escalate tickets, and run reports. What do you need?",
     "SERVICE_PROVIDER": "Hello! I can help you manage your jobs, update ticket statuses, handle scheduling and emergencies, and check your performance. What do you need?",
     "SYSTEM_ADMIN": "Hello, administrator! I can help you manage users, properties, technicians, settings, backups, analytics, and system health. What do you need?",
 }

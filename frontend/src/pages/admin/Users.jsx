@@ -324,8 +324,8 @@ const Users = () => {
           </div>
           <p className="phase-note">
             Property Manager accounts awaiting System Administrator approval.
-            Two-tier approval: Tenant/Provider accounts are approved by their
-            Property Manager (REQ-005).
+            New Tenant/Provider registrations can only be approved by a
+            System Administrator — managers have no approval rights.
           </p>
           <div className="data-list">
             {pendingManagers.map((u) => (

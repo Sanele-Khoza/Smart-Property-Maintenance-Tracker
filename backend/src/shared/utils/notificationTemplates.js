@@ -242,6 +242,29 @@ function unitCreatedForManager({ managerName, unit, propertyName }) {
   };
 }
 
+function unitsBulkCreatedForManager({ managerName, units, propertyName }) {
+  const headerColor = "#059669";
+  const btnUrl = BASE_URL;
+  const unitList = units.map(u => u.unit_number).join(", ");
+  const body = `
+    <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">New Units Added (${units.length})</h2>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">Hi ${managerName},</p>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">${units.length} new units have been added to a property in bulk.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin-bottom:20px;">
+      ${detailRow("Building", propertyName)}
+      ${detailRow("Units", unitList)}
+      ${detailRow("Floor", units[0]?.floor)}
+      ${detailRow("Count", units.length)}
+    </table>
+    <p style="margin:0 0 8px;color:#4b5563;font-size:14px;">Log in to manage these units.</p>
+    ${ctaButton("Log In to View Units", btnUrl, headerColor)}
+    <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;">Or copy this link: <a href="${btnUrl}" style="color:#059669;">${btnUrl}</a></p>`;
+  return {
+    subject: `[SPMT] ${units.length} New Units Added: ${propertyName}`,
+    html: buildShell("New Units Added", headerColor, body),
+  };
+}
+
 export {
   ticketCreatedForManager,
   ticketAssignedToProvider,
@@ -250,4 +273,5 @@ export {
   unitAssignedToManager,
   propertyCreatedForManager,
   unitCreatedForManager,
+  unitsBulkCreatedForManager,
 };

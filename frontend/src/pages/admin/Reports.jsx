@@ -21,6 +21,23 @@ const COLORS = {
   purple: '#8250c8',
 };
 
+const STATUS_COLORS = {
+  'New': COLORS.teal,
+  'Open': COLORS.teal,
+  'AI Classified': COLORS.blue,
+  'Assigned': COLORS.blue,
+  'Accepted': COLORS.blue,
+  'In Progress': COLORS.amber,
+  'Waiting for Parts': COLORS.gray,
+  'Completed': COLORS.teal,
+  'Tenant Confirmed': COLORS.teal,
+  'Closed': COLORS.gray,
+  'Manual Review': COLORS.purple,
+  'Reopened': '#e67e22',
+  'Escalated': COLORS.red,
+  'Cancelled': COLORS.gray,
+};
+
 const CHART_TIP_STYLE = {
   background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6,
   fontSize: 11, padding: '6px 10px', color: 'var(--text)',
@@ -118,6 +135,8 @@ const Reports = () => {
     'Manual Review': 'Manual Review',
     'Reopened': 'Reopened',
     'Escalated': 'Escalated',
+    'Open': 'Open',
+    'Cancelled': 'Cancelled',
   };
 
   const maxCount = Math.max(...Object.values(statusCounts), 1);
@@ -519,7 +538,7 @@ const Reports = () => {
               <div
                 style={{
                   width: 40, height: Math.max(pct * 1.2, 4), borderRadius: '4px 4px 0 0',
-                  backgroundColor: pct > 75 ? 'var(--teal)' : pct > 50 ? 'var(--amber)' : 'var(--info)',
+                  backgroundColor: STATUS_COLORS[status] || COLORS.teal,
                   transition: 'height 0.3s', minHeight: 4,
                 }}
               />

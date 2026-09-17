@@ -1,6 +1,6 @@
 import { query } from '../../db/connection.js';
 
-const SELECT_PROFILE = 'id, name, surname, email, role, phone, id_number, status, approved, approved_at, last_login, created_at';
+const SELECT_PROFILE = 'id, name, surname, email, role, phone, status, approved, approved_at, last_login, created_at, id_number AS "idNumber"';
 
 const findByEmail = async (email) => {
   const result = await query('SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL', [email]);
@@ -17,12 +17,12 @@ const findByIdFull = async (id) => {
   return result.rows[0] || null;
 };
 
-const create = async ({ name, surname, email, phone, idNumber, passwordHash, role, status, approved }) => {
+const create = async ({ name, surname, email, phone, idNumber, age, passwordHash, role, status, approved }) => {
   const result = await query(
-    `INSERT INTO users (name, surname, email, phone, id_number, password_hash, role, status, approved, email_verification_token, password_changed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-     RETURNING id, name, surname, email, role, phone, status`,
-    [name, surname, email, phone || null, idNumber || null, passwordHash, role, status, approved, null]
+    `INSERT INTO users (name, surname, email, phone, id_number, age, password_hash, role, status, approved, email_verification_token, password_changed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+     RETURNING id, name, surname, email, role, phone, status, approved, id_number, created_at, updated_at`,
+    [name, surname, email, phone || null, idNumber || null, age, passwordHash, role, status, approved, null]
   );
   return result.rows[0];
 };

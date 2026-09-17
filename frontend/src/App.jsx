@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getSession, logoutUser, refreshUsers, connectRealtime } from './data/authStore';
+import { getSession, saveSession, logoutUser, refreshUsers, connectRealtime } from './data/authStore';
 import { getTickets, syncPropertiesAndUnits, syncTechnicians, refreshTickets } from './data/store';
 import { startSlaPolling, stopSlaPolling } from './data/slaEngine';
 import { setLogoutHandler, api, getToken } from './api/client';
@@ -12,6 +12,7 @@ import TenantDashboard from './pages/dashboard/TenantDashboard';
 import PropertyManagerDashboard from './pages/dashboard/PropertyManagerDashboard';
 import ServiceProviderDashboard from './pages/dashboard/ServiceProviderDashboard';
 import SystemAdminDashboard from './pages/dashboard/SystemAdminDashboard';
+import AiAssistantWidget from './components/AiAssistantWidget';
 
 const adminNavItems = [
   'Overview', 'Users', 'Properties', 'Units', 'Tickets',
@@ -47,8 +48,8 @@ function App() {
   const [activeManagerPage, setActiveManagerPage] = useState('Overview');
   const [activeTenantPage, setActiveTenantPage] = useState('Overview');
   const [activeProviderPage, setActiveProviderPage] = useState('Overview');
-  const [verificationToken, setVerificationToken] = useState('');
-  const [resetToken, setResetToken] = useState('');
+  const [verificationToken, setVerificationToken] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset-token') || '');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const pageRef = useRef(page);
   useEffect(() => { pageRef.current = page; }, [page]);
@@ -101,18 +102,15 @@ function App() {
     });
 
     const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    const resetPasswordToken = params.get('reset-token');
-    if (urlToken) {
-      setVerificationToken(urlToken);
-      setPage('verify-email');
+    if (params.get('token') || params.get('reset-token')) {
       window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (verificationToken) {
+      setPage('verify-email');
       return;
     }
-    if (resetPasswordToken) {
-      setResetToken(resetPasswordToken);
+    if (resetToken) {
       setPage('forgot-password');
-      window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
@@ -128,6 +126,10 @@ function App() {
             return;
           }
           setUser(session);
+          const fresh = result.data?.user;
+          if (fresh && (fresh.idNumber !== undefined || fresh.email)) {
+            saveSession({ ...session, ...fresh });
+          }
           await syncPropertiesAndUnits();
           await syncTechnicians();
           await refreshTickets();
@@ -157,7 +159,7 @@ function App() {
     };
     window.addEventListener('spmt:sla-breach', handleSlaBreach);
     return () => { cancelled = true; window.removeEventListener('spmt:sla-breach', handleSlaBreach); };
-  }, []);
+  }, [verificationToken, resetToken]);
 
   const handleLogin = async (userData) => {
     setUser(userData);
@@ -254,6 +256,7 @@ function App() {
           {renderDashboard()}
         </div>
       </div>
+      <AiAssistantWidget />
     </>
   );
 }

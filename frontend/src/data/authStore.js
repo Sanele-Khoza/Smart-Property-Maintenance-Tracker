@@ -26,7 +26,7 @@ function decodeToken(token) {
   }
 }
 
-function saveSession(user) {
+export function saveSession(user) {
   localStorage.setItem(SESSION_KEY, JSON.stringify(user));
 }
 
@@ -253,35 +253,32 @@ export const updateUser = async (userId, updates) => {
   }
 };
 
-
-export const updateProfile = async (updates) => {
+export const updateSelfProfile = async (updates) => {
   try {
-    const result = await api('/profile', {
-      method: 'PUT',
-      body: updates,
-    });
+    const result = await api('/users/me', { method: 'PATCH', body: updates });
     if (result.success) {
-      const updated = normalizeUser(result.data?.user || result.data);
       const session = getSession();
-      if (session) {
-        const merged = { ...session, ...updated };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
-      }
+      const updated = normalizeUser({ ...session, ...result.data?.user });
+      saveSession(updated);
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem(USERS_CACHE_KEY) || '[]'); } catch {}
+      cached = cached.map(u => u.id === updated.id ? updated : u);
+      localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(cached));
       return { success: true, data: updated };
     }
-    return { success: false, error: result.error || 'Failed to update' };
+    return { success: false, error: result.error || 'Failed to update profile' };
   } catch (err) {
     return { success: false, error: err.message };
   }
 };
 
-export const changePassword = async (currentPassword, newPassword) => {
+export const changeMyPassword = async (currentPassword, newPassword) => {
   try {
     const result = await api('/auth/change-password', {
       method: 'PUT',
       body: { currentPassword, newPassword },
     });
-    if (result.success) return { success: true, message: result.message };
+    if (result.success) return { success: true, message: result.message || 'Password changed successfully' };
     return { success: false, error: result.error || 'Failed to change password' };
   } catch (err) {
     return { success: false, error: err.message };

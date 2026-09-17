@@ -13,6 +13,7 @@ router.put('/:id/deactivate', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.
 router.put('/:id/reactivate', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.reactivateUser);
 router.put('/:id/role', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.changeRole);
 router.put('/:id/unlock', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.unlockUser);
+router.patch('/me', authenticate, ctrl.updateSelfProfile);
 router.patch('/:id', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.updateUser);
 
 export default router;

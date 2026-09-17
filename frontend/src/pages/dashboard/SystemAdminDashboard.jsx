@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaWrench } from 'react-icons/fa';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { getStats, getTickets, getProperties, getUnits, getAllData, resetData } from '../../data/store';
+import { getStats, getAllData, resetData } from '../../data/store';
+import useTickets from '../../hooks/useTickets';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
 import Overview from '../admin/Overview';
@@ -28,13 +29,24 @@ import RatingsList from '../../components/ratings/RatingsList';
 const SystemAdminDashboard = ({ activePage }) => {
   const [stats, setStats] = useState(getStats());
   const [allData, setAllData] = useState(getAllData());
+  const [tickets, refreshTickets] = useTickets();
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   const [resetMsg, setResetMsg] = useState({ text: '', type: '' });
 
+  useEffect(() => {
+    const onUpdate = () => {
+      setStats(getStats());
+      setAllData(getAllData());
+    };
+    window.addEventListener('spmt:tickets-updated', onUpdate);
+    return () => window.removeEventListener('spmt:tickets-updated', onUpdate);
+  }, []);
+
   const refresh = () => {
     setStats(getStats());
     setAllData(getAllData());
+    refreshTickets();
   };
 
   const handleResetData = () => {
@@ -46,7 +58,6 @@ const SystemAdminDashboard = ({ activePage }) => {
     }
   };
 
-  const tickets = allData.tickets || [];
   const properties = allData.properties || [];
   const units = allData.units || [];
 

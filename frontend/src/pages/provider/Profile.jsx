@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaLock, FaBuilding, FaStar, FaCheckCircle, FaExclamationCircle, FaMapMarkerAlt, FaClock, FaToolbox, FaToggleOn, FaToggleOff, FaIdCard, FaBriefcase, FaWrench } from 'react-icons/fa';
-import { getSession, getUsers, updateUser, changePassword,updateProfile } from '../../data/authStore';
+import { getSession, updateSelfProfile, changeMyPassword } from '../../data/authStore';
 import { getTechnicians, updateTechnicianStatus, updateTechnician } from '../../data/store';
 import { getMyTechnician, updateMyTechnician } from '../../data/technicianStore';
-
-const maskIdNumber = (idNumber) => {
-  if (!idNumber) return '—';
-  const s = String(idNumber);
-  if (s.length <= 4) return '*'.repeat(s.length);
-  return '*'.repeat(s.length - 4) + s.slice(-4);
-};
 
 const ALL_SPECIALISATIONS = ['Plumbing', 'Electrical', 'HVAC', 'Structural', 'Pest Control', 'General'];
 const STATUS_OPTIONS = ['AVAILABLE', 'ON_CALL', 'OFF_DUTY'];
@@ -22,7 +15,7 @@ const Profile = () => {
   const [user, setUser] = useState(session);
   const [tech, setTech] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', surname: '', email: '', phone: '' });
+  const [form, setForm] = useState({ name: '', surname: '', email: '', phone: '', idNumber: '' });
   const [techForm, setTechForm] = useState({ companyName: '', specialisations: [] });
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' });
   const [msg, setMsg] = useState({ text: '', type: '' });
@@ -67,15 +60,18 @@ const Profile = () => {
     }));
   };
 
-    const handleSaveProfile = async () => {
-    const r = await updateProfile({
+  const handleSaveProfile = async () => {
+    if (form.idNumber && !/^\d{13}$/.test(form.idNumber)) {
+      showMsg('ID number must be exactly 13 digits.', 'error');
+      return;
+    }
+    const r = await updateSelfProfile({
       name: form.name.trim(), surname: form.surname.trim(),
       email: form.email.trim(), phone: form.phone.trim(),
-      idNumber: (form.idNumber || '').trim(),
+      idNumber: form.idNumber,
     });
     if (r.success) {
-      const updated = getSession();
-      setUser(updated);
+      setUser(r.data);
       showMsg('Profile updated successfully.', 'success');
       setEditing(false);
       refreshTech();
@@ -108,9 +104,13 @@ const Profile = () => {
     const handlePasswordChange = async () => {
     if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
     if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
-    if (passForm.newPass.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
-    const r = await changePassword(passForm.current, passForm.newPass);
-    if (r.success) { showMsg('Password changed successfully. Please log in again.', 'success'); setPassForm({ current: '', newPass: '', confirm: '' }); }
+    if (passForm.newPass.length < 8) { showMsg('Password must be at least 8 characters.', 'error'); return; }
+    if (!/[A-Z]/.test(passForm.newPass) || !/[a-z]/.test(passForm.newPass) || !/[0-9]/.test(passForm.newPass) || !/[^A-Za-z0-9]/.test(passForm.newPass)) {
+      showMsg('Password must include upper & lower case, a number, and a special character.', 'error');
+      return;
+    }
+    const r = await changeMyPassword(passForm.current, passForm.newPass);
+    if (r.success) { showMsg(r.message || 'Password changed successfully.', 'success'); setPassForm({ current: '', newPass: '', confirm: '' }); }
     else { showMsg(r.error, 'error'); }
   };
 
@@ -219,8 +219,8 @@ const Profile = () => {
               <input className="form-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} disabled={!editing} />
             </div>
             <div className="form-group">
-              <label className="form-label"><FaIdCard /> ID Number <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>(masked — POPIA)</span></label>
-              <input className="form-input" value={form.idNumber || ''} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} disabled={!editing} />
+              <label className="form-label"><FaIdCard /> ID Number</label>
+              <input className="form-input" value={form.idNumber || ''} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} disabled={!editing} placeholder="13-digit SA ID number" />
             </div>
             {editing ? (
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -239,7 +239,7 @@ const Profile = () => {
             </div>
             <div className="form-group">
               <label className="form-label">New Password</label>
-              <input className="form-input" type="password" value={passForm.newPass} onChange={e => setPassForm(f => ({ ...f, newPass: e.target.value }))} placeholder="Min 6 characters" />
+              <input className="form-input" type="password" value={passForm.newPass} onChange={e => setPassForm(f => ({ ...f, newPass: e.target.value }))} placeholder="8+ chars, upper & lower, number, special" />
             </div>
             <div className="form-group">
               <label className="form-label">Confirm New Password</label>

@@ -10,5 +10,6 @@ router.get('/overview', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPER
 router.get('/ticket-trends', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.ticketTrends);
 router.get('/sla-compliance', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.slaCompliance);
 router.get('/priority-distribution', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.priorityDistribution);
+router.get('/dashboard', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.dashboard);
 
 export default router;

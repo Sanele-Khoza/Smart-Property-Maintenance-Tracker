@@ -90,7 +90,7 @@ async function autoAssign(ticketId, userId, userName, requireSpecialisation = tr
   }
 
   const category = ticket.ai_category || ticket.category || 'Other';
-  const providers = await pickProviders(ticket, { topN: 1, requireSpecialisation, category });
+  const providers = await pickProviders(ticket, { topN: 1, requireSpecialisation, category, priority: ticket.priority });
 
   if (providers.length === 0) {
     throw AppError.badRequest('No suitable providers available for auto-assignment');
@@ -187,7 +187,7 @@ async function dispatchEmergency(ticketId, userId, userName, opts = {}) {
   const category = ticket.ai_category || ticket.category || 'Other';
   const requireSpecialisation = opts.requireSpecialisation !== false;
   const qualified = await pickProviders(ticket, {
-    topN: 50, requireSpecialisation, category,
+    topN: 50, requireSpecialisation, category, priority: ticket.priority,
   });
 
   const eligible = qualified.filter(p =>
@@ -196,7 +196,7 @@ async function dispatchEmergency(ticketId, userId, userName, opts = {}) {
 
   if (eligible.length === 0) {
     const fallback = await pickProviders(ticket, {
-      topN: 10, requireSpecialisation: false, category,
+      topN: 10, requireSpecialisation: false, category, priority: ticket.priority,
     });
     const offDutyOk = fallback.filter(p => p.status !== 'OFF_DUTY');
     if (offDutyOk.length === 0) {
@@ -437,7 +437,7 @@ async function reassignAfterDecline(ticketId) {
 
     const category = ticket.ai_category || ticket.category || 'Other';
     const providers = await pickProviders(ticket, {
-      topN: 10, requireSpecialisation: true, category,
+      topN: 10, requireSpecialisation: true, category, priority: ticket.priority,
     });
 
     const prior = await query(

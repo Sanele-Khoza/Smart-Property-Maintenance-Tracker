@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { registerUser, resendVerificationEmail } from '../../data/authStore';
 import Alert from '../common/Alert';
+import { parseSaId, ageFromId } from '../../utils/saId';
 
 const ROLE_OPTIONS = [
   { value: '', label: '-- Select Role --' },
@@ -13,10 +14,11 @@ const SPECIALISATION_OPTIONS = ['Plumbing', 'Electrical', 'HVAC', 'Structural', 
 
 const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
   const [form, setForm] = useState({
-    name: '', surname: '', age: '', email: '', phone: '',
+    name: '', surname: '', email: '', phone: '',
     idNumber: '', password: '', confirmPassword: '', role: '',
     companyName: '', specialisations: [],
   });
+  const [idInfo, setIdInfo] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +29,12 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleIdChange = (e) => {
+    const value = e.target.value;
+    setForm({ ...form, idNumber: value });
+    setIdInfo(parseSaId(value));
   };
 
   const toggleSpecialisation = (spec) => {
@@ -67,6 +75,11 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       return;
     }
 
+    if (form.idNumber && !parseSaId(form.idNumber).valid) {
+      setError('Invalid South African ID number.');
+      return;
+    }
+
     if (!/^\d{10}$/.test(form.phone)) {
       setError('Phone number must be exactly 10 digits.');
       return;
@@ -82,7 +95,6 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
       const result = await registerUser({
         name: form.name,
         surname: form.surname,
-        age: form.age,
         email: form.email,
         phone: form.phone,
         idNumber: form.idNumber,
@@ -96,10 +108,11 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
         setRegistered(true);
         setRegisteredEmail(form.email);
         setForm({
-          name: '', surname: '', age: '', email: '', phone: '',
+          name: '', surname: '', email: '', phone: '',
           idNumber: '', password: '', confirmPassword: '', role: '',
           companyName: '', specialisations: [],
         });
+        setIdInfo(null);
       } else {
         setError(result.error);
       }
@@ -180,12 +193,16 @@ const RegisterPage = ({ onRegisterSuccess, onVerifyNavigate }) => {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="reg-age">Age</label>
-              <input className="form-input" type="number" name="age" id="reg-age" min="1" max="150" value={form.age} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="reg-idnumber">ID Number</label>
-              <input className="form-input" type="text" name="idNumber" id="reg-idnumber" value={form.idNumber} onChange={handleChange} required />
+              <label className="form-label" htmlFor="reg-idnumber">SA ID Number</label>
+              <input className="form-input" type="text" name="idNumber" id="reg-idnumber" maxLength="13" inputMode="numeric" pattern="[0-9]{13}" placeholder="e.g. 9712315012084" value={form.idNumber} onChange={handleIdChange} required />
+              {form.idNumber && idInfo && !idInfo.valid && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--red, #c0392b)', marginTop: 4 }}>{idInfo.reason}</div>
+              )}
+              {idInfo && idInfo.valid && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--teal)', marginTop: 4 }}>
+                  Age: {ageFromId(form.idNumber)} ({idInfo.gender === 'MALE' ? 'Male' : 'Female'}) — calculated from ID number
+                </div>
+              )}
             </div>
           </div>
           <div className="form-row">

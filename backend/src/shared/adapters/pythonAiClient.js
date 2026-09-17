@@ -67,7 +67,10 @@ async function classifyText(text) {
  * Score/rank providers using the Python model.
  * @param {Object} ticket      ticket row (uses ai_category || category)
  * @param {Array}  providers   candidate provider rows from DB
- * @param {Object} opts        { category, topN, requireSpecialisation, lat, lng }
+ * @param {Object} opts        { category, topN, requireSpecialisation, lat, lng, priority }
+ *
+ * When priority === 'EMERGENCY' the Python matcher shifts its weights so the
+ * nearest available specialist wins (proximity + free capacity dominate).
  *
  * Matches are returned in the same camelCase shape the Node scorer produces
  * (id/name/totalScore/autoAccept/...) so downstream assignment code is
@@ -102,6 +105,7 @@ async function autoAssign(providers, opts = {}) {
       ticket_lng: opts.lng ?? null,
       require_specialisation: opts.requireSpecialisation !== false,
       top_n: opts.topN || 1,
+      priority: opts.priority || null,
     });
     return {
       success: true,
@@ -157,6 +161,7 @@ async function scoreProvidersWithPython(ticket, opts = {}) {
     const result = await autoAssign(providers, {
       category, topN, requireSpecialisation,
       lat: ticketLat, lng: ticketLng,
+      priority: ticket.priority,
     });
     return result.data?.matches || [];
   } catch (err) {

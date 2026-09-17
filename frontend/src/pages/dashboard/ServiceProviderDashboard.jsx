@@ -269,8 +269,8 @@ const ServiceProviderDashboard = ({ activePage }) => {
         return <WorkHistory />;
       case 'My Performance':
         return <Reports />;
-      case 'My Ratings':
-        return <RatingsList title="My Ratings" subtitle="Every individual rating and comment you have received." />;
+case 'My Ratings':
+        return <RatingsList title="My Ratings" subtitle="The ratings and comments you have received." />;
       default:
         return <Overview />;
     }

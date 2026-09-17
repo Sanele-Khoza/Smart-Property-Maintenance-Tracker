@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPMT Assistant</title>
+<style>
+  :root {
+    --bg: #0d1b1e;
+    --surface: #12262b;
+    --surface2: #1a3036;
+    --border: #2a454c;
+    --teal: #26c6b4;
+    --teal-dark: #0e8c80;
+    --amber: #f6b93b;
+    --ink: #e6f4f2;
+    --dim: #9fb8b4;
+    --danger: #ef5350;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 20% -10%, #15343b 0%, var(--bg) 60%);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px;
+  }
+  .app {
+    width: 100%;
+    max-width: 720px;
+    height: min(86vh, 860px);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  header {
+    padding: 14px 18px;
+    background: linear-gradient(135deg, var(--surface2), var(--surface));
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    display: grid; place-items: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .title { font-weight: 600; letter-spacing: .3px; }
+  .subtitle { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .status {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--teal);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .status::before {
+    content: "";
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+  }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg {
+    max-width: 82%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    animation: rise .18s ease;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--teal-dark), #0a6f66);
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg .meta {
+    display: block;
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 6px;
+    font-family: var(--mono);
+  }
+  .msg .conf { color: var(--teal); }
+  .suggest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 18px 12px;
+  }
+  .chip {
+    font-size: 12px;
+    color: var(--teal);
+    border: 1px solid var(--teal-dark);
+    background: rgba(38,198,180,.08);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .chip:hover { background: rgba(38,198,180,.2); }
+  .inputbar {
+    display: flex;
+    gap: 10px;
+    padding: 14px 18px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    padding: 11px 14px;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+  }
+  #input:focus { border-color: var(--teal); }
+  #send {
+    border: none;
+    border-radius: 10px;
+    padding: 0 20px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: #062a26;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #send:disabled { opacity: .5; cursor: not-allowed; }
+  .typing { color: var(--dim); font-size: 12px; padding: 0 4px; display: flex; align-items: center; gap: 8px; }
+  .typing .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .scrollbar::-webkit-scrollbar { width: 8px; }
+  .scrollbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">🔧</div>
+      <div>
+        <div class="title">SPMT Assistant</div>
+        <div class="subtitle">Tenant help — Smart Property Maintenance Tracker</div>
+      </div>
+      <div class="status" id="status">online</div>
+    </header>
+
+    <div id="messages" class="scrollbar"></div>
+
+    <div class="suggest" id="suggest"></div>
+
+    <div class="inputbar">
+      <input id="input" type="text" placeholder="Ask about reporting an issue, tracking a ticket, accounts..." autocomplete="off">
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+<script>
+  const SUGGESTIONS = [
+    "How do I create a ticket?",
+    "What does each ticket status mean?",
+    "Why can't I log in after registering?",
+    "How is an emergency detected?",
+    "How do I rate a service provider?",
+    "Is my personal information safe?",
+  ];
+
+  const messages = document.getElementById('messages');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const suggest = document.getElementById('suggest');
+  const status = document.getElementById('status');
+
+  function addMsg(text, who, meta) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.textContent = text;
+    if (meta) {
+      const span = document.createElement('span');
+      span.className = 'meta';
+      span.innerHTML = meta;
+      div.appendChild(span);
+    }
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return div;
+  }
+
+  function renderSuggestions(topics) {
+    suggest.innerHTML = '';
+    (topics || SUGGESTIONS).slice(0, 6).forEach(t => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.textContent = t;
+      chip.onclick = () => ask(t);
+      suggest.appendChild(chip);
+    });
+  }
+
+  async function ask(text) {
+    if (!text.trim()) return;
+    addMsg(text, 'user');
+    input.value = '';
+    renderSuggestions([]);
+    const typingEl = document.createElement('div');
+    typingEl.className = 'msg bot typing';
+    typingEl.innerHTML = '<div class="spinner"></div><span>Retrieving info...</span>';
+    messages.appendChild(typingEl);
+    messages.scrollTop = messages.scrollHeight;
+    status.textContent = 'thinking…';
+    status.style.color = 'var(--amber)';
+    sendBtn.disabled = true;
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        const d = json.data;
+        let meta = '';
+        if (d.source && d.source !== 'greeting') {
+          meta += 'Source: ' + d.source + ' · ';
+        }
+        if (d.matched_question) {
+          meta += 'Matched: “' + d.matched_question + '” · ';
+        }
+        if (typeof d.confidence === 'number' && d.confidence > 0) {
+          meta += '<span class="conf">' + Math.round(d.confidence * 100) + '% match</span>';
+        }
+        typingEl.remove();
+        addMsg(d.answer, 'bot', meta || null);
+        renderSuggestions(d.topics);
+      } else {
+        typingEl.remove();
+        addMsg('Sorry, I hit an error. Please try again.', 'bot');
+      }
+    } catch (err) {
+      typingEl.remove();
+      addMsg('Could not reach the chatbot server. Is `python server.py` running?', 'bot');
+    } finally {
+      status.textContent = 'online';
+      status.style.color = 'var(--teal)';
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.onclick = () => ask(input.value);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') ask(input.value); });
+
+  addMsg(
+    "Hello! I'm the SPMT assistant.\nAsk me anything about reporting a maintenance issue, tracking your ticket, or using the app.",
+    'bot'
+  );
+  renderSuggestions(SUGGESTIONS);
+  input.focus();
+</script>
+</body>
+</html>

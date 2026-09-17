@@ -343,6 +343,7 @@ async function pythonClassifyAndAssign(ticketId, { topN = 1 } = {}) {
 
   const assignResult = await autoAssign(providers.rows, {
     category, topN, lat, lng,
+    priority: ticket.priority,
   });
 
   return {

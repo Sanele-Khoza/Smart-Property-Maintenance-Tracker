@@ -331,8 +331,8 @@ const PropertyManagerDashboard = ({ activePage }) => {
         return <Scheduling />;
       case 'Reports':
         return <Reports />;
-      case 'Ratings':
-        return <RatingsList title="Ratings" subtitle="Individual ratings and comments for your managed properties." />;
+case 'Ratings':
+        return <RatingsList title="All Ratings" subtitle="The ratings and comments across the system." />;
       default:
         return <Overview />;
     }

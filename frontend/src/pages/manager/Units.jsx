@@ -7,6 +7,10 @@ import Alert from '../../components/common/Alert';
 const Units = () => {
   const session = getSession();
   const pmName = session ? `${session.name} ${session.surname}` : '';
+  // Unit number/floor are free-text labels (e.g. "G", "B1", "PH2") so they
+  // can't just be forced numeric — but a bare negative number like "-5" is
+  // never a real label. This only rejects that specific shape.
+  const isNegativeNumber = (val) => /^-\d+(\.\d+)?$/.test(String(val || '').trim());
   const [allUnits] = useState(getUnits);
   const [allProperties] = useState(getProperties);
   const [allTickets] = useState(getTickets());
@@ -53,6 +57,8 @@ const Units = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.propertyId || !createForm.unitNumber.trim()) { setCreateError('Property and unit number required.'); return; }
+    if (isNegativeNumber(createForm.unitNumber)) { setCreateError('Unit number cannot be a negative number.'); return; }
+    if (isNegativeNumber(createForm.floor)) { setCreateError('Floor cannot be a negative number.'); return; }
     const r = await addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
     if (r.success) { showAlert(`Unit ${r.data.unitNumber} created.`, 'success'); setShowCreate(false); refresh(); } else setCreateError(r.error);
   };
@@ -60,6 +66,8 @@ const Units = () => {
   const handleEdit = async (e) => {
     e.preventDefault();
     if (!editForm.unitNumber.trim()) { setEditError('Unit number required.'); return; }
+    if (isNegativeNumber(editForm.unitNumber)) { setEditError('Unit number cannot be a negative number.'); return; }
+    if (isNegativeNumber(editForm.floor)) { setEditError('Floor cannot be a negative number.'); return; }
     const r = await updateUnit(editTarget.unitId, editForm);
     if (r.success) { showAlert('Unit updated.', 'success'); setEditTarget(null); refresh(); } else setEditError(r.error);
   };

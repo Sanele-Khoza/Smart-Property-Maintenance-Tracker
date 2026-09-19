@@ -42,6 +42,7 @@ function buildUserPayload(user) {
     email: user.email,
     role: user.role,
     phone: user.phone,
+    idNumber: user.id_number,
     status: user.status,
     approved: user.approved,
     idNumber: user.id_number,
@@ -106,7 +107,6 @@ async function register({ name, surname, email, password, role, phone, idNumber,
       console.log(`  Tenant: ${email}`);
       console.log(`══════════════════════════════════════════════\n`);
     });
-
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 
   return {

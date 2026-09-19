@@ -35,7 +35,9 @@ async function run(query) {
     { name: '029_auto_assign_seconds', file: '029_auto_assign_seconds.js' },
     { name: '030_ai_priority', file: '030_ai_priority.js' },
     { name: '031_br001_occupant_unique', file: '031_br001_occupant_unique.js' },
+    { name: '032_units_unique_constraint', file: '032_units_unique_constraint.js' },
   ];
+  
 
   await query(`
     CREATE TABLE IF NOT EXISTS _migrations (

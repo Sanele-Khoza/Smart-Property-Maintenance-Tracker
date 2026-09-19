@@ -101,7 +101,7 @@ const Profile = () => {
     }
   };
 
-  const handlePasswordChange = async () => {
+    const handlePasswordChange = async () => {
     if (!passForm.current || !passForm.newPass || !passForm.confirm) { showMsg('All password fields are required.', 'error'); return; }
     if (passForm.newPass !== passForm.confirm) { showMsg('New passwords do not match.', 'error'); return; }
     if (passForm.newPass.length < 8) { showMsg('Password must be at least 8 characters.', 'error'); return; }

@@ -18,7 +18,9 @@ const Profile = () => {
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
 
-  const handleSave = async () => {
+   const handleSave = async () => {
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { showMsg('Please enter a valid email address.', 'error'); return; }
+    if (!/^\d{10}$/.test(form.phone.trim())) { showMsg('Phone number must be exactly 10 digits.', 'error'); return; }
     if (form.idNumber && !/^\d{13}$/.test(form.idNumber)) {
       showMsg('ID number must be exactly 13 digits.', 'error');
       return;

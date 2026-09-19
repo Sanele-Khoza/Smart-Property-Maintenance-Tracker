@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamationTriangle, FaCheckCircle, FaClock, FaBrain } from 'react-icons/fa';
+import React, { useState, useMemo, useEffect } from 'react';
+import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaWrench, FaExclamationTriangle, FaCheckCircle, FaClock, FaBrain, FaUserPlus, FaCheck } from 'react-icons/fa';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Property from '../../components/Property';
 import Assignment from '../../components/Assignment';
 import { getStats, getProperties, getUnits } from '../../data/store';
 import { getSlaStatus } from '../../data/slaEngine';
-import { getSession } from '../../data/authStore';
+import { getSession, getUsers, approveManager, refreshUsers } from '../../data/authStore';
 import StatusBadge from '../../components/common/StatusBadge';
+import Alert from '../../components/common/Alert';
 import useTickets from '../../hooks/useTickets';
 import Overview from '../manager/Overview';
 import Properties from '../manager/Properties';
@@ -27,7 +28,31 @@ const PropertyManagerDashboard = ({ activePage }) => {
   const [allUnits, setAllUnits] = useState(getUnits());
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [allUsers, setAllUsers] = useState(() => getUsers());
+  const [approvalAlert, setApprovalAlert] = useState({ msg: '', type: '' });
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncUsers = () => refreshUsers().then(() => { if (!cancelled) setAllUsers(getUsers()); });
+    syncUsers();
+    const onUsersUpdated = () => { if (!cancelled) setAllUsers(getUsers()); };
+    window.addEventListener('spmt:users-updated', onUsersUpdated);
+    return () => { cancelled = true; window.removeEventListener('spmt:users-updated', onUsersUpdated); };
+  }, []);
+
+  const showApprovalAlert = (msg, type) => { setApprovalAlert({ msg, type }); setTimeout(() => setApprovalAlert({ msg: '', type: '' }), 5000); };
+
+  const pendingApprovals = allUsers.filter(u =>
+    (u.role === 'TENANT' || u.role === 'SERVICE_PROVIDER') &&
+    String(u.status).toUpperCase() === 'PENDING'
+  );
+
+  const handleApprove = async (userId) => {
+    const r = await approveManager(userId);
+    if (r.success) { showApprovalAlert('Account approved.', 'success'); refresh(); }
+    else showApprovalAlert(r.error, 'error');
+  };
 
   const properties = useMemo(() => allProperties.filter(p => p.managerName === pmName), [allProperties, pmName]);
   const propNames = useMemo(() => new Set(properties.map(p => p.name)), [properties]);
@@ -61,13 +86,30 @@ const PropertyManagerDashboard = ({ activePage }) => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'Overview':
+            case 'Overview':
         return (
           <>
             <div className="welcome-banner">
               <h2>Property Manager Dashboard</h2>
               <p>Manage properties, assign maintenance requests, and monitor ticket progress.</p>
             </div>
+            <Alert msg={approvalAlert.msg} type={approvalAlert.type} />
+            {pendingApprovals.length > 0 && (
+              <div className="card" style={{ borderLeft: '3px solid var(--amber)' }}>
+                <div className="card-title"><span><FaUserPlus /> Pending Approvals <span className="req-ref">REQ-004</span></span><span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600 }}>{pendingApprovals.length} pending</span></div>
+                <table className="data-table" style={{ fontSize: 12 }}>
+                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                  <tbody>{pendingApprovals.map(u => (
+                    <tr key={u.id}>
+                      <td>{u.name} {u.surname}</td>
+                      <td>{u.email}</td>
+                      <td><span className="badge badge-info">{u.role}</span></td>
+                      <td><button className="btn btn-teal btn-sm" onClick={() => handleApprove(u.id)}><FaCheck /> Approve</button></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            )}
             <div className="stat-grid" style={{ marginBottom: 20 }}>
               <div className="stat-card"><div className="stat-value">{properties.length}</div><div className="stat-label">Properties</div></div>
               <div className="stat-card"><div className="stat-value">{units.length}</div><div className="stat-label">Units</div></div>

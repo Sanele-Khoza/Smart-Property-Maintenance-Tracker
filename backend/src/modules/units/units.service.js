@@ -26,6 +26,13 @@ async function getById(id) {
 }
 
 async function create(data) {
+  const propertyId = data.property_id || data.propertyId;
+  const unitNumber = data.unit_number || data.unitNumber;
+  const existing = await repo.findByPropertyAndNumber(propertyId, unitNumber);
+  if (existing) {
+    throw AppError.conflict(`Unit "${unitNumber}" already exists for this property`);
+  }
+
   const unit = await repo.create(data);
   if (unit.property_id) {
     (async () => {
@@ -54,6 +61,14 @@ async function update(id, data) {
   }
   if (data.status === 'Occupied') {
     throw AppError.badRequest('Cannot set status to Occupied directly. Use the assign endpoint.');
+  }
+
+  const newUnitNumber = data.unit_number || data.unitNumber;
+  if (newUnitNumber) {
+    const duplicate = await repo.findByPropertyAndNumber(existing.property_id, newUnitNumber, id);
+    if (duplicate) {
+      throw AppError.conflict(`Unit "${newUnitNumber}" already exists for this property`);
+    }
   }
 
   const unit = await repo.update(id, data);

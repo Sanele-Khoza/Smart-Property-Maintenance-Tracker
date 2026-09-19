@@ -13,6 +13,18 @@ const findById = async (id) => {
   return result.rows[0] || null;
 };
 
+const findByPropertyAndNumber = async (propertyId, unitNumber, excludeId) => {
+  const params = [propertyId, unitNumber];
+  let sql = `SELECT * FROM units WHERE property_id = $1 AND LOWER(TRIM(unit_number)) = LOWER(TRIM($2))`;
+  if (excludeId) {
+    params.push(excludeId);
+    sql += ` AND id != $${params.length}`;
+  }
+  sql += ' LIMIT 1';
+  const result = await query(sql, params);
+  return result.rows[0] || null;
+};
+
 const findAll = async (filters = {}) => {
   const conditions = [];
   const params = [];
@@ -131,4 +143,4 @@ const findTenantIdByName = async (name, surname) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName };
+export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName, findByPropertyAndNumber };

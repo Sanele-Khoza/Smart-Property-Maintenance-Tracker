@@ -57,6 +57,7 @@ function normalizeUser(u) {
     email: u.email,
     role: u.role,
     phone: u.phone || '',
+    idNumber: u.id_number || u.idNumber || '',
     status,
     account_status: status,
     approved: u.approved !== undefined ? u.approved : true,

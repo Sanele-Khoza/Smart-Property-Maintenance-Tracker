@@ -1943,6 +1943,21 @@ textarea:focus-visible {
   }
 }
 
+@keyframes rgbBorderGlow {
+  0%, 100% {
+    border-color: #39ff88;
+    box-shadow: 0 0 8px #39ff88, 0 0 14px rgba(57, 255, 136, .65);
+  }
+  33% {
+    border-color: #3a8bff;
+    box-shadow: 0 0 8px #3a8bff, 0 0 14px rgba(58, 139, 255, .65);
+  }
+  66% {
+    border-color: #ff3355;
+    box-shadow: 0 0 8px #ff3355, 0 0 14px rgba(255, 51, 85, .65);
+  }
+}
+
 .robot-tagline {
   font-size: 10px;
   color: var(--text-dim);
@@ -1972,14 +1987,12 @@ textarea:focus-visible {
   justify-content: center;
   font-size: 24px;
   color: #fff;
-  background: linear-gradient(135deg, var(--teal), #1f7a63);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
-  transition: transform .2s ease, box-shadow .2s ease;
+  background: transparent;
+  transition: transform .2s ease;
 }
 
 .ai-fab:hover {
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 8px 26px rgba(45, 183, 145, .4);
 }
 
 .ai-fab::after {
@@ -1988,7 +2001,7 @@ textarea:focus-visible {
   inset: -4px;
   border-radius: 50%;
   border: 2px solid transparent;
-  animation: rgbGlow 2.4s linear infinite;
+  animation: rgbBorderGlow 2.4s linear infinite;
   z-index: -1;
   opacity: .8;
 }

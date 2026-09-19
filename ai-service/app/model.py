@@ -1,4 +1,4 @@
-"""Category classification model built with scikit-learn.
+""" testing commit Category classification model built with scikit-learn.
 
 Pipeline: TfidfVectorizer -> LinearSVC (works well for short, multi-class
 text and is fast / low-memory). A model is trained offline via `train.py`

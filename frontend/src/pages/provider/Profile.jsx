@@ -41,12 +41,18 @@ const Profile = () => {
     }
   };
 
-  useEffect(() => {
+    useEffect(() => {
     if (session) {
       setUser(session);
       setForm({ name: session.name || '', surname: session.surname || '', email: session.email || '', phone: session.phone || '', idNumber: session.idNumber || '' });
     }
     refreshTech();
+
+    const intervalId = setInterval(() => {
+      refreshTech();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 4000); };
@@ -121,7 +127,8 @@ const Profile = () => {
     else { showMsg(r.error, 'error'); }
   };
 
-  const formatCoords = (lat, lng) => {
+  const formatCoords = (lat, lng, name) => {
+    if (name) return name;
     if (lat == null || lng == null) return '—';
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   };
@@ -183,7 +190,7 @@ const Profile = () => {
           <div className="form-group">
             <label className="form-label"><FaMapMarkerAlt /> GPS Location</label>
             <div style={{ fontFamily: 'monospace', fontSize: 12, padding: '6px 8px', background: 'var(--surface)', borderRadius: 4 }}>
-              {tech ? formatCoords(tech.gpsLatitude, tech.gpsLongitude) : '—'}
+              {tech ? formatCoords(tech.gpsLatitude, tech.gpsLongitude, tech.locationName) : '—'}
               {tech?.lastLocationUpdate && <span style={{ color: 'var(--text-dim)', marginLeft: 8, fontFamily: 'var(--font-sans)', fontSize: 10 }}>(updated {formatTimeAgo(tech.lastLocationUpdate)})</span>}
             </div>
           </div>

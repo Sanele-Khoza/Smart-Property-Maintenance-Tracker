@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaArrowLeft } from 'react-icons/fa';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getSession } from '../../data/authStore';
 import { acceptJob, startJob, submitJobCompletion } from '../../data/store';
+import { getMyTechnician, updateMyTechnicianLocation } from '../../data/technicianStore';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
 import useTickets from '../../hooks/useTickets';
@@ -18,6 +19,8 @@ import WorkHistory from '../provider/WorkHistory';
 import Reports from '../provider/Reports';
 import RatingsList from '../../components/ratings/RatingsList';
 
+const LOCATION_UPDATE_INTERVAL_MS = 60000;
+
 const ServiceProviderDashboard = ({ activePage }) => {
   const [tickets, refresh] = useTickets();
   const [selectedImage, setSelectedImage] = useState(null);
@@ -30,6 +33,58 @@ const ServiceProviderDashboard = ({ activePage }) => {
   const isMine = (t) => t.assignedTo === providerName || (session && t.assignedToId === session.id);
   const myTickets = tickets.filter(isMine);
   const openTickets = tickets.filter(t => t.status === 'New' && !isMine(t));
+
+  // Periodically capture and report this provider's GPS location while
+  // they're active in the dashboard, so managers/tenants can see their
+  // live position. Fails silently if geolocation is unavailable/denied.
+  useEffect(() => {
+    let techId = null;
+    let intervalId = null;
+    let cancelled = false;
+
+    const reverseGeocode = async (lat, lng) => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14`,
+          { headers: { 'Accept-Language': 'en' } }
+        );
+        const data = await res.json();
+        return data?.display_name || null;
+      } catch {
+        return null;
+      }
+    };
+
+    const sendLocation = () => {
+      if (!navigator.geolocation || !techId) return;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const placeName = await reverseGeocode(latitude, longitude);
+          updateMyTechnicianLocation(techId, latitude, longitude, placeName);
+        },
+        (err) => {
+          console.warn('Location tracking unavailable:', err.message);
+        },
+        { enableHighAccuracy: false, timeout: 25000, maximumAge: 30000 }
+      );
+    };
+
+    const init = async () => {
+      const r = await getMyTechnician();
+      if (cancelled || !r.success || !r.data?.id) return;
+      techId = r.data.id;
+      sendLocation();
+      intervalId = setInterval(sendLocation, LOCATION_UPDATE_INTERVAL_MS);
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
 
   const handleWorkflow = async (ticketId, promise, newStatus) => {
     const result = await promise;

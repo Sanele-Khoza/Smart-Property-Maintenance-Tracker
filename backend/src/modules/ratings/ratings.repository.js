@@ -121,6 +121,7 @@ const listRatings = async ({ userId, role }) => {
       `t.assigned_to = (
          SELECT sp.id FROM service_providers sp
          WHERE sp.email = (SELECT u.email FROM users u WHERE u.id = $${idx++})
+         LIMIT 1
        )`
     );
     params.push(userId);

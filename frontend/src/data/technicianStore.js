@@ -10,6 +10,9 @@ const mapTechnician = (t) => {
   if (Array.isArray(loc)) {
     lat = loc[0];
     lng = loc[1];
+  } else if (loc && typeof loc === 'object' && 'x' in loc && 'y' in loc) {
+    lat = loc.x;
+    lng = loc.y;
   } else if (typeof loc === 'string') {
     const m = loc.match(/\((-?[\d.]+),(-?[\d.]+)\)/);
     if (m) {
@@ -39,8 +42,9 @@ const mapTechnician = (t) => {
     lastLocationUpdate: t.last_location_update || null,
     gpsLatitude: lat,
     gpsLongitude: lng,
+    locationName: t.location_name || null,
   };
-};
+  };
 
 export const syncTechnicians = async () => {
   try {
@@ -121,6 +125,17 @@ export const updateMyTechnician = async (updates) => {
       return { success: true, data: mapTechnician(updated) };
     }
     return { success: false, error: result.error || 'Failed to update provider details' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+export const updateMyTechnicianLocation = async (techId, latitude, longitude, locationName) => {
+  try {
+    const result = await api(`/technicians/${techId}/location`, {
+      method: 'PUT',
+      body: { latitude, longitude, locationName },
+    });
+    return { success: !!result.success, error: result.error };
   } catch (err) {
     return { success: false, error: err.message };
   }

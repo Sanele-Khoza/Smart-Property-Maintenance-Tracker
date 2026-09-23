@@ -1,213 +1,155 @@
-import React, { useState } from 'react';
-import { FaBell, FaExclamationTriangle, FaCheck, FaRedo, FaTimes, FaEnvelope, FaMobileAlt, FaSms, FaClock, FaShieldAlt } from 'react-icons/fa';
-import { getNotifications, updateNotificationStatus } from '../../data/store';
-import Alert from '../../components/common/Alert';
+import React, { useState, useEffect } from 'react';
+import { FaBell, FaEnvelope, FaMobileAlt, FaDesktop, FaCheckCircle, FaExclamationTriangle, FaClock, FaTimesCircle, FaFilter, FaBolt, FaCheckDouble } from 'react-icons/fa';
+import { getSession } from '../../data/authStore';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationPreferences, updateNotificationPreference, refreshNotifications } from '../../data/store';
 
-const STATUS_STYLES = {
-  Pending:    { bg: 'rgba(240,180,50,0.15)', color: '#f0b432' },
-  Sent:       { bg: 'rgba(50,120,220,0.15)', color: '#3278dc' },
-  Delivered:  { bg: 'rgba(45,183,145,0.15)', color: '#2db791' },
-  Failed:     { bg: 'rgba(220,60,60,0.15)',  color: '#dc3c3c' },
+const CHANNEL_ICONS = { email: <FaEnvelope />, push: <FaMobileAlt />, sms: <FaDesktop /> };
+const CHANNEL_LABELS = { in_app: 'In-App', email: 'Email', push: 'Push' };
+const STATUS_CONFIG = {
+  Sent: { color: 'var(--teal)', icon: FaCheckCircle },
+  Delivered: { color: 'var(--teal)', icon: FaCheckCircle },
+  Pending: { color: 'var(--amber)', icon: FaClock },
+  Failed: { color: 'var(--danger)', icon: FaTimesCircle },
 };
 
-const TYPE_ICONS = {
-  email: FaEnvelope,
-  push: FaMobileAlt,
-  sms: FaSms,
-};
-
-const RATE_LIMIT = 10; // 10 push/hour/user for non-emergency
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'unread', label: 'Unread' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'sent', label: 'Sent' },
+  { key: 'delivered', label: 'Delivered' },
+  { key: 'failed', label: 'Failed' },
+];
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState(getNotifications);
-  const [alert, setAlert] = useState({ msg: '', type: '' });
-  const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [emergencyFilter, setEmergencyFilter] = useState('');
+  const session = getSession();
+  const providerEmail = session ? session.email : '';
+  const providerName = session ? `${session.name} ${session.surname}` : '';
+  const [allNotifs, setAllNotifs] = useState(getNotifications());
+  const [filter, setFilter] = useState('all');
+  const [prefs, setPrefs] = useState([]);
 
-  const refresh = () => setNotifications(getNotifications());
+ const refresh = () => refreshNotifications().then(() => setAllNotifs(getNotifications()));
 
-  const showAlert = (msg, type) => {
-    setAlert({ msg, type });
-    setTimeout(() => setAlert({ msg: '', type: '' }), 5000);
+useEffect(() => {
+  refresh();
+  getNotificationPreferences().then(r => { if (r.success) setPrefs(r.data); });
+}, []);
+
+  const togglePref = async (channel, currentEnabled) => {
+    const r = await updateNotificationPreference(channel, !currentEnabled);
+    if (r.success) setPrefs(r.data);
+  };
+const myNotifs = allNotifs;
+
+  const filtered = myNotifs.filter(n => {
+    if (filter === 'all') return true;
+    if (filter === 'unread') return !n.read;
+    return n.deliveryStatus?.toLowerCase() === filter;
+  });
+
+  const formatTime = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return d.toLocaleDateString();
   };
 
-  const filtered = notifications.filter(n => {
-    if (statusFilter && n.deliveryStatus !== statusFilter) return false;
-    if (typeFilter && n.type !== typeFilter) return false;
-    if (emergencyFilter === 'emergency' && !n.isEmergency) return false;
-    if (emergencyFilter === 'non-emergency' && n.isEmergency) return false;
-    return true;
-  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const now = Date.now();
-  const oneHourAgo = new Date(now - 3600000).toISOString();
-  const pushLastHour = notifications.filter(n => n.type === 'push' && n.createdAt >= oneHourAgo).length;
-
-  const pendingCount = filtered.filter(n => n.deliveryStatus === 'Pending').length;
-  const failedCount = filtered.filter(n => n.deliveryStatus === 'Failed').length;
-  const emergencyCount = filtered.filter(n => n.isEmergency).length;
-
-  const handleRetry = async (notif) => {
-    const newRetry = (notif.retryCount || 0) + 1;
-    const r = await updateNotificationStatus(notif.id, 'Pending', newRetry);
-    if (r.success) {
-      showAlert(`Retry ${notif.id} (attempt ${newRetry})`, 'success');
-      refresh();
-    }
+  const stats = {
+    total: myNotifs.length,
+    unread: myNotifs.filter(n => !n.read).length,
+    emergency: myNotifs.filter(n => n.isEmergency).length,
   };
 
-  const handleDismiss = async (notif) => {
-    const r = await updateNotificationStatus(notif.id, 'Sent', notif.retryCount);
-    if (r.success) {
-      showAlert(`Dismissed ${notif.id}`, 'success');
-      refresh();
-    }
+  const handleMarkRead = async (id) => {
+    await markNotificationRead(id);
+    refresh();
   };
 
-  const deliveryStatuses = ['Pending', 'Sent', 'Delivered', 'Failed'];
-  const uniqueTypes = [...new Set(notifications.map(n => n.type))];
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
+    refresh();
+  };
 
   return (
-    <div>
+    <>
+      <div className="welcome-banner"><h2><FaBell /> Notifications</h2><p>Job assignments, emergency alerts, and system messages. <span className="req-ref">MOD-008 / REQ-043 / NFR-P03</span></p></div>
+      <div className="stat-grid" style={{ marginBottom: 16 }}>
+        <div className="stat-card"><div className="stat-value">{stats.total}</div><div className="stat-label">Total</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: stats.unread > 0 ? 'var(--amber)' : undefined }}>{stats.unread}</div><div className="stat-label">Unread</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: stats.emergency > 0 ? 'var(--danger)' : undefined }}>{stats.emergency}</div><div className="stat-label"><FaBolt /> Emergency</div></div>
+      </div>
+
       <div className="card">
-        <div className="card-title">
-          <span><FaBell /> Notifications <span className="req-ref">MOD-008</span></span>
-        </div>
-        <Alert msg={alert.msg} type={alert.type} />
-        <div className="stat-grid">
-          <div className="stat-card">
-            <div className="stat-value"><FaBell /> {notifications.length}</div>
-            <div className="stat-label">Total Notifications</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: pendingCount > 0 ? 'var(--amber)' : 'var(--text)' }}>
-              <FaClock /> {pendingCount}
-            </div>
-            <div className="stat-label">Pending</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: failedCount > 0 ? 'var(--danger)' : 'var(--text)' }}>
-              <FaExclamationTriangle /> {failedCount}
-            </div>
-            <div className="stat-label">Failed</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: emergencyCount > 0 ? 'var(--danger)' : 'var(--text)' }}>
-              <FaShieldAlt /> {emergencyCount}
-            </div>
-            <div className="stat-label">Emergency (TTL=0)</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 6, backgroundColor: 'rgba(0,188,212,0.06)', border: '1px solid rgba(0,188,212,0.15)', fontSize: 11, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span><FaClock style={{ marginRight: 4 }} /> Push rate: <strong>{pushLastHour}/{RATE_LIMIT}</strong> pushes in the last hour (10 push/hour/user limit for non-emergency)</span>
-          {pushLastHour >= RATE_LIMIT && <span className="badge badge-warning" style={{ fontSize: 9 }}>RATE LIMITED</span>}
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-dim)' }}>
-            Emergency notifications: TTL=0, no queuing, immediate SysAdmin alert on failure
-          </span>
+        <div className="card-title"><FaFilter style={{ marginRight: 6 }} />Notification Preferences</div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {prefs.map(p => (
+            <label key={p.channel} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={p.enabled} onChange={() => togglePref(p.channel, p.enabled)} />
+              {CHANNEL_LABELS[p.channel] || p.channel}
+            </label>
+          ))}
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">
-          <span><FaBell /> Notification Log</span>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <select className="form-select" style={{ width: 'auto', minWidth: 90, fontSize: 11, padding: '3px 6px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Statuses</option>
-              {deliveryStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select className="form-select" style={{ width: 'auto', minWidth: 80, fontSize: 11, padding: '3px 6px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-              <option value="">All Types</option>
-              {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <select className="form-select" style={{ width: 'auto', minWidth: 110, fontSize: 11, padding: '3px 6px' }} value={emergencyFilter} onChange={e => setEmergencyFilter(e.target.value)}>
-              <option value="">All Notifications</option>
-              <option value="emergency">Emergency Only</option>
-              <option value="non-emergency">Non-Emergency</option>
-            </select>
+        <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <span><FaBell /> Notification History ({filtered.length})</span>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {FILTERS.map(f => (
+              <button key={f.key} className={`btn btn-sm ${filter === f.key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilter(f.key)}>
+                {f.icon && <f.icon style={{ marginRight: 2 }} />}{f.label}
+              </button>
+            ))}
+            {stats.unread > 0 && (
+              <button className="btn btn-sm btn-secondary" onClick={handleMarkAllRead}>
+                <FaCheckDouble style={{ marginRight: 2 }} /> Mark all read
+              </button>
+            )}
           </div>
         </div>
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Recipient</th>
-                <th>Type</th>
-                <th>Message</th>
-                <th>Status</th>
-                <th>Retry</th>
-                <th>Emergency</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan="9" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No notifications match the current filter.</td></tr>
-              ) : (
-                filtered.map(n => {
-                  const st = STATUS_STYLES[n.deliveryStatus] || {};
-                  const TypeIcon = TYPE_ICONS[n.type] || FaEnvelope;
-                  return (
-                    <tr key={n.id} style={n.isEmergency ? { borderLeft: '3px solid var(--danger)' } : {}}>
-                      <td className="cell-mono">{n.id}</td>
-                      <td style={{ fontSize: 11 }}>{n.recipient}</td>
-                      <td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-                          <TypeIcon style={{ fontSize: 10, color: 'var(--text-dim)' }} /> {n.type}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 11, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={n.message}>
-                        {n.message}
-                      </td>
-                      <td>
-                        <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600, backgroundColor: st.bg || 'rgba(100,100,100,0.1)', color: st.color || 'var(--text)' }}>
-                          {n.deliveryStatus}
-                        </span>
-                      </td>
-                      <td className="cell-mono" style={{ fontSize: 11 }}>{n.retryCount || 0}</td>
-                      <td>
-                        {n.isEmergency ? (
-                          <span className="badge badge-danger" style={{ fontSize: 8, cursor: 'help' }} title="TTL=0, no queuing, immediate SysAdmin alert if delivery fails">
-                            <FaShieldAlt style={{ marginRight: 2 }} /> EMERGENCY
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{new Date(n.createdAt).toLocaleString()}</td>
-                      <td>
-                        <div className="action-cell">
-                          {n.deliveryStatus === 'Failed' && (
-                            <>
-                              <button className="btn btn-teal btn-sm" onClick={() => handleRetry(n)} title={`Retry (attempt ${(n.retryCount || 0) + 1})`} style={{ fontSize: 9, padding: '2px 5px' }}>
-                                <FaRedo /> Retry
-                              </button>
-                              <button className="btn btn-secondary btn-sm" onClick={() => handleDismiss(n)} title="Dismiss" style={{ fontSize: 9, padding: '2px 5px' }}>
-                                <FaCheck /> Dismiss
-                              </button>
-                            </>
-                          )}
-                          {n.deliveryStatus === 'Pending' && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleDismiss(n)} title="Mark as sent" style={{ fontSize: 9, padding: '2px 5px' }}>
-                              <FaCheck /> Acknowledge
-                            </button>
-                          )}
-                          {!['Failed', 'Pending'].includes(n.deliveryStatus) && (
-                            <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>—</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {filtered.length === 0 ? (
+          <div className="empty-state"><div className="empty-text">No notifications to display.</div></div>
+        ) : (
+          <div style={{ maxHeight: 500, overflow: 'auto' }}>
+            {filtered.map(n => {
+              const StatusIcon = STATUS_CONFIG[n.deliveryStatus]?.icon || FaClock;
+              const statusColor = STATUS_CONFIG[n.deliveryStatus]?.color || 'var(--text-dim)';
+              return (
+                <div key={n.id} onClick={() => !n.read && handleMarkRead(n.id)} style={{
+                  padding: '12px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                  cursor: n.read ? 'default' : 'pointer',
+                  background: n.isEmergency ? 'rgba(192,57,43,0.04)' :
+                    !n.read ? 'rgba(66,133,244,0.05)' :
+                    n.deliveryStatus === 'Pending' ? 'rgba(243,156,18,0.04)' : 'transparent',
+                  borderLeft: n.isEmergency ? '3px solid var(--danger)' : !n.read ? '3px solid var(--info, #4285f4)' : '3px solid transparent',
+                }}>
+                  <div style={{ fontSize: 16, color: statusColor, marginTop: 2 }}>
+                    {n.isEmergency ? <FaBolt style={{ color: 'var(--danger)' }} /> : (CHANNEL_ICONS[n.type] || <FaBell />)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: n.read ? 400 : 600 }}>{n.message}</div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+                      <span style={{ color: statusColor }}>
+                        <StatusIcon style={{ marginRight: 3 }} />{n.deliveryStatus}
+                        {n.retryCount > 0 && <span style={{ marginLeft: 4 }}>(retries: {n.retryCount})</span>}
+                      </span>
+                      <span><FaClock /> {formatTime(n.createdAt)}</span>
+                      {n.isEmergency && <span style={{ color: 'var(--danger)' }}><FaExclamationTriangle /> Emergency Alert</span>}
+                      {!n.read && <span style={{ color: 'var(--info, #4285f4)', fontWeight: 600 }}>NEW</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 };
 

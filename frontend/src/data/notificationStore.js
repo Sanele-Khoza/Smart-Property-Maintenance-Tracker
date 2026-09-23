@@ -25,6 +25,82 @@ export const updateNotificationStatus = async (notifId, newStatus, retryCount) =
   }
 };
 
+export const markNotificationRead = async (notifId) => {
+  try {
+    const result = await api(`/notifications/${notifId}/read`, { method: 'PUT' });
+    if (result.success) {
+      const store = getStore();
+      const notif = store.notifications.find(n => n.id === notifId);
+      if (notif) { notif.read = true; saveToLocalStorage(); }
+      return { success: true };
+    }
+    return { success: false, error: result.error || 'Failed to mark as read' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const markAllNotificationsRead = async () => {
+  try {
+    const result = await api('/notifications/read-all', { method: 'PUT' });
+    if (result.success) {
+      const store = getStore();
+      store.notifications.forEach(n => { n.read = true; });
+      saveToLocalStorage();
+      return { success: true };
+    }
+    return { success: false, error: result.error || 'Failed to mark all as read' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const getNotificationPreferences = async () => {
+  try {
+    const result = await api('/notification-preferences');
+    if (result.success) return { success: true, data: result.data.preferences };
+    return { success: false, error: result.error || 'Failed to load preferences' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+export const refreshNotifications = async () => {
+  try {
+    const result = await api('/notifications?limit=100');
+    if (result.success && result.data?.notifications) {
+      const store = getStore();
+      store.notifications = result.data.notifications.map(n => ({
+        id: n.id,
+        recipient: n.recipient,
+        userId: n.user_id,
+        type: n.type,
+        title: n.title,
+        message: n.body || n.message,
+        ticketId: n.ticket_id,
+        isEmergency: n.is_emergency,
+        deliveryStatus: n.delivery_status || 'Sent',
+        retryCount: n.retry_count || 0,
+        read: n.read,
+        createdAt: n.created_at,
+      }));
+      saveToLocalStorage();
+    }
+  } catch {}
+};
+
+export const updateNotificationPreference = async (channel, enabled) => {
+  try {
+    const result = await api('/notification-preferences', {
+      method: 'PUT',
+      body: { channel, enabled },
+    });
+    if (result.success) return { success: true, data: result.data.preferences };
+    return { success: false, error: result.error || 'Failed to update preference' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const addNotification = async (recipientEmail, type, message, isEmergency) => {
   try {
     const result = await api('/notifications', {

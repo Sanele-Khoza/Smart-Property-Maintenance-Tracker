@@ -1,9 +1,9 @@
 import { query } from '../../db/connection.js';
 
-const findForUser = async (userId, email, filters = {}) => {
-  const conditions = ['(user_id = $1 OR recipient = $2)'];
-  const params = [userId, email];
-  let idx = 3;
+const findForUser = async (userId, filters = {}) => {
+  const conditions = ['user_id = $1'];
+  const params = [userId];
+  let idx = 2;
 
   if (filters.read !== undefined) {
     conditions.push(`read = $${idx++}`);
@@ -41,8 +41,8 @@ const findById = async (id) => {
 
 const create = async (data) => {
   const result = await query(
-    'INSERT INTO notifications (user_id, type, title, body, is_emergency) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [data.user_id || null, data.type || 'info', data.title || null, data.body, !!data.is_emergency]
+    'INSERT INTO notifications (user_id, type, title, body, is_emergency, ticket_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [data.user_id || null, data.type || 'info', data.title || null, data.body, !!data.is_emergency, data.ticket_id || null]
   );
   return result.rows[0];
 };
@@ -52,8 +52,8 @@ const markRead = async (id) => {
   return result.rows[0];
 };
 
-const markAllRead = async (userId, email) => {
-  await query('UPDATE notifications SET read = TRUE WHERE (user_id = $1 OR recipient = $2) AND read = FALSE', [userId, email]);
+const markAllRead = async (userId) => {
+  await query('UPDATE notifications SET read = TRUE WHERE user_id = $1 AND read = FALSE', [userId]);
 };
 
 const updateDeliveryStatus = async (id, status) => {
@@ -65,8 +65,8 @@ const remove = async (id) => {
   await query('DELETE FROM notifications WHERE id = $1', [id]);
 };
 
-const countUnread = async (userId, email) => {
-  const result = await query('SELECT COUNT(*)::int AS count FROM notifications WHERE (user_id = $1 OR recipient = $2) AND read = FALSE', [userId, email]);
+const countUnread = async (userId) => {
+  const result = await query('SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND read = FALSE', [userId]);
   return result.rows[0].count;
 };
 

@@ -18,7 +18,7 @@ async function authenticate(req, res, next) {
 
   try {
     const result = await query(
-      'SELECT id, email, role, status FROM users WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT id, email, name, surname, role, status FROM users WHERE id = $1 AND deleted_at IS NULL',
       [decoded.id]
     );
     const user = result.rows[0];
@@ -28,7 +28,7 @@ async function authenticate(req, res, next) {
     if (user.status !== 'ACTIVE') {
       return next(AppError.forbidden('Account is not active'));
     }
-    req.user = { id: user.id, email: user.email, role: user.role, status: user.status };
+    req.user = { id: user.id, email: user.email, name: user.name, surname: user.surname, role: user.role, status: user.status };
     next();
   } catch (err) {
     next(err);

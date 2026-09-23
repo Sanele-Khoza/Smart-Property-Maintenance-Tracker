@@ -80,6 +80,7 @@ async function notifyAutoAssignment({ ticket, provider, manager = null }) {
         title: 'Ticket auto-assigned',
         body: `Your ticket "${ticket.title}" was auto-assigned to ${provider.name}.`,
         is_emergency: isEmergency,
+        ticket_id: ticket.id,
       }), () => {
         sendToUser(ticket.tenant_id, 'ticket_assigned', {
           ticketId: ticket.id, providerName: provider.name, method: 'auto',
@@ -95,6 +96,7 @@ async function notifyAutoAssignment({ ticket, provider, manager = null }) {
         title: 'New job auto-assigned',
         body: `Ticket "${ticket.title}" (${ticket.priority}) was auto-assigned to you. Tap to accept or decline.`,
         is_emergency: isEmergency,
+        ticket_id: ticket.id,
       }), () => {
         sendToUser(providerUserId, 'job_assigned', {
           ticketId: ticket.id, title: ticket.title, providerId: provider.id,
@@ -110,6 +112,7 @@ async function notifyAutoAssignment({ ticket, provider, manager = null }) {
         title: 'Ticket auto-assigned by system',
         body: `Ticket "${ticket.title}" (${ticket.priority}) was auto-assigned to ${provider.name} on your behalf.`,
         is_emergency: isEmergency,
+        ticket_id: ticket.id,
       }), () => {
         sendToUser(manager.id, 'ticket_auto_assigned', {
           ticketId: ticket.id, providerName: provider.name,

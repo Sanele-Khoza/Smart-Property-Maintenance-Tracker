@@ -6,7 +6,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import ImageLightbox from '../../components/common/ImageLightbox';
 import useTickets from '../../hooks/useTickets';
 
-const STATUS_TABS = ['all', 'Assigned', 'Accepted', 'In Progress', 'Waiting for Parts', 'Completed'];
+const STATUS_TABS = ['all', 'Assigned', 'Accepted', 'In Progress', 'Waiting for Parts', 'Completed', 'Tenant Confirmed', 'Closed', 'On Hold', 'Declined'];
 
 const MyJobs = ({ onViewDetails }) => {
   const session = getSession();
@@ -41,9 +41,9 @@ const MyJobs = ({ onViewDetails }) => {
   };
 
   const runDecline = async () => {
-    if (!declineFor) return;
-    setDeclineBusy(true);
-    const r = await declineJob(declineFor, declineReason.trim() || undefined, declineDate || undefined);
+  if (!declineFor) return;
+  setDeclineBusy(true);
+  const r = await declineJob(declineFor, declineReason.trim() || undefined);
     setDeclineBusy(false);
     if (r.success) {
       setDeclineFor(null); setDeclineDate(''); setDeclineReason(''); setExpandedId(null);
@@ -61,24 +61,7 @@ const MyJobs = ({ onViewDetails }) => {
     setExpandedId(expandedId === ticketId ? null : ticketId);
   };
 
-  const DeclineForm = ({ t }) => (
-    <div style={{ marginTop: 8, padding: 10, border: '1px solid rgba(240,180,50,0.35)', borderRadius: 6, background: 'rgba(240,180,50,0.06)' }}>
-      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}><FaExclamationTriangle style={{ color: 'var(--amber)', marginRight: 4 }} />Decline this job?</div>
-      <div className="form-group">
-        <label className="form-label">Postpone until (optional)</label>
-        <input type="datetime-local" className="form-input" value={declineDate} onChange={e => setDeclineDate(e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Reason for the tenant / manager (optional)</label>
-        <textarea className="form-textarea" style={{ minHeight: 50 }} placeholder="e.g. Waiting for parts — available to reschedule next week." value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button className="btn btn-danger btn-sm" disabled={declineBusy} onClick={runDecline}>{declineBusy ? 'Declining...' : 'Confirm Decline'}</button>
-        <button className="btn btn-secondary btn-sm" onClick={() => setDeclineFor(null)}>Cancel</button>
-      </div>
-    </div>
-  );
-
+  
   const ActionButtons = ({ t }) => {
     switch (t.status) {
       case 'Assigned':
@@ -190,8 +173,21 @@ const MyJobs = ({ onViewDetails }) => {
                               </div>
                             </div>
                           )}
-                          {declineFor === t.ticketId && <DeclineForm t={t} />}
-                        </td>
+                      {declineFor === t.ticketId && (
+                              <div style={{ marginTop: 8, padding: 10, border: '1px solid rgba(240,180,50,0.35)', borderRadius: 6, background: 'rgba(240,180,50,0.06)' }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}><FaExclamationTriangle style={{ color: 'var(--amber)', marginRight: 4 }} />Decline this job?</div>
+
+                                <div className="form-group">
+                                  <label className="form-label">Reason for the tenant / manager (optional)</label>
+                                  <textarea className="form-textarea" style={{ minHeight: 50 }} placeholder="e.g. Waiting for parts — available to reschedule next week." value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
+                                </div>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button className="btn btn-danger btn-sm" disabled={declineBusy} onClick={runDecline}>{declineBusy ? 'Declining...' : 'Confirm Decline'}</button>
+                                  <button className="btn btn-secondary btn-sm" onClick={() => setDeclineFor(null)}>Cancel</button>
+                                </div>
+                              </div>
+                            )}
+                                                    </td>
                       </tr>
                     )}
                   </React.Fragment>

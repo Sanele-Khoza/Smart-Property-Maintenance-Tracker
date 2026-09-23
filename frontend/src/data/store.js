@@ -31,6 +31,8 @@ export {
 
 export {
   getNotifications, updateNotificationStatus, addNotification,
+  markNotificationRead, markAllNotificationsRead, refreshNotifications,
+  getNotificationPreferences, updateNotificationPreference,
   getCategories, addCategory, updateCategory, deleteCategory,
 } from './notificationStore';
 

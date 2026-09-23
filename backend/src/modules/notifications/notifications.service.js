@@ -11,7 +11,7 @@ async function list(req) {
     offset,
     type: req.query.type,
   };
-  const { notifications, total } = await repo.findForUser(req.user.id, req.user.email, filters);
+  const { notifications, total } = await repo.findForUser(req.user.id, filters);
   return {
     success: true,
     data: { notifications },
@@ -38,12 +38,11 @@ async function markRead(id) {
 }
 
 async function markAllRead(req) {
-  await repo.markAllRead(req.user.id, req.user.email);
-  return { success: true, message: 'All marked as read' };
+  await repo.markAllRead(req.user.id);
+  return { success: true, message: 'All notifications marked as read' };
 }
-
-async function countUnread(req) {
-  const count = await repo.countUnread(req.user.id, req.user.email);
+  async function countUnread(req) {
+  const count = await repo.countUnread(req.user.id);
   return { success: true, data: { count } };
 }
 

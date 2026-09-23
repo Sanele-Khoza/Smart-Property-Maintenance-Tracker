@@ -176,6 +176,7 @@ async function flagNoProvider(ticket) {
         title: 'Ticket needs your attention — no matching provider',
         body: `Ticket "${ticket.title}" (${ticket.priority}) has no available provider with the matching specialisation and needs manual assignment.`,
         is_emergency: ticket.priority === 'EMERGENCY',
+        ticket_id: ticket.id,
       });
       sendToUser(ticket.manager_id, 'ticket_needs_attention', {
         ticketId: ticket.id, reason,

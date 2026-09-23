@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { FaArrowLeft, FaBuilding, FaBox, FaUser, FaCalendarAlt, FaBolt, FaClock, FaWrench, FaMapMarkerAlt, FaEnvelope, FaPhone, FaCheck, FaPause, FaPlay, FaIdCard, FaCamera, FaTimes } from 'react-icons/fa';
 import { getSession } from '../../data/authStore';
 import { getUsers } from '../../data/authStore';
-import { getTickets, getProperties, getUnits, acceptJob, declineJob, startJob, waitForParts, partsReceived, submitJobCompletion } from '../../data/store';
+import { getTickets, getProperties, getUnits, acceptJob, declineJob, startJob, waitForParts, partsReceived, submitJobCompletion, getAuditLogs } from '../../data/store';
 import StatusBadge from '../../components/common/StatusBadge';
 import Alert from '../../components/common/Alert';
 import ImageLightbox from '../../components/common/ImageLightbox';
@@ -58,6 +58,11 @@ const JobDetail = ({ ticketId, onBack }) => {
     };
   }, [ticket]);
 
+  const auditEntries = useMemo(() => {
+    if (!ticket) return [];
+    return getAuditLogs().filter(a => a.ticketId === ticket.ticketId);
+  }, [ticket]);
+
   const showMsg = (text, type) => { setMsg({ text, type }); setTimeout(() => setMsg({ text: '', type: '' }), 3000); };
   const refresh = () => setTickets(getTickets());
 
@@ -69,7 +74,7 @@ const JobDetail = ({ ticketId, onBack }) => {
 
   const runDecline = async () => {
     setDeclineBusy(true);
-    const r = await declineJob(ticketId, declineReason.trim() || undefined, declineDate || undefined);
+    const r = await declineJob(ticketId, declineReason.trim() || undefined);
     setDeclineBusy(false);
     if (r.success) { refresh(); showMsg('Job declined.', 'success'); setShowDecline(false); setDeclineDate(''); setDeclineReason(''); }
     else { showMsg(r.error, 'error'); }
@@ -165,10 +170,6 @@ const JobDetail = ({ ticketId, onBack }) => {
                 <div style={{ marginTop: 12, padding: 10, border: '1px solid rgba(240,180,50,0.35)', borderRadius: 6, background: 'rgba(240,180,50,0.06)' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}><FaBolt style={{ color: 'var(--amber)', marginRight: 4 }} />Decline this job?</div>
                   <div className="form-group">
-                    <label className="form-label">Postpone until (optional)</label>
-                    <input type="datetime-local" className="form-input" value={declineDate} onChange={e => setDeclineDate(e.target.value)} />
-                  </div>
-                  <div className="form-group">
                     <label className="form-label">Reason for the tenant / manager (optional)</label>
                     <textarea className="form-textarea" style={{ minHeight: 50 }} placeholder="e.g. Waiting for parts — available to reschedule next week." value={declineReason} onChange={e => setDeclineReason(e.target.value)} />
                   </div>
@@ -177,6 +178,25 @@ const JobDetail = ({ ticketId, onBack }) => {
               )}
             </div>
           )}
+
+          <div className="card" style={{ marginTop: 12 }}>
+            <div className="card-title">Audit Trail</div>
+            <div style={{ maxHeight: 200, overflow: 'auto' }}>
+              {auditEntries.length === 0 ? (
+                <div style={{ padding: 8, color: 'var(--text-dim)', fontSize: 12 }}>No audit entries.</div>
+              ) : (
+                auditEntries.map(a => (
+                  <div key={a.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--amber)' }}>{a.action}</span>{' '}
+                    <span style={{ color: 'var(--text-dim)' }}>by {a.actor}</span>
+                    {a.previousStatus && a.newStatus && <span> — {a.previousStatus} → {a.newStatus}</span>}
+                    {a.comment && <span style={{ color: 'var(--text-mid)', display: 'block', marginLeft: 16 }}>{a.comment}</span>}
+                    <span style={{ color: 'var(--text-dim)', display: 'block', marginLeft: 16, fontSize: 10 }}>{a.timestamp}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
           {(ticket.status === 'In Progress' || ticket.status === 'Waiting for Parts') && (
             <div className="card" style={{ marginTop: 12 }}>

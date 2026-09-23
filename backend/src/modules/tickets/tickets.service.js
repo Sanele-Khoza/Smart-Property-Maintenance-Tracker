@@ -16,6 +16,8 @@ import { moderateImage, detectLabels } from '../../shared/adapters/rekognitionAd
 import { persistClassification, logSingleInference } from '../ai/ai.service.js';
 import { checkForDuplicate } from '../ai/duplicateDetector.js';
 import { reassignAfterDecline } from '../routing/routing.service.js';
+import { resolveProviderUserId } from '../../shared/utils/assignmentCommitter.js';
+import * as notificationsRepo from '../notifications/notifications.repository.js';
 import { getPresignedUrl, isS3Healthy } from '../../shared/adapters/s3Adapter.js';
 import { isAwsEnabled } from '../../shared/adapters/retry.js';
 import config from '../../config/index.js';
@@ -42,6 +44,16 @@ async function auditLog(ticketId, action, userId, userName, details) {
     console.error('audit_log insert failed:', err.message);
   }
 }
+
+const STATUS_NOTIFICATION_TITLES = {
+  [TicketStates.ACCEPTED]: 'Service provider accepted your ticket',
+  [TicketStates.IN_PROGRESS]: 'Work started on your ticket',
+  [TicketStates.WAITING_FOR_PARTS]: 'Your ticket is waiting for parts',
+  [TicketStates.COMPLETED]: 'Your ticket has been marked complete',
+  [TicketStates.TENANT_CONFIRMED]: 'Ticket completion confirmed',
+  [TicketStates.CLOSED]: 'Your ticket has been closed',
+  [TicketStates.REOPENED]: 'Your ticket has been reopened',
+};
 
 async function performTransition(ticketId, toStatus, userId, userName, reason, sseEvent) {
   const ticket = await repo.findById(ticketId);
@@ -75,6 +87,21 @@ async function performTransition(ticketId, toStatus, userId, userName, reason, s
   }
 
   if (updated.tenant_id) {
+    // Same gap decline used to have: this previously only emailed + live-
+    // pushed, so a tenant who wasn't online at that exact moment, or whose
+    // email didn't arrive, never saw it — not now, not on a later visit to
+    // their Notifications page, since nothing was ever persisted. Now every
+    // status change (accept, start, waiting-for-parts, parts-received,
+    // complete, tenant-confirm, close) reliably shows up.
+    await notificationsRepo.create({
+      user_id: updated.tenant_id,
+      type: 'status',
+      title: STATUS_NOTIFICATION_TITLES[toStatus] || `Ticket status updated to ${toStatus}`,
+      body: `Ticket "${ticket.title}": ${reason}`,
+      is_emergency: ticket.priority === 'EMERGENCY',
+      ticket_id: ticketId,
+    }).catch(() => {});
+
     sendTicketStatusChangedNotification(
       updated.tenant_id, updated, toStatus, ticket.status, reason
     ).catch(() => {});
@@ -428,7 +455,32 @@ async function assign(id, technicianId, note, userId, userName, role) {
     providerId: technicianId, provider: provider.name, note,
   });
 
-  sendTicketAssignedNotification(technicianId, updated).catch(() => {});
+  // BUG FIX: technicianId is a service_providers.id, but the provider's
+  // real login/notification identity is a users.id — a different UUID,
+  // joined only by matching email (see resolveProviderUserId). The old
+  // code here called sendTicketAssignedNotification(technicianId, ...)
+  // directly, which silently did nothing for manually-assigned providers:
+  // it looked up a "user" by a service_providers id, found nothing, and
+  // the email never sent. No persisted notification or live push existed
+  // for this path at all, so a manually-assigned provider previously had
+  // no way to find out a job existed until they happened to check MyJobs.
+  const providerUserId = await resolveProviderUserId(technicianId);
+  if (providerUserId) {
+    await notificationsRepo.create({
+      user_id: providerUserId,
+      type: 'assignment',
+      title: 'New job assigned',
+      body: `Ticket "${updated.title}" (${updated.priority}) was assigned to you by ${userName}. Tap to accept or decline.`,
+      is_emergency: updated.priority === 'EMERGENCY',
+      ticket_id: id,
+    }).catch(() => {});
+
+    sendToUser(providerUserId, 'job_assigned', {
+      ticketId: id, title: updated.title, providerId: technicianId,
+    });
+
+    sendTicketAssignedNotification(providerUserId, updated).catch(() => {});
+  }
 
   return { success: true, data: { ticket: updated }, message: `Assigned to ${provider.name}` };
 }
@@ -468,9 +520,47 @@ async function declineTicket(id, userId, userName, note, postponeUntil) {
   });
 
   if (updated.tenant_id) {
+    // Was previously an SSE-only ping — invisible to the tenant unless their
+    // browser happened to be open at that exact moment, and never showed up
+    // later in their Notifications page or inbox. Now persisted (so it's
+    // there on next login/refresh regardless) + emailed, same pattern used
+    // for every other ticket status change.
+    const declineMessage = parsedUntil
+      ? `${userName} declined your ticket "${ticket.title}" and requested to postpone until ${parsedUntil.toLocaleDateString()}.${note ? ` Reason: ${note}` : ''}`
+      : `${userName} declined your ticket "${ticket.title}".${note ? ` Reason: ${note}` : ''}`;
+
+    await notificationsRepo.create({
+      user_id: updated.tenant_id,
+      type: 'status',
+      title: 'Service provider declined your ticket',
+      body: declineMessage,
+      is_emergency: ticket.priority === 'EMERGENCY',
+      ticket_id: id,
+    }).catch(() => {});
+
     sendToUser(updated.tenant_id, 'ticket_declined', {
       ticketId: id, title: ticket.title, status: TicketStates.DECLINED,
     });
+
+    sendTicketStatusChangedNotification(
+      updated.tenant_id, updated, TicketStates.DECLINED, ticket.status, note
+    ).catch(() => {});
+  }
+
+  /* BUG FIX: reassignAfterDecline() only excludes providers who already have
+   * a routing_assignments row for this ticket — but that table is only ever
+   * written by the *auto*-routing flow. A manually-assigned ticket has no
+   * such row at all, so the provider who just declined it wasn't excluded
+   * from anything, and pickProviders() could legitimately re-offer the same
+   * ticket right back to them. Record this decline here too, regardless of
+   * how the ticket got assigned, so the exclusion actually works.
+   */
+  if (ticket.assigned_to) {
+    await query(
+      `INSERT INTO routing_assignments (ticket_id, provider_id, assignment_type, status, responded_at)
+       VALUES ($1, $2, 'manual', 'declined', NOW())`,
+      [id, ticket.assigned_to]
+    ).catch(() => {});
   }
 
   /* §4 — a decline must trigger real fallback (unless the provider is

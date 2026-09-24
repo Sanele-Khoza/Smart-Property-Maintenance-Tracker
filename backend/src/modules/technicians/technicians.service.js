@@ -30,9 +30,9 @@ async function updateStatus(id, status) {
   return { success: true, data: { technician }, message: 'Status updated' };
 }
 
-async function updateLocation(id, latitude, longitude) {
+async function updateLocation(id, latitude, longitude, locationName) {
   await repo.findById(id);
-  await repo.updateLocation(id, latitude, longitude);
+  await repo.updateLocation(id, latitude, longitude, locationName);
   return { success: true, message: 'Location updated' };
 }
 

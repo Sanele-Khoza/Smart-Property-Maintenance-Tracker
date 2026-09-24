@@ -93,10 +93,10 @@ const update = async (id, data) => {
   return result.rows[0];
 };
 
-const updateLocation = async (id, latitude, longitude) => {
+const updateLocation = async (id, latitude, longitude, locationName = null) => {
   await query(
-    'UPDATE service_providers SET gps_location = point($1, $2), last_location_update = NOW() WHERE id = $3',
-    [latitude, longitude, id]
+    'UPDATE service_providers SET gps_location = point($1, $2), location_name = $3, last_location_update = NOW() WHERE id = $4',
+    [latitude, longitude, locationName, id]
   );
 };
 

@@ -159,6 +159,13 @@ const updateSelfProfile = async (req, res, next) => {
         if (!parsed.valid) throw AppError.badRequest(parsed.reason || 'Invalid South African ID number');
       }
     }
+
+    if (req.body.phone !== undefined && req.body.phone !== '' && req.body.phone !== null) {
+      if (!/^\d{10}$/.test(String(req.body.phone))) {
+        throw AppError.badRequest('Phone number must be exactly 10 digits');
+      }
+    }
+
     const updates = [];
     const params = [];
     let idx = 1;

@@ -7,6 +7,7 @@ import {
   ticketCreatedForManager,
   ticketAssignedToProvider,
   ticketStatusChangedForTenant,
+  ticketDeclinedForManager,
   unitAssignedToTenant,
   unitAssignedToManager,
   propertyCreatedForManager,
@@ -197,6 +198,23 @@ async function sendNewUserRegisteredAlert(user) {
   return sendEmail({ to: config.adminEmail, subject, text, html });
 }
 
+async function sendTicketDeclinedNotification(managerId, ticket, providerName, reason) {
+  try {
+    const manager = await userRepo.findById(managerId);
+    if (!manager?.email) return;
+    const { subject, html } = ticketDeclinedForManager({
+      managerName: manager.name,
+      ticket,
+      providerName,
+      reason,
+    });
+    await sendMail({ to: manager.email, subject, html });
+    logger.info(`Ticket declined notification sent to ${manager.email} for ticket ${ticket.id}`);
+  } catch (err) {
+    logger.error(`Failed to send ticket declined notification: ${err.message}`);
+  }
+}
+
 async function sendPropertyCreatedNotification(managerId, property) {
   try {
     const manager = await userRepo.findById(managerId);
@@ -234,6 +252,7 @@ export {
   sendTicketCreatedNotification,
   sendTicketAssignedNotification,
   sendTicketStatusChangedNotification,
+  sendTicketDeclinedNotification,
   sendUnitAssignedToTenantNotification,
   sendUnitAssignedToManagerNotification,
   sendPropertyCreatedNotification,

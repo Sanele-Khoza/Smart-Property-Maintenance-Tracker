@@ -1,6 +1,7 @@
 import * as repo from './properties.repository.js';
 import AppError from '../../shared/errors/AppError.js';
 import { sendPropertyCreatedNotification } from '../../shared/utils/email.service.js';
+import { notifySystemAdmins } from '../../shared/utils/adminNotify.js';
 
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
@@ -23,6 +24,13 @@ async function create(data) {
   if (property.manager_id) {
     sendPropertyCreatedNotification(property.manager_id, property).catch(() => {});
   }
+  notifySystemAdmins({
+    type: 'property_created',
+    title: 'New property created',
+    body: `Property "${property.name}" was added to the system.`,
+    sseEvent: 'property_created',
+    sseData: { propertyId: property.id },
+  }).catch((err) => console.error('Admin property-created alert failed:', err.message));
   return { success: true, data: { property }, message: 'Property created' };
 }
 async function update(id, data) {

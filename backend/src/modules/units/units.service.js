@@ -6,6 +6,7 @@ import {
   sendUnitAssignedToManagerNotification,
   sendUnitCreatedNotification,
 } from '../../shared/utils/email.service.js';
+import { notifySystemAdmins } from '../../shared/utils/adminNotify.js';
 
 async function list(filters) {
   const page = parseInt(filters.page) || 1;
@@ -26,6 +27,13 @@ async function getById(id) {
 }
 
 async function create(data) {
+  const propertyId = data.property_id || data.propertyId;
+  const unitNumber = data.unit_number || data.unitNumber;
+  const existing = await repo.findByPropertyAndNumber(propertyId, unitNumber);
+  if (existing) {
+    throw AppError.conflict(`Unit "${unitNumber}" already exists for this property`);
+  }
+
   const unit = await repo.create(data);
   if (unit.property_id) {
     (async () => {
@@ -36,6 +44,13 @@ async function create(data) {
         if (propRow?.manager_id) {
           sendUnitCreatedNotification(propRow.manager_id, unit, propRow.name).catch(() => {});
         }
+        notifySystemAdmins({
+          type: 'unit_created',
+          title: 'New unit added',
+          body: `Unit ${unit.unit_number} was added to ${propRow?.name || 'a property'}.`,
+          sseEvent: 'unit_created',
+          sseData: { unitId: unit.id, propertyId: unit.property_id },
+        }).catch((err) => console.error('Admin unit-created alert failed:', err.message));
       } catch (e) {
         console.error('Unit created notification failed:', e.message);
       }
@@ -54,6 +69,14 @@ async function update(id, data) {
   }
   if (data.status === 'Occupied') {
     throw AppError.badRequest('Cannot set status to Occupied directly. Use the assign endpoint.');
+  }
+
+  const newUnitNumber = data.unit_number || data.unitNumber;
+  if (newUnitNumber) {
+    const duplicate = await repo.findByPropertyAndNumber(existing.property_id, newUnitNumber, id);
+    if (duplicate) {
+      throw AppError.conflict(`Unit "${newUnitNumber}" already exists for this property`);
+    }
   }
 
   const unit = await repo.update(id, data);
@@ -104,6 +127,13 @@ async function assign(unitId, tenantId, tenantName) {
       if (propRow?.manager_id) {
         sendUnitAssignedToManagerNotification(propRow.manager_id, unit, property, tenantName).catch(() => {});
       }
+      notifySystemAdmins({
+        type: 'tenant_assigned',
+        title: 'Tenant assigned to unit',
+        body: `${tenantName} was assigned to unit ${unit.unit_number} at ${property.name || 'a property'}.`,
+        sseEvent: 'tenant_assigned',
+        sseData: { unitId, tenantId: resolvedTenantId },
+      }).catch((err) => console.error('Admin tenant-assigned alert failed:', err.message));
     } catch (e) {
       console.error('Unit assignment notification failed:', e.message);
     }

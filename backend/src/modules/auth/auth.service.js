@@ -7,6 +7,7 @@ import * as repo from './auth.repository.js';
 import * as audit from '../../shared/utils/securityAudit.js';
 import { sendMail } from '../../shared/adapters/mailAdapter.js';
 import { sendNewUserRegisteredAlert } from '../../shared/utils/email.service.js';
+import { notifySystemAdmins } from '../../shared/utils/adminNotify.js';
 import { ageFromId } from '../../shared/utils/saId.js';
 
 const BCRYPT_ROUNDS = 12;
@@ -42,6 +43,7 @@ function buildUserPayload(user) {
     email: user.email,
     role: user.role,
     phone: user.phone,
+    idNumber: user.id_number,
     status: user.status,
     approved: user.approved,
     idNumber: user.id_number,
@@ -106,6 +108,20 @@ async function register({ name, surname, email, password, role, phone, idNumber,
       console.log(`  Tenant: ${email}`);
       console.log(`══════════════════════════════════════════════\n`);
     });
+
+  const roleLabel = {
+    TENANT: 'Tenant',
+    PROPERTY_MANAGER: 'Property Manager',
+    SERVICE_PROVIDER: 'Service Provider',
+  }[role] || role;
+
+  notifySystemAdmins({
+    type: 'user_registered',
+    title: 'New user registered',
+    body: `${name} ${surname} (${email}) registered as a ${roleLabel} and is awaiting review.`,
+    sseEvent: 'user_registered',
+    sseData: { userId: user.id, role },
+  }).catch((err) => console.error('Admin registration alert failed:', err.message));
 
   await audit.log('REGISTER', `User registered as ${role}`, user.id, ipAddress);
 

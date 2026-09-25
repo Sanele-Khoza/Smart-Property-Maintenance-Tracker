@@ -62,6 +62,30 @@ function ctaButton(text, url, color) {
 </div>`;
 }
 
+function ticketDeclinedForManager({ managerName, ticket, providerName, reason }) {
+  const headerColor = "#ef4444";
+  const btnUrl = BASE_URL;
+  const body = `
+    <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">Ticket Assignment Declined</h2>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">Hi ${managerName},</p>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;">${providerName || "The assigned service provider"} declined the maintenance ticket below. It needs a new assignment.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin-bottom:20px;">
+      ${detailRow("Title", ticket.title)}
+      ${detailRow("Declined by", providerName)}
+      ${detailRow("Reason", reason)}
+      ${detailRow("Property", ticket.property_name)}
+      ${detailRow("Unit", ticket.unit_number)}
+      ${detailRow("Ticket ID", `<span style="font-family:monospace;font-size:12px;">${ticket.id}</span>`)}
+    </table>
+    <p style="margin:0 0 8px;color:#4b5563;font-size:14px;">Log in to assign a different service provider.</p>
+    ${ctaButton("View Ticket", btnUrl, headerColor)}
+    <p style="margin:16px 0 0;color:#9ca3af;font-size:12px;">Or copy this link: <a href="${btnUrl}" style="color:#ef4444;">${btnUrl}</a></p>`;
+  return {
+    subject: `[SPMT] Ticket Declined: ${ticket.title}`,
+    html: buildShell("Ticket Assignment Declined", headerColor, body),
+  };
+}
+
 function ticketCreatedForManager({ managerName, ticket, submitterName }) {
   const headerColor = "#3b82f6";
   const btnUrl = BASE_URL;
@@ -246,6 +270,7 @@ export {
   ticketCreatedForManager,
   ticketAssignedToProvider,
   ticketStatusChangedForTenant,
+  ticketDeclinedForManager,
   unitAssignedToTenant,
   unitAssignedToManager,
   propertyCreatedForManager,

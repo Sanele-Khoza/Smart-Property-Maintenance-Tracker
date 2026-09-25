@@ -2,6 +2,14 @@ import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
 import { parseSaId } from '../../shared/utils/saId.js';
 import { notifyUserStatusChange } from '../../shared/utils/notifyUser.js';
+import { notifySystemAdmins } from '../../shared/utils/adminNotify.js';
+
+const ROLE_LABEL = {
+  TENANT: 'Tenant',
+  PROPERTY_MANAGER: 'Property Manager',
+  SERVICE_PROVIDER: 'Service Provider',
+  SYSTEM_ADMIN: 'System Admin',
+};
 
 function getIp(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
@@ -56,6 +64,13 @@ const approveUser = async (req, res, next) => {
       ipAddress: getIp(req),
       severity: 'INFO',
     });
+    notifySystemAdmins({
+      type: 'account_approved',
+      title: 'Account approved',
+      body: `${ROLE_LABEL[user.role] || user.role} account for ${user.name} ${user.surname} (${user.email}) was approved.`,
+      sseEvent: 'account_approved',
+      sseData: { userId: user.id, role: user.role },
+    }).catch((err) => console.error('Admin approval alert failed:', err.message));
     res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };
@@ -75,6 +90,13 @@ const deactivateUser = async (req, res, next) => {
       performedBy: req.user?.id,
       ipAddress: getIp(req),
     });
+    notifySystemAdmins({
+      type: 'account_deactivated',
+      title: 'Account deactivated',
+      body: `${ROLE_LABEL[user.role] || user.role} account for ${user.name} ${user.surname} (${user.email}) was deactivated.`,
+      sseEvent: 'account_deactivated',
+      sseData: { userId: user.id, role: user.role },
+    }).catch((err) => console.error('Admin deactivation alert failed:', err.message));
     res.json({ success: true, data: { user }, error: null, meta: { timestamp: new Date().toISOString() } });
   } catch (err) { next(err); }
 };

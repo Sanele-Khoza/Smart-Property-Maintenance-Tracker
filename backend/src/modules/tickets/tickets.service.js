@@ -25,6 +25,7 @@ import {
   sendTicketCreatedNotification,
   sendTicketAssignedNotification,
   sendTicketStatusChangedNotification,
+  sendTicketDeclinedNotification,
 } from '../../shared/utils/email.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -547,7 +548,32 @@ async function declineTicket(id, userId, userName, note, postponeUntil) {
     ).catch(() => {});
   }
 
-  /* BUG FIX: reassignAfterDecline() only excludes providers who already have
+  /* Property Manager needs to know too — they may need to step in if
+   * there's no automatic fallback provider available (see below). */
+  (async () => {
+    try {
+      const propRow = ticket.property_id
+        ? (await query(`SELECT manager_id FROM properties WHERE id = $1`, [ticket.property_id])).rows[0]
+        : null;
+      if (propRow?.manager_id) {
+        const declineReason = note || 'No reason provided';
+        await notificationsRepo.create({
+          user_id: propRow.manager_id,
+          type: 'status',
+          title: 'Ticket assignment declined',
+          body: `${userName} declined "${ticket.title}" — Reason: ${declineReason}`,
+          is_emergency: ticket.priority === 'EMERGENCY',
+          ticket_id: id,
+        });
+        sendToUser(propRow.manager_id, 'ticket_declined', {
+          ticketId: id, title: ticket.title, providerName: userName, reason: declineReason,
+        });
+        sendTicketDeclinedNotification(propRow.manager_id, updated, userName, declineReason).catch(() => {});
+      }
+    } catch (e) {
+      console.error('Ticket decline manager notification failed:', e.message);
+    }
+  })();  /* BUG FIX: reassignAfterDecline() only excludes providers who already have
    * a routing_assignments row for this ticket — but that table is only ever
    * written by the *auto*-routing flow. A manually-assigned ticket has no
    * such row at all, so the provider who just declined it wasn't excluded

@@ -71,7 +71,7 @@ const acceptSchema = z.object({
 });
 
 const declineSchema = z.object({
-  note: z.string().optional().nullable(),
+  note: z.string().trim().min(1, 'A reason is required to decline this ticket'),
   postponeUntil: z.string().optional().nullable(),
 });
 

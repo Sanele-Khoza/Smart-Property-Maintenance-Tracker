@@ -13,6 +13,14 @@ const findById = async (id) => {
   return result.rows[0] || null;
 };
 
+const findByPropertyAndNumber = async (propertyId, unitNumber) => {
+  const result = await query(
+    `SELECT * FROM units WHERE property_id = $1 AND unit_number = $2`,
+    [propertyId, unitNumber]
+  );
+  return result.rows[0] || null;
+};
+
 const findAll = async (filters = {}) => {
   const conditions = [];
   const params = [];
@@ -131,4 +139,4 @@ const findTenantIdByName = async (name, surname) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName };
+export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName, findByPropertyAndNumber };

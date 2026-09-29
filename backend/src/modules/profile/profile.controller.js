@@ -1,7 +1,7 @@
 import { query } from '../../db/connection.js';
 import AppError from '../../shared/errors/AppError.js';
 
-const PROFILE_FIELDS = 'id, name, surname, email, phone, role, avatar_url, created_at';
+const PROFILE_FIELDS = 'id, name, surname, email, phone, id_number, role, avatar_url, created_at';
 
 const getProfile = async (req, res, next) => {
   try {
@@ -23,13 +23,21 @@ const getProfile = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, surname, phone } = req.body;
+    const { name, surname, phone, idNumber, email } = req.body;
+
+    if (email) {
+      const existing = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, req.user.id]);
+      if (existing.rows.length) throw AppError.conflict('Email already in use');
+    }
+
     const updates = [];
     const params = [];
     let idx = 1;
     if (name) { updates.push(`name = $${idx++}`); params.push(name); }
     if (surname) { updates.push(`surname = $${idx++}`); params.push(surname); }
     if (phone !== undefined) { updates.push(`phone = $${idx++}`); params.push(phone); }
+    if (idNumber !== undefined) { updates.push(`id_number = $${idx++}`); params.push(idNumber); }
+    if (email) { updates.push(`email = $${idx++}`); params.push(email); }
     if (updates.length === 0) throw AppError.badRequest('No fields to update');
     params.push(req.user.id);
     await query(`UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${idx}`, params);

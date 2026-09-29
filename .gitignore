@@ -12,6 +12,9 @@ backend/opencode.txt
 .DS_Store
 Thumbs.db
 
+# Database backup archives (BACKUP_DIR)
+/backups/
+
 # Python AI service
 ai-service/.venv/
 ai-service/models/

@@ -1,5 +1,12 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const config = {
   port: parseInt(process.env.PORT, 10) || 5000,
@@ -61,6 +68,15 @@ const config = {
     enabled: process.env.CHATBOT_ENABLED === "true",
     baseUrl: process.env.CHATBOT_URL || "http://127.0.0.1:8090",
     timeoutMs: parseInt(process.env.CHATBOT_TIMEOUT_MS, 10) || 4000,
+  },
+  backup: {
+    dir: process.env.BACKUP_DIR || path.resolve(__dirname, "../../..", "backups"),
+    scheduleEnabled: process.env.BACKUP_SCHEDULE_ENABLED !== "false",
+    scheduleCron: process.env.BACKUP_SCHEDULE_CRON || "30 21 * * *",
+    retentionCount: parseInt(process.env.BACKUP_RETENTION_COUNT, 10) || 14,
+    pgDumpPath: process.env.PG_DUMP_PATH || "pg_dump",
+    pgRestorePath: process.env.PG_RESTORE_PATH || "pg_restore",
+    restoreEnabled: process.env.BACKUP_RESTORE_ENABLED !== "false",
   },
   aws: {
     enabled: process.env.AWS_ENABLED === "true",

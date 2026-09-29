@@ -5,6 +5,7 @@ import { query } from "./db/connection.js";
 import { run as runMigrations } from "./db/migrations/index.js";
 import { seed } from "./db/seeds/index.js";
 import { start as startSlaWorker } from "./modules/ai/slaWorker.js";
+import { start as startBackupScheduler } from "./modules/backup/backupScheduler.js";
 
 process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled Rejection", {
@@ -27,6 +28,7 @@ async function start() {
     await seed(query);
 
     startSlaWorker();
+    startBackupScheduler();
 
     app.listen(config.port, () => {
       logger.info(

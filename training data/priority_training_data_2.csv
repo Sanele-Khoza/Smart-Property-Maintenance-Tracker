@@ -154,7 +154,7 @@ Loose handrail reported near unit 87 stairwell.,Medium  ,structural
 "Scorched outlet found in unit 94, warm to the touch.",High  ,electrical
 Loose handrail reported near unit 75 stairwell.,Medium  ,structural
 "A gas leak has been confirmed in unit 9, immediate danger.",Emergency,gas
-A wall socket is scorched and warm to the touch.,High  ,electrical
+A wall socket is scorched and warm to the touch.,High,electrical
 There's a live wire hanging low in the parking garage.,High  ,electrical
 Broken stair railing reported near unit 34.,High  ,structural
 A cabinet door hinge is broken and hanging loosely at head height.,Medium  ,structural

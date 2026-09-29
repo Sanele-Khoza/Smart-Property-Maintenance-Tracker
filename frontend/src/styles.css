@@ -300,7 +300,7 @@ body {
   background: var(--amber);
   opacity: 0.6;
 }
-
+ 
 .stat-value {
   font-family: var(--font-display);
   font-size: 22px;

@@ -1,17 +1,56 @@
 import * as service from './backup.service.js';
 
-const exportData = async (req, res, next) => {
+const create = async (req, res, next) => {
   try {
-    const result = await service.exportData();
+    const result = await service.createBackup({
+      type: 'MANUAL',
+      userId: req.user?.id ?? null,
+      ip: req.ip,
+    });
     res.json(result);
   } catch (err) { next(err); }
 };
 
-const importData = async (req, res, next) => {
+const list = async (req, res, next) => {
   try {
-    const result = await service.importData(req.body);
+    const result = await service.listBackups({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    });
     res.json(result);
   } catch (err) { next(err); }
 };
 
-export { exportData, importData };
+const getOne = async (req, res, next) => {
+  try {
+    const result = await service.getBackup(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+const verify = async (req, res, next) => {
+  try {
+    const result = await service.verifyBackup(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+const restore = async (req, res, next) => {
+  try {
+    const result = await service.restoreBackup(req.params.id, {
+      confirm: req.body?.confirm === true,
+      userId: req.user?.id ?? null,
+      ip: req.ip,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+const schedule = async (req, res, next) => {
+  try {
+    const result = await service.getSchedule();
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
+export { create, list, getOne, verify, restore, schedule };

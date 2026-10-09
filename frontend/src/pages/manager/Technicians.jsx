@@ -119,7 +119,7 @@ const Technicians = () => {
                           <span className={ss.className} style={ss.className === 'badge' ? { backgroundColor: 'var(--text-dim)', color: '#fff' } : {}}>{ss.label}</span>
                           {excludedFromRouting && <span style={{ marginLeft: 4, fontSize: 9, padding: '1px 4px', borderRadius: 2, backgroundColor: 'rgba(192,57,43,0.12)', color: 'var(--danger)', whiteSpace: 'nowrap' }}><FaBan style={{ fontSize: 8, marginRight: 2 }} />Routing</span>}
                         </td>
-                        <td><span style={{ fontSize: 11, color: stale ? 'var(--danger)' : 'var(--text-dim)' }}><FaMapMarkerAlt style={{ marginRight: 4 }} />{tech.gpsLatitude != null ? `${tech.gpsLatitude.toFixed(4)}, ${tech.gpsLongitude.toFixed(4)}` : '—'}</span></td>
+                        <td><span style={{ fontSize: 11, color: stale ? 'var(--danger)' : 'var(--text-dim)' }}><FaMapMarkerAlt style={{ marginRight: 4 }} />{tech.locationName || (tech.gpsLatitude != null ? `${tech.gpsLatitude.toFixed(4)}, ${tech.gpsLongitude.toFixed(4)}` : '—')}</span></td>
                         <td>
                           <div className="action-cell">
                             <button className="btn btn-secondary btn-sm" onClick={() => setExpandedRow(expandedRow === tech.id ? null : tech.id)} title="Details"><FaMapMarkerAlt /></button>
@@ -135,7 +135,7 @@ const Technicians = () => {
                       {expandedRow === tech.id && (
                         <tr className="expanded-row"><td colSpan="10" style={{ padding: '8px 16px', backgroundColor: 'var(--surface)' }}>
                           <div style={{ display: 'flex', gap: 32, fontSize: 12, flexWrap: 'wrap' }}>
-                            <div><strong><FaMapMarkerAlt /> Location:</strong><br />{tech.gpsLatitude != null ? `${tech.gpsLatitude.toFixed(6)}, ${tech.gpsLongitude.toFixed(6)}` : '—'}</div>
+                            <div><strong><FaMapMarkerAlt /> Location:</strong><br />{tech.locationName || (tech.gpsLatitude != null ? `${tech.gpsLatitude.toFixed(6)}, ${tech.gpsLongitude.toFixed(6)}` : '—')}</div>
                             <div><strong><FaClock /> Last Update:</strong><br /><span style={{ color: stale ? 'var(--danger)' : 'inherit' }}>{formatLoc(tech.lastLocationUpdate)}{stale && <FaExclamationTriangle style={{ color: 'var(--danger)', marginLeft: 4 }} />}</span></div>
                             <div><strong><FaEnvelope /> Email:</strong><br />{tech.email || '—'}</div>
                             <div><strong><FaPhone /> Phone:</strong><br />{tech.phone || '—'}</div>

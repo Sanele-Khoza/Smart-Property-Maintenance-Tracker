@@ -1,223 +1,292 @@
-import React, { useState } from 'react';
-import { FaDatabase, FaCloud, FaHistory, FaClock, FaCheckCircle, FaExclamationTriangle, FaRedo, FaCalendarAlt, FaAws, FaUndo, FaTimes } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaDatabase, FaDownload, FaUpload, FaHistory, FaCheckCircle, FaExclamationTriangle, FaTrash, FaRedo, FaTimes } from 'react-icons/fa';
+import {
+  getBackupInfo, exportBackup, downloadBackupFile, downloadSqlBackupFile, parseBackupFile,
+  restoreBackup, clearLocalMirror, getBackupHistory, clearBackupHistory,
+} from '../../data/backupStore';
 
-const now = Date.now();
-const day = 86400000;
-
-const SEED_SNAPSHOTS = Array.from({ length: 30 }, (_, i) => ({
-  id: `snap-${String(i + 1).padStart(3, '0')}`,
-  type: 'automated',
-  status: 'available',
-  createdAt: new Date(now - (i + 1) * day).toISOString(),
-  instanceSize: 'db.t3.medium',
-  storageGiB: 20,
-  engineVersion: i < 15 ? '2019' : '2022',
-})).concat([
-  { id: 'snap-031', type: 'manual', status: 'available', createdAt: new Date(now - 5 * day).toISOString(), instanceSize: 'db.t3.medium', storageGiB: 20, engineVersion: '2022' },
-  { id: 'snap-032', type: 'manual', status: 'creating',  createdAt: new Date(now - 0.5 * day).toISOString(), instanceSize: 'db.t3.medium', storageGiB: 20, engineVersion: '2022' },
-]);
-
-const RETENTION_DAYS = 30;
-const RPO_MINUTES = 5;
+const formatBytes = (n) => {
+  if (n === null || n === undefined) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const Backup = () => {
-  const [snapshots, setSnapshots] = useState(SEED_SNAPSHOTS);
-  const [triggering, setTriggering] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [infoLoading, setInfoLoading] = useState(true);
+  const [infoError, setInfoError] = useState('');
+  const [exporting, setExporting] = useState(null);
+  const [restoring, setRestoring] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [restoreMode, setRestoreMode] = useState('replace');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [ackRisk, setAckRisk] = useState(false);
+  const [msg, setMsg] = useState({ text: '', type: '' });
+  const [history, setHistory] = useState(getBackupHistory);
+  const fileRef = useRef(null);
 
-  const availableSnaps = snapshots.filter(s => s.status === 'available');
-  const latestSnapshot = availableSnaps.length > 0 ? availableSnaps.reduce((a, b) => new Date(a.createdAt) > new Date(b.createdAt) ? a : b) : null;
-  const earliestSnapshot = availableSnaps.length > 0 ? availableSnaps.reduce((a, b) => new Date(a.createdAt) < new Date(b.createdAt) ? a : b) : null;
-  const oldestRetained = earliestSnapshot ? new Date(earliestSnapshot.createdAt) : new Date(now - RETENTION_DAYS * day);
+  const loadInfo = async () => {
+    setInfoLoading(true);
+    setInfoError('');
+    const r = await getBackupInfo();
+    if (r.success) setInfo(r.data);
+    else setInfoError(r.error);
+    setInfoLoading(false);
+  };
 
-  const handleTriggerSnapshot = () => {
-    setTriggering(true);
-    setMsg('');
+  useEffect(() => { loadInfo(); }, []);
+
+  const flash = (text, type) => setMsg({ text, type });
+
+  const handleDownload = async (format = 'json') => {
+    setExporting(format);
+    flash('', '');
+    try {
+      const r = await exportBackup(format);
+      if (!r.success) {
+        flash(`Backup failed: ${r.error}`, 'error');
+        return;
+      }
+      if (format === 'sql') {
+        if (!r.data?.sql) {
+          flash('Backup failed: server returned an empty SQL script.', 'error');
+          return;
+        }
+        const dl = downloadSqlBackupFile(r.data.sql, r.data.filename, r.data.exportedAt);
+        setHistory(getBackupHistory());
+        flash(`SQL backup created and saved to your device: ${dl.fileName} (${formatBytes(dl.sizeBytes)}). Keep this file — it is your restore point.`, 'success');
+      } else {
+        if (!r.data?.dump || typeof r.data.dump !== 'object') {
+          flash('Backup failed: server returned an empty backup.', 'error');
+          return;
+        }
+        const dl = downloadBackupFile(r.data.dump);
+        setHistory(getBackupHistory());
+        flash(`Backup created and saved to your device: ${dl.fileName} (${dl.totalRows} records, ${formatBytes(dl.sizeBytes)}). Keep this file — it is your restore point.`, 'success');
+      }
+      loadInfo();
+    } catch (e) {
+      flash(`Backup failed: ${e?.message || 'unexpected error while saving the file'}`, 'error');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleFilePicked = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    flash('', '');
+    const r = await parseBackupFile(file);
+    if (!r.success) {
+      setSelected(null);
+      flash(r.error, 'error');
+    } else {
+      setSelected(r.data);
+      setAckRisk(false);
+      flash(r.data.isSql
+        ? `Loaded ${r.data.fileName}: SQL restore script (${formatBytes(r.data.sizeBytes)}). This restores as a full replacement — then click Restore.`
+        : `Loaded ${r.data.fileName}: ${r.data.totalRows} records across ${r.data.totalTables} tables. Choose a restore mode, then Restore.`, 'info');
+    }
+    e.target.value = '';
+  };
+
+  const openConfirm = () => {
+    if (!selected) { flash('Choose a backup file first.', 'error'); return; }
+    setAckRisk(false);
+    setConfirmOpen(true);
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    flash('', '');
+    const r = await restoreBackup(selected.payload, restoreMode);
+    setRestoring(false);
+    if (!r.success) {
+      flash(`Restore failed: ${r.error}`, 'error');
+      return;
+    }
+    setHistory(getBackupHistory());
+    setConfirmOpen(false);
+    setSelected(null);
+    flash(`${r.message} Reloading from the restored database…`, 'success');
     setTimeout(() => {
-      const newSnap = {
-        id: `snap-${String(snapshots.length + 1).padStart(3, '0')}`,
-        type: 'manual',
-        status: 'creating',
-        createdAt: new Date().toISOString(),
-        instanceSize: 'db.t3.medium',
-        storageGiB: 20,
-        engineVersion: '2022',
-      };
-      setSnapshots(p => [newSnap, ...p]);
-      setTriggering(false);
-      setMsg('Manual snapshot triggered successfully. Initializing...');
-      setTimeout(() => {
-        setSnapshots(p => p.map(s => s.id === newSnap.id ? { ...s, status: 'available' } : s));
-        setMsg('Manual snapshot completed and available.');
-      }, 3000);
+      clearLocalMirror();
+      window.location.reload();
     }, 1500);
   };
 
-  const handleRestore = (snapshot) => {
-    setRestoreTarget(snapshot);
-  };
-
-  const confirmRestore = () => {
-    setMsg(`Restore initiated from ${restoreTarget.id} (${new Date(restoreTarget.createdAt).toLocaleString()}). Estimated downtime: 15-30 min.`);
-    setRestoreTarget(null);
-  };
-
-  const handlePitrRestore = () => {
-    const targetTime = new Date(now - 2 * 60 * 1000).toLocaleString();
-    setMsg(`Point-in-time recovery initiated to ${targetTime} (RPO: 5 min). Restoring from ${new Date(now - 10 * 60 * 1000).toLocaleString()} to ${targetTime}.`);
-  };
+  const counts = info?.counts || {};
+  const countedTables = Object.entries(counts).filter(([, v]) => v > 0);
+  const totalRows = info?.totalRows ?? countedTables.reduce((a, [, v]) => a + v, 0);
 
   return (
     <div>
       <div className="card">
         <div className="card-title">
-          <span><FaDatabase /> RDS Backup & Recovery <span className="req-ref">NFR-R04</span></span>
+          <span><FaDatabase /> Database Backup & Restore <span className="req-ref">NFR-R04</span></span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-teal btn-sm" onClick={handleTriggerSnapshot} disabled={triggering}>
-              <FaRedo /> {triggering ? 'Triggering...' : 'Trigger Snapshot'}
+            <button className="btn btn-secondary btn-sm" onClick={loadInfo} disabled={infoLoading}>
+              <FaRedo /> {infoLoading ? 'Refreshing…' : 'Refresh'}
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={handlePitrRestore}>
-              <FaUndo /> PITR Restore
+            <button className="btn btn-teal btn-sm" onClick={() => handleDownload('json')} disabled={!!exporting}>
+              <FaDownload /> {exporting === 'json' ? 'Creating…' : 'Create backup (.json)'}
+            </button>
+            <button className="btn btn-teal btn-sm" onClick={() => handleDownload('sql')} disabled={!!exporting}>
+              <FaDownload /> {exporting === 'sql' ? 'Creating…' : 'Create backup (.sql)'}
             </button>
           </div>
         </div>
-        {msg && (
+
+        {msg.text && (
           <div style={{
             padding: '8px 12px', marginBottom: 12, borderRadius: 6, fontSize: 11,
-            backgroundColor: msg.includes('fail') ? 'rgba(220,60,60,0.08)' : 'rgba(45,183,145,0.08)',
-            border: msg.includes('fail') ? '1px solid rgba(220,60,60,0.2)' : '1px solid rgba(45,183,145,0.2)',
+            backgroundColor: msg.type === 'error' ? 'rgba(220,60,60,0.08)' : msg.type === 'info' ? 'rgba(0,188,212,0.08)' : 'rgba(45,183,145,0.08)',
+            border: msg.type === 'error' ? '1px solid rgba(220,60,60,0.2)' : msg.type === 'info' ? '1px solid rgba(0,188,212,0.2)' : '1px solid rgba(45,183,145,0.2)',
           }}>
-            {msg}
+            {msg.text}
           </div>
         )}
+
         <div className="stat-grid">
           <div className="stat-card">
-            <div className="stat-value"><FaCloud /> {snapshots.filter(s => s.type === 'automated' && s.status === 'available').length}</div>
-            <div className="stat-label">Available Automated Snapshots (daily)</div>
+            <div className="stat-value"><FaDatabase /> {infoLoading ? '…' : totalRows}</div>
+            <div className="stat-label">Database Records</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value"><FaDatabase /> {snapshots.filter(s => s.status === 'available').reduce((sum, s) => sum + s.storageGiB, 0)} GiB</div>
-            <div className="stat-label">Total Snapshot Storage</div>
+            <div className="stat-value">{infoLoading ? '…' : (info?.tableCount ?? 0)}</div>
+            <div className="stat-label">Tables</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--teal)' }}>{RETENTION_DAYS} days</div>
-            <div className="stat-label">Retention Period</div>
+            <div className="stat-value">{infoLoading ? '…' : (info?.dbSize || '—')}</div>
+            <div className="stat-label">Database Size</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--amber)' }}>{RPO_MINUTES} min</div>
-            <div className="stat-label">Recovery Point Objective (RPO)</div>
+            <div className="stat-value" style={{ color: 'var(--teal)' }}>{history.filter(h => typeof h.kind === 'string' && h.kind.startsWith('created')).length}</div>
+            <div className="stat-label">Backups Created</div>
           </div>
         </div>
-        <div style={{ marginTop: 10, display: 'flex', gap: 20, padding: '10px 14px', backgroundColor: 'rgba(0,188,212,0.06)', borderRadius: 6, border: '1px solid rgba(0,188,212,0.15)', fontSize: 11, flexWrap: 'wrap' }}>
-          <span><FaAws style={{ marginRight: 4 }} /> Instance: <strong>db.t3.medium</strong> (20 GiB gp2) <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>per SDD §7 Capacity Planning</span></span>
-          <span><FaCalendarAlt style={{ marginRight: 4 }} /> Oldest retained: <strong>{oldestRetained.toLocaleDateString()}</strong></span>
-          <span><FaClock style={{ marginRight: 4 }} /> Latest snapshot: <strong>{latestSnapshot ? new Date(latestSnapshot.createdAt).toLocaleString() : '—'}</strong></span>
-          <span>
-            <FaHistory style={{ marginRight: 4 }} /> PITR window:{' '}
-            <strong style={{ color: 'var(--teal)' }}>{new Date(now - 5 * 60 * 1000).toLocaleString()}</strong> to now
-          </span>
-        </div>
+
+        {infoError && (
+          <p style={{ fontSize: 11, color: 'var(--danger)', marginTop: 8 }}>
+            <FaExclamationTriangle style={{ marginRight: 4 }} />Could not reach the backup service: {infoError}
+          </p>
+        )}
+
+        {!infoLoading && !infoError && countedTables.length > 0 && (
+          <div style={{ marginTop: 10, padding: '10px 14px', backgroundColor: 'rgba(0,188,212,0.06)', borderRadius: 6, border: '1px solid rgba(0,188,212,0.15)', fontSize: 11, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {countedTables.slice(0, 12).map(([t, c]) => (
+              <span key={t}><strong>{t}</strong>: {c}</span>
+            ))}
+            {countedTables.length > 12 && <span style={{ color: 'var(--text-dim)' }}>+{countedTables.length - 12} more</span>}
+          </div>
+        )}
       </div>
 
       <div className="card">
         <div className="card-title">
-          <span><FaHistory /> Snapshot History</span>
+          <span><FaUpload /> Restore from file</span>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12 }}>
+          Select a backup file previously created from this page (<code>.json</code> or <code>.sql</code>). Restoring in
+          <strong> Replace </strong> mode overwrites the entire database with the file contents. SQL backups always restore as a full replacement.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+          <input ref={fileRef} type="file" accept=".json,.sql,application/json,application/sql" style={{ display: 'none' }} onChange={handleFilePicked} />
+          <button className="btn btn-secondary" onClick={() => fileRef.current && fileRef.current.click()}>
+            <FaUpload /> Choose backup file
+          </button>
+          {selected && (
+            <span style={{ fontSize: 11 }}><FaCheckCircle style={{ color: 'var(--teal)', marginRight: 4 }} />{selected.fileName} — {selected.isSql ? `SQL script, ${formatBytes(selected.sizeBytes)}` : `${selected.totalRows} records, ${formatBytes(selected.sizeBytes)}`}{selected.exportedAt ? ` (exported ${new Date(selected.exportedAt).toLocaleString()})` : ''}</span>
+          )}
+        </div>
+
+        {selected && (
+          <>
+            {!selected.isSql && (
+              <div className="form-group" style={{ maxWidth: 420 }}>
+                <label className="form-label">Restore mode</label>
+                <select className="form-select" value={restoreMode} onChange={e => setRestoreMode(e.target.value)}>
+                  <option value="replace">Replace — wipe database and restore exactly from file (recommended)</option>
+                  <option value="merge">Merge — insert missing records, keep current data</option>
+                </select>
+              </div>
+            )}
+            {!selected.isSql && (
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 12, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {Object.entries(selected.counts).slice(0, 12).map(([t, c]) => (
+                  <span key={t}><strong>{t}</strong>: {c}</span>
+                ))}
+              </div>
+            )}
+            <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+              <button className="btn btn-secondary" onClick={() => setSelected(null)}>Clear</button>
+              <button className="btn btn-primary" onClick={openConfirm}><FaUpload /> Restore…</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card-title">
+          <span><FaHistory /> Backup Activity</span>
+          {history.length > 0 && <button className="btn btn-secondary btn-sm" onClick={() => { clearBackupHistory(); setHistory([]); }}><FaTrash /> Clear</button>}
         </div>
         <div className="admin-table-wrapper">
           <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Snapshot ID</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Instance</th>
-                <th>Storage</th>
-                <th>Engine</th>
-                <th>Retained Until</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr><th>When</th><th>Activity</th><th>File</th><th>Records</th><th>Size</th></tr></thead>
             <tbody>
-              {snapshots.length === 0 ? (
-                <tr><td colSpan="9" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No snapshots available.</td></tr>
+              {history.length === 0 ? (
+                <tr><td colSpan="5" className="empty-text" style={{ textAlign: 'center', padding: 24 }}>No backups downloaded or restored yet on this browser.</td></tr>
               ) : (
-                snapshots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(s => {
-                  const retainedUntil = new Date(new Date(s.createdAt).getTime() + RETENTION_DAYS * day);
-                  const isExpired = retainedUntil < new Date();
-                  return (
-                    <tr key={s.id} style={s.type === 'manual' ? { backgroundColor: 'rgba(45,183,145,0.04)' } : {}}>
-                      <td className="cell-mono" style={{ fontSize: 10 }}>{s.id}</td>
-                      <td>
-                        {s.type === 'automated' ? (
-                          <span className="badge badge-info" style={{ fontSize: 8 }}>Automated</span>
-                        ) : (
-                          <span className="badge badge-completed" style={{ fontSize: 8 }}>Manual</span>
-                        )}
-                      </td>
-                      <td>
-                        {s.status === 'available' ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--teal)' }}>
-                            <FaCheckCircle style={{ fontSize: 10 }} /> Available
-                          </span>
-                        ) : s.status === 'creating' ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--amber)' }}>
-                            <FaClock style={{ fontSize: 10 }} /> Creating
-                          </span>
-                        ) : (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--danger)' }}>
-                            <FaExclamationTriangle style={{ fontSize: 10 }} /> {s.status}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ fontSize: 10, whiteSpace: 'nowrap', color: 'var(--text-dim)' }}>{new Date(s.createdAt).toLocaleString()}</td>
-                      <td style={{ fontSize: 10, fontFamily: 'monospace' }}>{s.instanceSize}</td>
-                      <td className="cell-mono" style={{ fontSize: 11 }}>{s.storageGiB} GiB</td>
-                      <td className="cell-mono" style={{ fontSize: 11 }}>SQL Server {s.engineVersion}</td>
-                      <td style={{ fontSize: 10, whiteSpace: 'nowrap', color: isExpired ? 'var(--danger)' : 'var(--text-dim)' }}>
-                        {isExpired ? 'EXPIRED' : retainedUntil.toLocaleDateString()}
-                      </td>
-                      <td>
-                        {s.status === 'available' && (
-                          <button className="btn btn-secondary btn-sm" onClick={() => handleRestore(s)} title="Restore from this snapshot" style={{ fontSize: 9, padding: '2px 5px' }}>
-                            <FaUndo /> Restore
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                history.map((h, i) => (
+                  <tr key={i}>
+                    <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(h.at).toLocaleString()}</td>
+                    <td style={{ fontSize: 11 }}>{h.kind === 'created' || h.kind === 'download' ? 'Created backup' : h.kind && h.kind.startsWith('restore') ? `Restore (${h.kind.split(':')[1] || 'replace'})` : h.kind}</td>
+                    <td className="cell-mono" style={{ fontSize: 11 }}>{h.fileName || '—'}</td>
+                    <td className="cell-mono" style={{ fontSize: 11 }}>{h.totalRows ?? '—'}</td>
+                    <td className="cell-mono" style={{ fontSize: 11 }}>{h.sizeBytes ? formatBytes(h.sizeBytes) : '—'}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {restoreTarget && (
-        <div className="modal" onClick={() => setRestoreTarget(null)}>
-          <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+      {confirmOpen && selected && (
+        <div className="modal" onClick={() => setConfirmOpen(false)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="edit-modal-header">
-              <span><FaUndo /> Restore from Snapshot</span>
-              <button className="modal-close-btn" onClick={() => setRestoreTarget(null)}><FaTimes /></button>
+              <span><FaExclamationTriangle /> Confirm restore</span>
+              <button className="modal-close-btn" onClick={() => setConfirmOpen(false)}><FaTimes /></button>
             </div>
             <div style={{ padding: 20 }}>
               <p style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 12 }}>
-                Restore RDS instance from <strong>{restoreTarget.id}</strong>?
+                Restore from <strong>{selected.fileName}</strong> in <strong>{selected.isSql ? 'full replacement (SQL script)' : restoreMode}</strong> mode?
               </p>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <span>Snapshot: <strong>{restoreTarget.id}</strong></span>
-                <span>Created: <strong>{new Date(restoreTarget.createdAt).toLocaleString()}</strong></span>
-                <span>Engine: <strong>SQL Server {restoreTarget.engineVersion}</strong></span>
-                <span>Storage: <strong>{restoreTarget.storageGiB} GiB</strong></span>
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 16 }}>
-                <FaExclamationTriangle style={{ marginRight: 4 }} />
-                Restoring overwrites the current instance. Estimated downtime: 15-30 minutes. Data after snapshot creation will be lost (RPO: 5 min PITR available as alternative).
-              </p>
+              {(selected.isSql || restoreMode === 'replace') ? (
+                <p style={{ fontSize: 11, color: 'var(--danger)', marginBottom: 16 }}>
+                  <FaExclamationTriangle style={{ marginRight: 4 }} />
+                  This wipes the current database and replaces it with the backup file
+                  {selected.isSql ? '' : ` (${selected.totalRows} records)`}.
+                  Anything created after the backup was created will be lost. The app will reload afterwards.
+                </p>
+              ) : (
+                <p style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 16 }}>
+                  <FaExclamationTriangle style={{ marginRight: 4 }} />
+                  Merge mode inserts missing records but keeps current data. It cannot undo deletions.
+                </p>
+              )}
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, marginBottom: 16 }}>
+                <input type="checkbox" checked={ackRisk} onChange={e => setAckRisk(e.target.checked)} />
+                I understand{selected.isSql || restoreMode === 'replace' ? ' this overwrites the database' : ' the effects of this restore'}
+              </label>
               <div className="form-actions">
-                <button className="btn btn-secondary" onClick={() => setRestoreTarget(null)}>Cancel</button>
-                <button className="btn btn-primary" onClick={confirmRestore}><FaUndo /> Restore</button>
+                <button className="btn btn-secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
+                <button className="btn btn-primary" disabled={!ackRisk || restoring} onClick={handleRestore}>
+                  <FaUpload /> {restoring ? 'Restoring…' : 'Restore now'}
+                </button>
               </div>
             </div>
           </div>

@@ -3,8 +3,14 @@
 Each ticket is a short (title + description) string mapped to one of the
 SPMT maintenance categories. Data is random but seeded so results are
 reproducible across runs.
+
+Usage:
+    python -m app.data_generator [--n-per-category N] [--seed S] [--out PATH]
+
+Default N=625 generates 625 * 8 categories = 5,000 labelled samples.
 """
 
+import argparse
 import random
 import csv
 from pathlib import Path
@@ -61,7 +67,7 @@ def _make_description(keyword: str) -> str:
     return template.format(kw=keyword, room=random.choice(ROOMS), state=random.choice(STATES))
 
 
-def generate_dataset(n_per_category: int = 120, seed: int = 42) -> list[dict]:
+def generate_dataset(n_per_category: int = 625, seed: int = 42) -> list[dict]:
     """Return list of {text, category} labelled samples."""
     rng = random.Random(seed)
     rows = []
@@ -90,6 +96,16 @@ def write_dataset(path: Path, n_per_category: int = 120, seed: int = 42) -> list
 
 
 if __name__ == "__main__":
-    out = Path(__file__).resolve().parents[1] / "data" / "tickets_dataset.csv"
-    rows = write_dataset(out)
-    print(f"Wrote {len(rows)} labelled samples to {out}")
+    parser = argparse.ArgumentParser(description="Generate the SPMT category training dataset.")
+    parser.add_argument("--n-per-category", type=int, default=625,
+                        help="samples per category (default 625 -> 5,000 total across 8 categories)")
+    parser.add_argument("--seed", type=int, default=42, help="random seed (default 42)")
+    parser.add_argument("--out", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "data" / "tickets_dataset.csv",
+                        help="output CSV path")
+    args = parser.parse_args()
+
+    rows = write_dataset(args.out, args.n_per_category, args.seed)
+    from collections import Counter
+    print(f"Wrote {len(rows)} labelled samples -> {args.out}")
+    print(Counter(r["category"] for r in rows))

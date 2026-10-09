@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaDoorOpen, FaPlus, FaEdit, FaTrash, FaUserCheck, FaUserSlash, FaSearch, FaTimes, FaCheck, FaBuilding, FaExclamationTriangle, FaTicketAlt, FaSortAmountUp, FaSortAmountDown } from 'react-icons/fa';
-import { getUnits, addUnit, assignTenantToUnit, vacateUnit, updateUnit, deleteUnit, getProperties, getTickets } from '../../data/store';
+import { getUnits, addUnit, addUnitsBulk, parseUnitRangeInput, expandUnitRange, assignTenantToUnit, vacateUnit, updateUnit, deleteUnit, getProperties, getTickets } from '../../data/store';
 import Alert from '../../components/common/Alert';
 
 const STATUS_CONFIG = {
@@ -20,8 +20,10 @@ const Units = () => {
   const ticketCountByUnit = {};
   allTickets.forEach(t => { ticketCountByUnit[t.unitId] = (ticketCountByUnit[t.unitId] || 0) + 1; });
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ propertyId: '', unitNumber: '', floor: '' });
+  const [createMode, setCreateMode] = useState('single');
+  const [createForm, setCreateForm] = useState({ propertyId: '', unitNumber: '', from: '', to: '', floor: '' });
   const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState({ unitNumber: '', floor: '' });
   const [editError, setEditError] = useState('');
@@ -57,24 +59,66 @@ const Units = () => {
   ];
 
   const openCreate = () => {
-    setCreateForm({ propertyId: properties[0]?.propertyId || '', unitNumber: '', floor: '' });
+    setCreateForm({ propertyId: properties[0]?.propertyId || '', unitNumber: '', from: '', to: '', floor: '' });
     setCreateError('');
+    setCreateMode('single');
     setShowCreate(true);
   };
 
+  const bulkPreview = createMode === 'bulk'
+    ? expandUnitRange(createForm.from, createForm.to)
+    : parseUnitRangeInput(createForm.unitNumber);
+
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!createForm.propertyId || !createForm.unitNumber.trim()) {
-      setCreateError('Property and unit number are required.');
+    if (!createForm.propertyId) {
+      setCreateError('Property is required.');
       return;
     }
-    const r = await addUnit(createForm.propertyId, createForm.unitNumber, createForm.floor || null);
-    if (r.success) {
-      showAlert(`Unit ${r.data.unitNumber} created. (REQ-010)`, 'success');
-      setShowCreate(false);
-      refresh();
-    } else {
-      setCreateError(r.error);
+    setCreating(true);
+    try {
+      if (createMode === 'bulk') {
+        if (!String(createForm.from).trim() || !String(createForm.to).trim()) {
+          setCreateError('Start and end unit numbers required (e.g. 1 – 9).');
+          return;
+        }
+        const r = await addUnitsBulk(createForm.propertyId, { from: createForm.from, to: createForm.to, floor: createForm.floor || null });
+        if (r.success) {
+          showAlert(`Created ${r.data.count} unit(s). (REQ-010)`, 'success');
+          setShowCreate(false);
+          refresh();
+        } else {
+          setCreateError(r.error);
+        }
+      } else {
+        if (!createForm.unitNumber.trim()) {
+          setCreateError('Property and unit number are required.');
+          return;
+        }
+        if (createForm.unitNumber.includes('-')) {
+          const parsed = parseUnitRangeInput(createForm.unitNumber);
+          if (!parsed.ok) { setCreateError(parsed.error); return; }
+          const r = await addUnitsBulk(createForm.propertyId, { unitNumbers: parsed.numbers, floor: createForm.floor || null });
+          if (r.success) {
+            showAlert(`Created ${r.data.count} unit(s). (REQ-010)`, 'success');
+            setShowCreate(false);
+            refresh();
+          } else {
+            setCreateError(r.error);
+          }
+        } else {
+          const r = await addUnit(createForm.propertyId, createForm.unitNumber.trim(), createForm.floor || null);
+          if (r.success) {
+            showAlert(`Unit ${r.data.unitNumber} created. (REQ-010)`, 'success');
+            setShowCreate(false);
+            refresh();
+          } else {
+            setCreateError(r.error);
+          }
+        }
+      }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -293,7 +337,7 @@ const Units = () => {
         <div className="modal" onClick={() => setShowCreate(false)}>
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <span><FaPlus /> Add Unit <span className="req-ref">REQ-010</span></span>
+              <span><FaPlus /> Add Unit(s) <span className="req-ref">REQ-010</span></span>
               <button className="modal-close-btn" onClick={() => setShowCreate(false)}><FaTimes /></button>
             </div>
             <form onSubmit={handleCreate}>
@@ -307,19 +351,49 @@ const Units = () => {
                   ))}
                 </select>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Unit Number</label>
-                  <input className="form-input" name="unitNumber" value={createForm.unitNumber} onChange={e => setCreateForm({ ...createForm, unitNumber: e.target.value })} required placeholder="e.g. 101" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Floor</label>
-                  <input className="form-input" name="floor" type="number" min="0" value={createForm.floor} onChange={e => setCreateForm({ ...createForm, floor: e.target.value })} placeholder="e.g. 1" />
-                </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button type="button" className={createMode === 'single' ? 'btn btn-teal btn-sm' : 'btn btn-secondary btn-sm'} onClick={() => { setCreateMode('single'); setCreateError(''); }}>Single</button>
+                <button type="button" className={createMode === 'bulk' ? 'btn btn-teal btn-sm' : 'btn btn-secondary btn-sm'} onClick={() => { setCreateMode('bulk'); setCreateError(''); }}>Bulk range</button>
               </div>
+              {createMode === 'single' ? (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Unit Number <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>(or range e.g. 1-9)</span></label>
+                    <input className="form-input" name="unitNumber" value={createForm.unitNumber} onChange={e => setCreateForm({ ...createForm, unitNumber: e.target.value })} required placeholder="e.g. 101 or 1-9" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Floor</label>
+                    <input className="form-input" name="floor" type="number" min="0" value={createForm.floor} onChange={e => setCreateForm({ ...createForm, floor: e.target.value })} placeholder="e.g. 0" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">From</label>
+                      <input className="form-input" value={createForm.from} onChange={e => setCreateForm({ ...createForm, from: e.target.value })} required placeholder="e.g. 1" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">To</label>
+                      <input className="form-input" value={createForm.to} onChange={e => setCreateForm({ ...createForm, to: e.target.value })} required placeholder="e.g. 9" />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Floor (applies to all)</label>
+                    <input className="form-input" name="floor" type="number" min="0" value={createForm.floor} onChange={e => setCreateForm({ ...createForm, floor: e.target.value })} placeholder="e.g. 0" />
+                  </div>
+                </>
+              )}
+              {(createMode === 'bulk' ? (String(createForm.from).trim() || String(createForm.to).trim()) : createForm.unitNumber.includes('-')) && bulkPreview && (
+                <p style={{ fontSize: 12, color: bulkPreview.ok ? 'var(--teal)' : 'var(--danger)', marginTop: 4 }}>
+                  {bulkPreview.ok
+                    ? `Will create ${bulkPreview.numbers.length} unit(s) on floor ${createForm.floor || '—'}: ${bulkPreview.numbers.slice(0, 10).join(', ')}${bulkPreview.numbers.length > 10 ? ` … +${bulkPreview.numbers.length - 10} more` : ''}`
+                    : bulkPreview.error}
+                </p>
+              )}
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
-                <button type="submit" className="btn btn-teal"><FaPlus /> Create</button>
+                <button type="submit" className="btn btn-teal" disabled={creating}><FaPlus /> {creating ? 'Creating…' : createMode === 'bulk' ? 'Create units' : 'Create'}</button>
               </div>
             </form>
           </div>

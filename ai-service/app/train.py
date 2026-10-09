@@ -1,25 +1,35 @@
 """Train the category classifier and persist it.
 
-Trains on the merged dataset: the curated AWS comprehend training CSV
-(existing real ticket descriptions) combined with synthetic rows so every
-SPMT category is represented.
+Trains on the merged on-disk dataset:
+  - <repo-root>/training data/comprehend_training_data.csv  (curated real descriptions, ~256 rows)
+  - ai-service/data/tickets_dataset.csv                     (synthetic, 5,000 rows)
+
+The synthetic rows are regenerated with `python -m app.data_generator` if the
+file is missing. Training in total runs on 5,000+ labelled samples.
 
 Usage:
     python -m app.train
 """
 
-from pathlib import Path
 import csv
+import random
+from pathlib import Path
 
 import joblib
 
-from app.model import build_pipeline, MODEL_PATH
+from app.comprehend_loader import load_comprehend_csv
 from app.data_generator import generate_dataset
+from app.model import build_pipeline, MODEL_PATH
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "data" / "tickets_dataset.csv"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+COMPREHEND_CSV = REPO_ROOT / "training data" / "comprehend_training_data.csv"
+
+SYNTHETIC_N_PER_CATEGORY = 625
 
 
-def load_or_generate(path: Path, n_per_category: int = 150) -> tuple[list[str], list[str]]:
+def load_synthetic(path: Path) -> tuple[list[str], list[str]]:
+    """Read the synthetic category CSV, or generate it if missing/empty."""
     if path.exists():
         texts, labels = [], []
         with open(path, newline="", encoding="utf-8") as f:
@@ -28,7 +38,7 @@ def load_or_generate(path: Path, n_per_category: int = 150) -> tuple[list[str], 
                 labels.append(row["category"])
         if texts:
             return texts, labels
-    rows = generate_dataset(n_per_category)
+    rows = generate_dataset(SYNTHETIC_N_PER_CATEGORY)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["text", "category"])
@@ -38,22 +48,27 @@ def load_or_generate(path: Path, n_per_category: int = 150) -> tuple[list[str], 
 
 
 def main() -> None:
-    texts, labels = load_or_generate(CSV_PATH)
-from app.comprehend_loader import build_merged_dataset
+    real = load_comprehend_csv(COMPREHEND_CSV)
+    synth_texts, synth_labels = load_synthetic(CSV_PATH)
 
-# Curated real-labelled tickets live in <repo-root>/training data/
-REPO_ROOT = Path(__file__).resolve().parents[2]
-COMPREHEND_CSV = REPO_ROOT / "training data" / "comprehend_training_data.csv"
+    texts = [r["text"] for r in real] + synth_texts
+    labels = [r["category"] for r in real] + synth_labels
 
+    rng = random.Random(42)
+    pairs = list(zip(texts, labels))
+    rng.shuffle(pairs)
+    texts = [t for t, _ in pairs]
+    labels = [l for _, l in pairs]
 
-def main() -> None:
-    texts, labels = build_merged_dataset(COMPREHEND_CSV, synthetic_n_per_category=120)
     pipe = build_pipeline()
     pipe.fit(texts, labels)
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipe, MODEL_PATH)
-    print(f"Trained on {len(texts)} samples -> saved to {MODEL_PATH}")
+
+    from collections import Counter
+    print(f"Trained on {len(texts)} samples (real={len(real)}, synthetic={len(synth_texts)}) -> saved to {MODEL_PATH}")
     print(f"Classes: {pipe.classes_.tolist()}")
+    print(f"Label distribution: {dict(Counter(labels))}")
 
 
 if __name__ == "__main__":

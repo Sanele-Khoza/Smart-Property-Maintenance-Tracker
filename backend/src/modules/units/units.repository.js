@@ -73,6 +73,34 @@ const create = async (data) => {
   return result.rows[0];
 };
 
+const bulkCreate = async (data, unitNumbers) => {
+  const propertyId = data.property_id || data.propertyId;
+  const floor = data.floor ?? null;
+  const type = data.type || '1-Bed';
+  const bedrooms = data.bedrooms || 1;
+  const bathrooms = data.bathrooms || 1;
+  const sizeSqm = data.size_sqm || data.sizeSqm || null;
+
+  // Skip numbers that already exist for this property
+  const existingRes = await query(
+    `SELECT unit_number FROM units WHERE property_id = $1`,
+    [propertyId]
+  );
+  const existing = new Set(existingRes.rows.map(r => r.unit_number));
+  const toCreate = [...new Set(unitNumbers)].filter(n => !existing.has(n));
+
+  const created = [];
+  for (const unitNumber of toCreate) {
+    const res = await query(
+      `INSERT INTO units (property_id, unit_number, floor, type, bedrooms, bathrooms, size_sqm)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [propertyId, unitNumber, floor, type, bedrooms, bathrooms, sizeSqm]
+    );
+    created.push(res.rows[0]);
+  }
+  return { created, skipped: [...new Set(unitNumbers)].filter(n => existing.has(n)) };
+};
+
 const update = async (id, data) => {
   const entries = Object.entries(data).filter(([_, v]) => v !== undefined);
   if (entries.length === 0) return findById(id);
@@ -131,4 +159,4 @@ const findTenantIdByName = async (name, surname) => {
   return result.rows[0] || null;
 };
 
-export { findById, findAll, create, update, assign, vacate, remove, findByOccupant, findTenantIdByName };
+export { findById, findAll, create, bulkCreate, update, assign, vacate, remove, findByOccupant, findTenantIdByName };

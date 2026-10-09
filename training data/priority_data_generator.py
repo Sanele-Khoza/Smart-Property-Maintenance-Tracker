@@ -8,10 +8,14 @@ consistent with the keyword heuristic (and generalises better on phrasing the
 heuristic misses, such as "exposed electrical wires").
 
 Output CSV (with header row):  text,priority
-    GLOBAL_TARGET  -> total samples to write (default 1500)
+    GLOBAL_TARGET  -> total samples to write (default 2500)
 Rows are seeded so results are reproducible across runs.
+
+Usage:
+    python priority_data_generator.py [--total N] [--seed S] [--out PATH]
 """
 
+import argparse
 import random
 import csv
 from pathlib import Path
@@ -91,7 +95,7 @@ def _sample_text(rng, priority):
     return op.format(kw=kw, room=room, loc=loc)
 
 
-def generate_priority_dataset(total: int = 1500, seed: int = 7) -> list[dict]:
+def generate_priority_dataset(total: int = 2500, seed: int = 7) -> list[dict]:
     rng = random.Random(seed)
     # Rough distribution tuned so EMERGENCY/HIGH are important but not dominant,
     # ensuring the model sees enough examples of each class.
@@ -107,7 +111,7 @@ def generate_priority_dataset(total: int = 1500, seed: int = 7) -> list[dict]:
     return rows
 
 
-def write_priority_dataset(path: Path, total: int = 1500, seed: int = 7) -> list[dict]:
+def write_priority_dataset(path: Path, total: int = 2500, seed: int = 7) -> list[dict]:
     rows = generate_priority_dataset(total, seed)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -118,8 +122,16 @@ def write_priority_dataset(path: Path, total: int = 1500, seed: int = 7) -> list
 
 
 if __name__ == "__main__":
-    out = Path(__file__).resolve().parent / "priority_training_data.csv"
-    rows = write_priority_dataset(out)
-    print(f"Wrote {len(rows)} labelled samples -> {out}")
+    parser = argparse.ArgumentParser(description="Generate the SPMT priority training dataset.")
+    parser.add_argument("--total", type=int, default=2500,
+                        help="total samples to write (default 2500)")
+    parser.add_argument("--seed", type=int, default=7, help="random seed (default 7)")
+    parser.add_argument("--out", type=Path,
+                        default=Path(__file__).resolve().parent / "priority_training_data.csv",
+                        help="output CSV path")
+    args = parser.parse_args()
+
+    rows = write_priority_dataset(args.out, args.total, args.seed)
+    print(f"Wrote {len(rows)} labelled samples -> {args.out}")
     from collections import Counter
     print(Counter(r["priority"] for r in rows))

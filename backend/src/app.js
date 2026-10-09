@@ -107,7 +107,7 @@ app.use(cors({ origin: config.cors.origin, credentials: true }));
 app.use(cookieParser());
 app.use(tlsEnforcer);
 app.use(unauthLimiter);
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(sanitize);
 app.use(morgan(config.nodeEnv === 'development' ? 'dev' : 'combined', { stream: { write: msg => logger.info(msg.trim()) } }));

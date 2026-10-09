@@ -2,7 +2,7 @@ export { resetData, getAllData } from './storeCore';
 
 export {
   addProperty, getProperties, updateProperty, updatePropertyStatus, deleteProperty,
-  addUnit, getUnits, getUnitById, updateUnit, assignTenantToUnit, vacateUnit, deleteUnit,
+  addUnit, addUnitsBulk, parseUnitRangeInput, expandUnitRange, getUnits, getUnitById, updateUnit, assignTenantToUnit, vacateUnit, deleteUnit,
   syncPropertiesAndUnits,
 } from './propertyStore';
 

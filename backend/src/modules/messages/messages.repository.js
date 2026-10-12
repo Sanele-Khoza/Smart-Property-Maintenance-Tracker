@@ -48,10 +48,30 @@ const findById = async (id) => {
 
 const create = async (data) => {
   const result = await query(
-    'INSERT INTO messages (sender_id, receiver_id, subject, body, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [data.sender_id, data.receiver_id, data.subject, data.body, data.category || 'general']
+    'INSERT INTO messages (sender_id, receiver_id, subject, body, category, is_popup) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [data.sender_id, data.receiver_id, data.subject, data.body, data.category || 'general', data.is_popup === true]
   );
   return result.rows[0];
+};
+
+const findPopupUnread = async (userId) => {
+  const result = await query(
+    `SELECT m.*, s.name AS sender_name, s.surname AS sender_surname
+     FROM messages m
+     LEFT JOIN users s ON s.id = m.sender_id
+     WHERE m.receiver_id = $1 AND m.read = FALSE AND m.is_popup = TRUE
+     ORDER BY m.created_at ASC`,
+    [userId]
+  );
+  return result.rows;
+};
+
+const findActiveUserIds = async (excludeId) => {
+  const result = await query(
+    `SELECT id FROM users WHERE deleted_at IS NULL AND status = 'ACTIVE' AND id <> $1 ORDER BY id`,
+    [excludeId]
+  );
+  return result.rows.map(r => r.id);
 };
 
 const markRead = async (id) => {
@@ -64,4 +84,4 @@ const countUnread = async (userId) => {
   return result.rows[0].count;
 };
 
-export { findForUser, findById, create, markRead, countUnread };
+export { findForUser, findById, create, markRead, countUnread, findPopupUnread, findActiveUserIds };

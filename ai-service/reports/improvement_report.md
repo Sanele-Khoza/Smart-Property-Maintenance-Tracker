@@ -12,11 +12,11 @@
 ### 5-fold CV on the 80% train (mean ± std, 5 algorithms)
 | Algorithm | CV accuracy | CV macro F1 | avg fit (s) | result |
 |---|---|---|---|---|
-| ComplementNB | 1.0000±0.0000 | 1.0000±0.0000 | 0.222 | winner |
-| Logistic Regression | 1.0000±0.0000 | 1.0000±0.0000 | 0.330 |  |
-| LinearSVC | 1.0000±0.0000 | 1.0000±0.0000 | 0.464 |  |
-| SGD (modified_huber) | 1.0000±0.0000 | 1.0000±0.0000 | 0.284 |  |
-| Random Forest | 1.0000±0.0000 | 1.0000±0.0000 | 0.928 |  |
+| ComplementNB | 1.0000±0.0000 | 1.0000±0.0000 | 0.168 | winner |
+| Logistic Regression | 1.0000±0.0000 | 1.0000±0.0000 | 0.275 |  |
+| LinearSVC | 1.0000±0.0000 | 1.0000±0.0000 | 0.378 |  |
+| SGD (modified_huber) | 1.0000±0.0000 | 1.0000±0.0000 | 0.212 |  |
+| Random Forest | 1.0000±0.0000 | 1.0000±0.0000 | 0.732 |  |
 
 Per-class precision / recall / F1:
 | Class | P-base | R-base | F1-base | P-impr | R-impr | F1-impr |
@@ -45,11 +45,11 @@ Per-class precision / recall / F1:
 ### 5-fold CV on the 80% train (mean ± std, 5 algorithms)
 | Algorithm | CV accuracy | CV macro F1 | avg fit (s) | result |
 |---|---|---|---|---|
-| ComplementNB | 1.0000±0.0000 | 1.0000±0.0000 | 0.305 | winner |
-| Logistic Regression | 1.0000±0.0000 | 1.0000±0.0000 | 0.418 |  |
-| LinearSVC | 1.0000±0.0000 | 1.0000±0.0000 | 0.781 |  |
-| SGD (modified_huber) | 1.0000±0.0000 | 1.0000±0.0000 | 0.415 |  |
-| Random Forest | 1.0000±0.0000 | 1.0000±0.0000 | 2.140 |  |
+| ComplementNB | 1.0000±0.0000 | 1.0000±0.0000 | 0.148 | winner |
+| Logistic Regression | 1.0000±0.0000 | 1.0000±0.0000 | 0.269 |  |
+| LinearSVC | 1.0000±0.0000 | 1.0000±0.0000 | 0.336 |  |
+| SGD (modified_huber) | 1.0000±0.0000 | 1.0000±0.0000 | 0.169 |  |
+| Random Forest | 1.0000±0.0000 | 1.0000±0.0000 | 0.954 |  |
 
 Per-class precision / recall / F1:
 | Class | P-base | R-base | F1-base | P-impr | R-impr | F1-impr |

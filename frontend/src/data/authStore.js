@@ -252,6 +252,25 @@ export const updateUser = async (userId, updates) => {
   }
 };
 
+export const changeUserRole = async (userId, role) => {
+  try {
+    const result = await api(`/users/${userId}/role`, {
+      method: 'PUT',
+      body: { role },
+    });
+    if (result.success) {
+      const updated = normalizeUser(result.data?.user || result.data);
+      usersCache = usersCache.map(u => u.id === userId ? updated : u);
+      saveUsersCache();
+      notifyUsersChanged();
+      return { success: true, data: updated };
+    }
+    return { success: false, error: result.error || 'Failed to change role' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const updateSelfProfile = async (updates) => {
   try {
     const result = await api('/users/me', { method: 'PATCH', body: updates });

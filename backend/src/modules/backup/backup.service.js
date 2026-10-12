@@ -1,13 +1,25 @@
 import logger from '../../shared/utils/logger.js';
 import { query, getClient } from '../../db/connection.js';
 
-const TABLES = ['users', 'properties', 'units', 'leases', 'categories', 'tickets', 'ticket_status_history', 'technicians', 'availability_slots', 'materials', 'notifications', 'documents', 'ratings', 'inference_logs', 'system_settings', 'sla_config', 'ai_threshold_config', 'audit_logs', 'security_audit_logs', 'messages', 'ticket_comments', 'job_evidence', 'completion_reports'];
+/* Tables to exclude from backups (migration bookkeeping, not app data). */
+const EXCLUDED_TABLES = ['_migrations', 'schema_migrations', 'migrations'];
 
-/* Insert order respects foreign keys: users -> categories/properties ->
-   units/technicians -> leases/tickets -> children -> config/logs. */
-const RESTORE_ORDER = ['users', 'categories', 'properties', 'units', 'technicians', 'leases', 'tickets', 'ticket_status_history', 'ticket_comments', 'availability_slots', 'materials', 'job_evidence', 'completion_reports', 'notifications', 'documents', 'ratings', 'messages', 'inference_logs', 'system_settings', 'sla_config', 'ai_threshold_config', 'audit_logs', 'security_audit_logs'];
+/* Quote-safe identifier check — table/column names interpolated into SQL must
+   match this (backup file contents are untrusted input on restore). */
+const isSafeIdent = (name) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(String(name || ''));
+
+/* Every real user table in the database, so backups cover the live schema
+   instead of a hardcoded list that drifts out of date. */
+const listBackupTables = async (clientOrQuery = { query }) => {
+  const res = await clientOrQuery.query(
+    `SELECT table_name FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1`
+  );
+  return res.rows.map(r => r.table_name).filter(t => !EXCLUDED_TABLES.includes(t) && isSafeIdent(t));
+};
 
 const tableExists = async (table) => {
+  if (!isSafeIdent(table)) return false;
   const res = await query(
     `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
     [table]
@@ -15,14 +27,46 @@ const tableExists = async (table) => {
   return res.rowCount > 0;
 };
 
-/* Real database backup: dumps every known table to JSON. */
+/* Parents-before-children insert order derived from the live FK graph
+   (Kahn's algorithm, alphabetical tie-break, cycle-safe fallback). */
+const getInsertOrder = async (tables, clientOrQuery = { query }) => {
+  const set = new Set(tables);
+  let edges = [];
+  try {
+    const res = await clientOrQuery.query(
+      `SELECT conrelid::regclass::text AS child, confrelid::regclass::text AS parent
+       FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace`
+    );
+    edges = res.rows.filter(e => set.has(e.child) && set.has(e.parent) && e.child !== e.parent);
+  } catch { /* no FK info — fall back to alphabetical */ }
+  const parents = new Map([...set].map(t => [t, new Set()]));
+  const children = new Map([...set].map(t => [t, new Set()]));
+  for (const { child, parent } of edges) {
+    parents.get(child).add(parent);
+    children.get(parent).add(child);
+  }
+  const order = [];
+  const ready = [...set].filter(t => parents.get(t).size === 0).sort();
+  while (ready.length) {
+    const t = ready.shift();
+    order.push(t);
+    for (const c of [...children.get(t)].sort()) {
+      parents.get(c).delete(t);
+      if (parents.get(c).size === 0) ready.push(c);
+    }
+    ready.sort();
+  }
+  for (const t of [...set].sort()) if (!order.includes(t)) order.push(t);
+  return order;
+};
+
+/* Real database backup: dumps every table to JSON. */
 const exportData = async () => {
   const data = { app: 'SPMT', version: 1, exportedAt: new Date().toISOString(), tables: {} };
   const counts = {};
   const skipped = [];
-  for (const table of TABLES) {
+  for (const table of await listBackupTables()) {
     try {
-      if (!(await tableExists(table))) { skipped.push(table); continue; }
       const result = await query(`SELECT * FROM ${table}`);
       data.tables[table] = result.rows;
       counts[table] = result.rows.length;
@@ -69,9 +113,9 @@ const toSqlLiteral = (v, udt) => {
 };
 
 const colTypeCache = {};
-const getColTypes = async (table) => {
+const getColTypes = async (table, clientOrQuery = { query }) => {
   if (!colTypeCache[table]) {
-    const res = await query(
+    const res = await clientOrQuery.query(
       `SELECT column_name, udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
       [table]
     );
@@ -88,9 +132,8 @@ const exportSql = async () => {
   const exportedAt = new Date().toISOString();
   const dumped = [];
   const counts = {};
-  for (const table of TABLES) {
+  for (const table of await listBackupTables()) {
     try {
-      if (!(await tableExists(table))) continue;
       const countRes = await query(`SELECT COUNT(*)::int AS count FROM ${table}`);
       dumped.push(table);
       counts[table] = countRes.rows[0].count;
@@ -109,8 +152,7 @@ const exportSql = async () => {
   ];
   if (dumped.length) lines.push(`TRUNCATE TABLE ${dumped.join(', ')} RESTART IDENTITY CASCADE;`, '');
   let totalRows = 0;
-  for (const table of RESTORE_ORDER) {
-    if (!dumped.includes(table)) continue;
+  for (const table of await getInsertOrder(dumped)) {
     const types = await getColTypes(table);
     const result = await query(`SELECT * FROM ${table} ORDER BY 1`);
     for (const row of result.rows) {
@@ -164,9 +206,8 @@ const importSql = async (sqlText) => {
 
 const getInfo = async () => {
   const counts = {};
-  for (const table of TABLES) {
+  for (const table of await listBackupTables()) {
     try {
-      if (!(await tableExists(table))) continue;
       const res = await query(`SELECT COUNT(*)::int AS count FROM ${table}`);
       counts[table] = res.rows[0].count;
     } catch { /* ignore per-table errors */ }
@@ -180,7 +221,8 @@ const getInfo = async () => {
   return { success: true, data: { counts, totalRows, tableCount: Object.keys(counts).length, dbSize }, message: 'Backup info retrieved' };
 };
 
-/* Accept the shapes produced by exportData (current + legacy + bare-tables). */
+/* Accept the shapes produced by exportData (current + legacy + bare-tables).
+   Table names must be safe identifiers (file contents are untrusted). */
 const unwrapPayload = (payload) => {
   if (!payload || typeof payload !== 'object') return null;
   const src = payload.tables && typeof payload.tables === 'object' ? payload.tables
@@ -188,15 +230,22 @@ const unwrapPayload = (payload) => {
     : payload;
   if (!src || typeof src !== 'object') return null;
   const tables = {};
-  for (const t of TABLES) {
-    if (Array.isArray(src[t])) tables[t] = src[t];
+  for (const t of Object.keys(src)) {
+    if (Array.isArray(src[t]) && isSafeIdent(t)) tables[t] = src[t];
   }
   return tables;
 };
 
-const toDbValue = (v) => {
+const toDbValue = (v, udt) => {
   if (v === undefined) return null;
-  if (v !== null && typeof v === 'object' && !(v instanceof Date) && !Buffer.isBuffer(v)) return JSON.stringify(v);
+  if (v === null) return null;
+  if (Array.isArray(v)) {
+    // The pg driver renders JS arrays as Postgres array literals, which is
+    // only valid for native array columns — everything else gets JSON text.
+    if (udt && udt.startsWith('_')) return v;
+    return JSON.stringify(v);
+  }
+  if (typeof v === 'object' && !(v instanceof Date) && !Buffer.isBuffer(v)) return JSON.stringify(v);
   return v;
 };
 
@@ -223,25 +272,23 @@ const replaceRestore = async (tables) => {
   let restored = 0;
   try {
     await client.query('BEGIN');
-    const existing = [];
-    for (const t of RESTORE_ORDER) {
-      const exists = (await client.query(
-        `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`, [t]
-      )).rowCount > 0;
-      if (exists) existing.push(t);
-    }
+    const names = Object.keys(tables);
+    const live = await listBackupTables(client);
+    const existing = names.filter(t => live.includes(t));
     if (existing.length) {
       await client.query(`TRUNCATE TABLE ${existing.join(', ')} RESTART IDENTITY CASCADE`);
     }
-    for (const table of RESTORE_ORDER) {
+    for (const table of await getInsertOrder(names, client)) {
       const rows = tables[table];
       if (!Array.isArray(rows) || rows.length === 0) continue;
+      if (!live.includes(table)) continue;
+      const types = await getColTypes(table, client);
       for (const row of rows) {
-        const keys = Object.keys(row);
+        const keys = Object.keys(row).filter(isSafeIdent);
         if (!keys.length) continue;
-        const cols = keys.map(k => `"${k.replace(/"/g, '')}"`).join(', ');
+        const cols = keys.map(k => `"${k}"`).join(', ');
         const vals = keys.map((_, i) => `$${i + 1}`).join(', ');
-        const values = keys.map(k => toDbValue(row[k]));
+        const values = keys.map(k => toDbValue(row[k], types[k]));
         await client.query(`INSERT INTO ${table} (${cols}) VALUES (${vals})`, values);
         restored++;
       }
@@ -260,16 +307,17 @@ const replaceRestore = async (tables) => {
 /* Non-destructive merge: inserts rows that don't conflict, keeps current data. */
 const mergeRestore = async (tables) => {
   let imported = 0;
-  for (const table of RESTORE_ORDER) {
+  for (const table of await getInsertOrder(Object.keys(tables))) {
     const rows = tables[table];
     if (!Array.isArray(rows) || rows.length === 0) continue;
     if (!(await tableExists(table))) continue;
+    const types = await getColTypes(table);
     for (const row of rows) {
-      const keys = Object.keys(row).filter(k => k !== 'created_at');
+      const keys = Object.keys(row).filter(k => k !== 'created_at' && isSafeIdent(k));
       if (!keys.length) continue;
-      const cols = keys.map(k => `"${k.replace(/"/g, '')}"`).join(', ');
+      const cols = keys.map(k => `"${k}"`).join(', ');
       const vals = keys.map((_, i) => `$${i + 1}`).join(', ');
-      const values = keys.map(k => toDbValue(row[k]));
+      const values = keys.map(k => toDbValue(row[k], types[k]));
       await query(`INSERT INTO ${table} (${cols}) VALUES (${vals}) ON CONFLICT DO NOTHING`, values);
       imported++;
     }

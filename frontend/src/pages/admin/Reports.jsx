@@ -8,7 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const PRIORITY_ORDER = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
@@ -331,7 +331,7 @@ const Reports = () => {
     let y = 48;
 
     const addTable = (headers, rows, startY) => {
-      doc.autoTable({
+      autoTable(doc, {
         head: [headers],
         body: rows,
         startY,
@@ -379,7 +379,7 @@ const Reports = () => {
         p.totalJobs,
         p.resolvedJobs,
         p.onTimePct !== '—' ? `${p.onTimePct}%` : '—',
-        p.rating.toFixed(1),
+        (p.rating ?? 0).toFixed(1),
         p.currentWorkload,
       ]);
       y = addTable(headers, rows, y);

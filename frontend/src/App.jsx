@@ -13,6 +13,7 @@ import PropertyManagerDashboard from './pages/dashboard/PropertyManagerDashboard
 import ServiceProviderDashboard from './pages/dashboard/ServiceProviderDashboard';
 import SystemAdminDashboard from './pages/dashboard/SystemAdminDashboard';
 import AiAssistantWidget from './components/AiAssistantWidget';
+import BroadcastPopup from './components/BroadcastPopup';
 
 const adminNavItems = [
   'Overview', 'Users', 'Properties', 'Units', 'Tickets',
@@ -257,6 +258,7 @@ function App() {
         </div>
       </div>
       <AiAssistantWidget />
+      <BroadcastPopup userId={user?.id} />
     </>
   );
 }

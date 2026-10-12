@@ -28,5 +28,31 @@ async function countUnread(userId) {
   const count = await repo.countUnread(userId);
   return { success: true, data: { count } };
 }
+async function sendBroadcast(senderId, data) {
+  let recipientIds;
+  if (data.broadcast_all === true) {
+    recipientIds = await repo.findActiveUserIds(senderId);
+  } else {
+    recipientIds = [...new Set((data.receiver_ids || []).filter(id => id !== senderId))];
+  }
+  if (recipientIds.length === 0) throw AppError.badRequest('No recipients selected');
+  const messageIds = [];
+  for (const receiverId of recipientIds) {
+    const message = await repo.create({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      subject: data.subject,
+      body: data.body,
+      category: 'announcement',
+      is_popup: true,
+    });
+    messageIds.push(message.id);
+  }
+  return { success: true, data: { sent: messageIds.length, messageIds }, message: `Announcement sent to ${messageIds.length} user(s)` };
+}
+async function getPopups(userId) {
+  const messages = await repo.findPopupUnread(userId);
+  return { success: true, data: { messages } };
+}
 
-export { list, listSent, getById, send, markRead, countUnread };
+export { list, listSent, getById, send, markRead, countUnread, sendBroadcast, getPopups };

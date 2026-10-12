@@ -6,6 +6,7 @@ import { Roles } from '../../shared/constants/roles.js';
 
 const router = Router();
 
+router.get('/health', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.getHealth);
 router.get('/settings', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.getSettings);
 router.put('/settings', authenticate, authorize(Roles.SYSTEM_ADMIN), ctrl.updateSettings);
 router.get('/settings/sla', authenticate, authorize(Roles.SYSTEM_ADMIN, Roles.PROPERTY_MANAGER), ctrl.getSla);

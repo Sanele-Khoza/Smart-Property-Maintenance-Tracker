@@ -36,6 +36,9 @@ async function run(query) {
     { name: '030_ai_priority', file: '030_ai_priority.js' },
     { name: '031_br001_occupant_unique', file: '031_br001_occupant_unique.js' },
     { name: '032_provider_location_name', file: '032_provider_location_name.js' },
+    { name: '033_structural_category', file: '033_structural_category.js' },
+    { name: '034_seed_dataset_categories', file: '034_seed_dataset_categories.js' },
+    { name: '035_messages_popup', file: '035_messages_popup.js' },
   ];
 
   await query(`

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FaShieldAlt, FaUserTag, FaCheck, FaTimes, FaSearch, FaChevronDown, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
-import { getUsers, updateUser } from '../../data/authStore';
+import { getUsers, changeUserRole } from '../../data/authStore';
 
 const ROLES = ['TENANT', 'PROPERTY_MANAGER', 'SERVICE_PROVIDER', 'TECHNICIAN', 'SYSTEM_ADMIN'];
 const ROLE_LABELS = { TENANT: 'Tenant', PROPERTY_MANAGER: 'Property Manager', SERVICE_PROVIDER: 'Service Provider', TECHNICIAN: 'Technician', SYSTEM_ADMIN: 'System Admin' };
@@ -120,7 +120,7 @@ const Roles = () => {
   const confirmRoleChange = async (userId) => {
     const newRole = changingRoles[userId];
     if (!newRole) return;
-    const result = await updateUser(userId, { role: newRole });
+    const result = await changeUserRole(userId, newRole);
     if (result.success) {
       setMessage({ type: 'success', text: `${result.data.name} ${result.data.surname} role updated to ${ROLE_LABELS[newRole]}.` });
       setChangingRoles(p => { const n = { ...p }; delete n[userId]; return n; });

@@ -9,6 +9,11 @@ const getDefaultData = () => ({
     { id: 'CAT-003', name: 'HVAC', description: 'Heating, ventilation, and air conditioning', defaultPriority: 'MEDIUM', aiKeywords: ['ac', 'heating', 'ventilation', 'aircon', 'hvac'], rekognitionLabel: 'HVAC' },
     { id: 'CAT-004', name: 'Emergency', description: 'Immediate safety or structural threats', defaultPriority: 'EMERGENCY', aiKeywords: ['gas leak', 'flooding', 'structural collapse', 'sewage overflow', 'burst pipe'], rekognitionLabel: 'Emergency' },
     { id: 'CAT-005', name: 'General', description: 'General maintenance and repairs', defaultPriority: 'LOW', aiKeywords: ['paint', 'clean', 'fix', 'repair', 'replace'], rekognitionLabel: 'General' },
+    { id: 'CAT-006', name: 'Structural', description: 'Walls, ceilings, roofs, foundations, and structural damage', defaultPriority: 'HIGH', aiKeywords: ['wall', 'ceiling', 'roof', 'crack', 'foundation', 'structural', 'mold', 'water damage'], rekognitionLabel: 'Structural' },
+    { id: 'CAT-007', name: 'Appliances', description: 'Fridges, stoves, washing machines, and other appliances', defaultPriority: 'HIGH', aiKeywords: ['fridge', 'stove', 'washing machine', 'appliance', 'dishwasher', 'oven'], rekognitionLabel: 'Appliances' },
+    { id: 'CAT-008', name: 'Landscaping', description: 'Gardens, lawns, weeds, and outdoor upkeep', defaultPriority: 'LOW', aiKeywords: ['garden', 'grass', 'trees', 'weeds', 'landscaping', 'lawn'], rekognitionLabel: 'Landscaping' },
+    { id: 'CAT-009', name: 'Pest Control', description: 'Ants, rodents, cockroaches, termites, and other pests', defaultPriority: 'MEDIUM', aiKeywords: ['pest', 'ants', 'rodents', 'cockroaches', 'termites', 'rats'], rekognitionLabel: 'Pest Control' },
+    { id: 'CAT-010', name: 'Security', description: 'Locks, alarms, and faulty or broken security fixtures', defaultPriority: 'HIGH', aiKeywords: ['lock', 'door', 'alarm', 'security', 'broken lock', 'faulty lock'], rekognitionLabel: 'Security' },
   ],
   technicians: [],
   systemSettings: [
@@ -95,6 +100,12 @@ const migrateSavedData = (parsed) => {
     parsed.categories = parsed.categories.map(c => {
       const d = defaults.categories.find(dc => dc.id === c.id);
       return d ? { ...d, ...c } : c;
+    });
+    const savedCategoryIds = new Set(parsed.categories.map(c => c.id));
+    defaults.categories.forEach(dc => {
+      if (!savedCategoryIds.has(dc.id)) {
+        parsed.categories.push(dc);
+      }
     });
   }
   return parsed;

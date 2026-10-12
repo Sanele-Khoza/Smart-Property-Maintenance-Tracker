@@ -24,20 +24,20 @@ async function sendEmail({ to, subject, text, html }) {
     logger.warn(`SES failed for ${to}, falling back to nodemailer: ${sesResult.error}`);
   }
 
-  if (config.nodeEnv === 'production' && config.smtp?.host) {
+  if (config.smtp?.host) {
     try {
       const nodemailer = await import('nodemailer');
       const transporter = nodemailer.default.createTransport({
         host: config.smtp.host,
         port: config.smtp.port || 587,
         secure: config.smtp.secure || false,
-        auth: {
-          user: config.smtp.user,
-          pass: config.smtp.pass,
-        },
+        auth: config.smtp.user
+          ? { user: config.smtp.user, pass: config.smtp.pass }
+          : undefined,
+        tls: { rejectUnauthorized: false },
       });
       await transporter.sendMail({
-        from: config.smtp.from || 'noreply@spmt.com',
+        from: config.smtp.from || config.mail.from || 'noreply@spmt.com',
         to,
         subject,
         text,
@@ -46,8 +46,7 @@ async function sendEmail({ to, subject, text, html }) {
       logger.info(`Email sent to ${to}: ${subject}`);
       return true;
     } catch (err) {
-      logger.error(`Failed to send email to ${to}: ${err.message}`);
-      return false;
+      logger.warn(`SMTP send failed for ${to}, using dev log: ${err.message}`);
     }
   }
 

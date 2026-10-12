@@ -189,13 +189,16 @@ const updateUser = async (req, res, next) => {
     const result = await query('SELECT id, name, surname, email, phone, role, status FROM users WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) throw AppError.notFound('User not found');
     const user = result.rows[0];
+    const roleChanged = req.body.role !== undefined;
     await notifyUserStatusChange({
       userId: user.id,
       userEmail: user.email,
       userName: `${user.name} ${user.surname}`,
-      action: 'USER_UPDATED',
-      title: 'Account updated',
-      body: 'Your account details were updated by the System Administrator.',
+      action: roleChanged ? 'ROLE_CHANGED' : 'USER_UPDATED',
+      title: roleChanged ? 'Role updated' : 'Account updated',
+      body: roleChanged
+        ? `Your role was changed to ${user.role.replace(/_/g, ' ').toLowerCase()} by the System Administrator. Your menu and access have been updated.`
+        : 'Your account details were updated by the System Administrator.',
       performedBy: req.user?.id,
       ipAddress: getIp(req),
       severity: 'INFO',
